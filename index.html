@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Centro de Mando V7.2: Omni-Sync</title>
+    <title>Centro de Mando V7.3: Omni-Sync Fix</title>
     
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#000000">
@@ -112,7 +112,8 @@
             q4: { id: 'q4', title: 'ELIMINAR', subtitle: 'No Urgente + No Importante', color: '#64748b' }
         };
 
-        const SCOPES = "https://www.googleapis.com/auth/calendar.events.readonly";
+        // --- CORRECCIÓN APLICADA AQUÍ: Scope ampliado para permitir listar calendarios ---
+        const SCOPES = "https://www.googleapis.com/auth/calendar.readonly";
         const DISCOVERY_DOC = "https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest";
 
         function CommandCenterV7() {
