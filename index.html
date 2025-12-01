@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Centro de Mando V7.1: Bio-Tactical</title>
+    <title>Centro de Mando V7.2: Omni-Sync</title>
     
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#000000">
@@ -112,7 +112,6 @@
             q4: { id: 'q4', title: 'ELIMINAR', subtitle: 'No Urgente + No Importante', color: '#64748b' }
         };
 
-        // --- SCOPES ---
         const SCOPES = "https://www.googleapis.com/auth/calendar.events.readonly";
         const DISCOVERY_DOC = "https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest";
 
@@ -176,30 +175,24 @@
 
                 // Load GAPI & GIS
                 if (window.gapi) window.gapi.load('client', initializeGapiClient);
-                // GIS client is loaded via script tag in head, just need to init when config is ready
             }, []);
 
             useEffect(() => { localStorage.setItem('cmd_events_v7', JSON.stringify(events)); }, [events]);
             useEffect(() => { localStorage.setItem('cmd_tabs_v7', JSON.stringify(tabs)); }, [tabs]);
             useEffect(() => { localStorage.setItem('cmd_google_config', JSON.stringify(googleConfig)); }, [googleConfig]);
 
-            // --- GOOGLE INTEGRATION V2 (NEW GIS LIBRARY) ---
+            // --- GOOGLE INTEGRATION V7.2 (OMNI-SYNC) ---
             
-            // 1. Initialize GAPI (Only needed for requests)
+            // 1. Initialize GAPI
             const initializeGapiClient = async () => {
                 if (!googleConfig.apiKey) return;
                 try {
-                    await window.gapi.client.init({
-                        apiKey: googleConfig.apiKey,
-                        discoveryDocs: [DISCOVERY_DOC],
-                    });
+                    await window.gapi.client.init({ apiKey: googleConfig.apiKey, discoveryDocs: [DISCOVERY_DOC] });
                     gapiInited.current = true;
-                } catch (err) {
-                    console.error("GAPI Init Error:", err);
-                }
+                } catch (err) { console.error("GAPI Init Error:", err); }
             };
 
-            // 2. Initialize GIS (Needed for Auth/Token)
+            // 2. Initialize GIS
             const initializeGisClient = () => {
                 if (!googleConfig.clientId) return;
                 try {
@@ -207,48 +200,29 @@
                         client_id: googleConfig.clientId,
                         scope: SCOPES,
                         callback: async (resp) => {
-                            if (resp.error) {
-                                alert("Error Auth: " + JSON.stringify(resp));
-                                return;
-                            }
-                            // Token obtained!
+                            if (resp.error) { alert("Error Auth: " + JSON.stringify(resp)); return; }
                             setIsGoogleSignedIn(true);
+                            // Auto-fetch after login
                             await fetchGoogleEvents();
                         },
                     });
                     gisInited.current = true;
-                } catch (err) {
-                    console.error("GIS Init Error:", err);
-                    alert("Error inicializando Google Identity Services. Revisa tu Client ID.");
-                }
+                } catch (err) { console.error("GIS Init Error:", err); alert("Error inicializando Google Identity Services."); }
             };
 
-            // 3. Trigger Auth Flow
+            // 3. Auth Trigger
             const handleAuthClick = () => {
-                if (!googleConfig.apiKey || !googleConfig.clientId) {
-                    alert("⚠️ FALTAN DATOS: Ingresa API Key y Client ID en Configuración.");
-                    return;
-                }
-                
-                // Initialize if not ready
+                if (!googleConfig.apiKey || !googleConfig.clientId) { alert("⚠️ FALTAN DATOS: Configura API Key y Client ID."); return; }
                 if (!gapiInited.current) initializeGapiClient();
                 if (!gisInited.current) initializeGisClient();
 
-                // Wait a bit or verify
                 setTimeout(() => {
-                    if (tokenClient.current) {
-                        // Request Token (Popup)
-                        tokenClient.current.requestAccessToken({ prompt: 'consent' });
-                    } else {
-                        // Retry init explicitly
-                        initializeGisClient();
-                        if(tokenClient.current) tokenClient.current.requestAccessToken({ prompt: 'consent' });
-                        else alert("⚠️ Error: No se pudo cargar el cliente de autenticación. Recarga la página.");
-                    }
+                    if (tokenClient.current) tokenClient.current.requestAccessToken({ prompt: 'consent' });
+                    else { initializeGisClient(); if(tokenClient.current) tokenClient.current.requestAccessToken({ prompt: 'consent' }); }
                 }, 500);
             };
 
-            // 4. Logout (Just remove token/state)
+            // 4. Logout
             const handleSignOutClick = () => {
                 const token = window.gapi.client.getToken();
                 if (token !== null) {
@@ -259,36 +233,71 @@
                 }
             };
 
-            // 5. Fetch Events
+            // 5. FETCH EVENTS (V7.2 MULTI-CALENDAR + FULL HISTORY)
             const fetchGoogleEvents = async () => {
                 setIsSyncing(true);
                 try {
-                    const response = await window.gapi.client.calendar.events.list({
-                        'calendarId': 'primary',
-                        'timeMin': (new Date()).toISOString(),
-                        'showDeleted': false,
-                        'singleEvents': true,
-                        'maxResults': 50,
-                        'orderBy': 'startTime',
-                    });
-                    
-                    const gEvents = response.result.items.map(item => ({
-                        id: item.id,
-                        title: item.summary,
-                        date: item.start.dateTime ? item.start.dateTime.split('T')[0] : (item.start.date || ''),
-                        time: item.start.dateTime ? item.start.dateTime.split('T')[1].substring(0,5) : '',
-                        type: 'google',
-                        notes: item.description || '',
-                        category: 'task', quadrant: 'q2'
-                    }));
+                    // A. Rango: Desde Enero
+                    const startOfYear = new Date(new Date().getFullYear(), 0, 1).toISOString();
 
+                    // B. Obtener LISTA de calendarios
+                    const calendarListResponse = await window.gapi.client.calendar.calendarList.list();
+                    const calendars = calendarListResponse.result.items;
+
+                    let allFetchedEvents = [];
+
+                    // C. Descarga Paralela
+                    const promises = calendars.map(async (cal) => {
+                        try {
+                            const response = await window.gapi.client.calendar.events.list({
+                                'calendarId': cal.id,
+                                'timeMin': startOfYear,
+                                'showDeleted': false,
+                                'singleEvents': true,
+                                'maxResults': 100,
+                                'orderBy': 'startTime',
+                            });
+
+                            return response.result.items.map(item => {
+                                const calName = (cal.summary || '').toLowerCase();
+                                const title = (item.summary || '').toLowerCase();
+                                let category = 'task';
+                                
+                                // Auto-etiquetado "Clase"
+                                if (calName.includes('clase') || calName.includes('uni') || calName.includes('escuela') || calName.includes('school') || title.includes('clase')) {
+                                    category = 'class';
+                                }
+
+                                return {
+                                    id: item.id,
+                                    title: item.summary || '(Sin título)',
+                                    date: item.start.dateTime ? item.start.dateTime.split('T')[0] : (item.start.date || ''),
+                                    time: item.start.dateTime ? item.start.dateTime.split('T')[1].substring(0,5) : '',
+                                    type: 'google',
+                                    notes: (item.description || '') + `\n[Cal: ${cal.summary}]`,
+                                    category: category,
+                                    quadrant: 'q2'
+                                };
+                            });
+                        } catch (err) {
+                            console.warn(`Skip Cal: ${cal.summary}`);
+                            return [];
+                        }
+                    });
+
+                    const results = await Promise.all(promises);
+                    allFetchedEvents = results.flat();
+
+                    // D. Guardar
                     const localEvents = events.filter(e => e.type !== 'google');
-                    setEvents([...localEvents, ...gEvents]);
-                    alert(`✅ Sincronizado: ${gEvents.length} eventos.`);
+                    const sortedGoogle = allFetchedEvents.sort((a, b) => new Date(a.date + 'T' + (a.time || '00:00')) - new Date(b.date + 'T' + (b.time || '00:00')));
+
+                    setEvents([...localEvents, ...sortedGoogle]);
+                    alert(`✅ SYNC COMPLETE\n\nCalendarios: ${calendars.length}\nEventos: ${allFetchedEvents.length}`);
 
                 } catch (err) {
                     console.error(err);
-                    alert("⚠️ Error Sync: " + err.message);
+                    alert("⚠️ Error Sync: " + (err.message || JSON.stringify(err)));
                 } finally {
                     setIsSyncing(false);
                 }
