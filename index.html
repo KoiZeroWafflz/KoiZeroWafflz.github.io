@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Centro de Mando V7.3:Fix</title>
+    <title>Centro de Mando V7.4: Logic & Colors</title>
     
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#000000">
@@ -54,6 +54,15 @@
             box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.05);
         }
         .draggable-item:active { cursor: grabbing; }
+        
+        /* Toggle Switch */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #68D391;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #68D391;
+        }
     </style>
 </head>
 <body>
@@ -66,7 +75,7 @@
             Calendar, CheckSquare, Settings, RefreshCw, Plus, ChevronLeft, ChevronRight, Menu, X, 
             Target, Folder, BookOpen, Clock, Trash2, Edit3, GripHorizontal, CheckCircle,
             Dna, Microscope, Activity, Leaf, Zap, Globe, Database, Cpu, Layout, PenTool, Hash, Briefcase, Terminal,
-            GraduationCap
+            GraduationCap, Eye, EyeOff
         } from 'https://esm.sh/lucide-react@0.292.0';
 
         const ICON_MAP = { 
@@ -88,13 +97,6 @@
                 desc: "Depredador visual con quelíceros iridiscentes.",
                 fact: "Saltan 50 veces su longitud corporal.",
                 img: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Phidippus_audax_male.jpg/800px-Phidippus_audax_male.jpg"
-            },
-            {
-                id: 3, name: "Tardígrado", scientific: "Hypsibius dujardini",
-                taxonomy: { kingdom: "Animalia", phylum: "Tardigrada", class: "Eutardigrada", order: "Parachela", family: "Hypsibiidae", genus: "Hypsibius" },
-                desc: "Extremófilo. Resiste radiación y vacío espacial.",
-                fact: "Proteína Dsup protege su ADN.",
-                img: "https://upload.wikimedia.org/wikipedia/commons/0/06/Hypsibius_dujardini.jpg" 
             }
         ];
 
@@ -127,7 +129,9 @@
             const [selectedEventId, setSelectedEventId] = useState(null);
             const [eventFormData, setEventFormData] = useState({ title: '', date: '', time: '', type: 'general', notes: '', category: 'task', quadrant: 'q2' });
             const [showSettings, setShowSettings] = useState(false);
-            const [editingTabId, setEditingTabId] = useState(null); 
+
+            // CALENDAR MANAGEMENT
+            const [calendars, setCalendars] = useState({}); // { id: { summary, color, visible } }
 
             // BIO
             const [bioIndex, setBioIndex] = useState(0); 
@@ -138,7 +142,6 @@
             const [googleConfig, setGoogleConfig] = useState({ apiKey: '', clientId: '' });
             const [isGoogleSignedIn, setIsGoogleSignedIn] = useState(false);
             
-            // Refs for Google Clients
             const tokenClient = useRef(null);
             const gapiInited = useRef(false);
             const gisInited = useRef(false);
@@ -159,31 +162,27 @@
                 const savedEvents = localStorage.getItem('cmd_events_v7');
                 const savedTabs = localStorage.getItem('cmd_tabs_v7');
                 const savedConfig = localStorage.getItem('cmd_google_config');
+                const savedCalendars = localStorage.getItem('cmd_calendars_meta');
                 
                 if (savedEvents) {
-                    try {
-                        const parsed = JSON.parse(savedEvents);
-                        const migrated = parsed.map(ev => ({ ...ev, category: ev.category || 'task', quadrant: ev.quadrant || 'q2' }));
-                        setEvents(migrated);
-                    } catch(e) { console.log("Reset events"); }
+                    try { setEvents(JSON.parse(savedEvents)); } catch(e) { console.log("Reset events"); }
                 } else {
                     setEvents([{ id: 1, title: 'INIT_SYSTEM_V7', date: new Date().toISOString().split('T')[0], time: '09:00', type: 'work', category: 'task', quadrant: 'q1' }]);
                 }
                 
                 if (savedTabs) setTabs(JSON.parse(savedTabs));
                 if (savedConfig) setGoogleConfig(JSON.parse(savedConfig));
+                if (savedCalendars) setCalendars(JSON.parse(savedCalendars));
 
-                // Load GAPI & GIS
                 if (window.gapi) window.gapi.load('client', initializeGapiClient);
             }, []);
 
             useEffect(() => { localStorage.setItem('cmd_events_v7', JSON.stringify(events)); }, [events]);
             useEffect(() => { localStorage.setItem('cmd_tabs_v7', JSON.stringify(tabs)); }, [tabs]);
             useEffect(() => { localStorage.setItem('cmd_google_config', JSON.stringify(googleConfig)); }, [googleConfig]);
+            useEffect(() => { localStorage.setItem('cmd_calendars_meta', JSON.stringify(calendars)); }, [calendars]);
 
-            // --- GOOGLE INTEGRATION V7.2 (OMNI-SYNC) ---
-            
-            // 1. Initialize GAPI
+            // --- GOOGLE INTEGRATION ---
             const initializeGapiClient = async () => {
                 if (!googleConfig.apiKey) return;
                 try {
@@ -192,7 +191,6 @@
                 } catch (err) { console.error("GAPI Init Error:", err); }
             };
 
-            // 2. Initialize GIS
             const initializeGisClient = () => {
                 if (!googleConfig.clientId) return;
                 try {
@@ -202,15 +200,13 @@
                         callback: async (resp) => {
                             if (resp.error) { alert("Error Auth: " + JSON.stringify(resp)); return; }
                             setIsGoogleSignedIn(true);
-                            // Auto-fetch after login
                             await fetchGoogleEvents();
                         },
                     });
                     gisInited.current = true;
-                } catch (err) { console.error("GIS Init Error:", err); alert("Error inicializando Google Identity Services."); }
+                } catch (err) { console.error("GIS Init Error:", err); }
             };
 
-            // 3. Auth Trigger (CORREGIDO: async + await)
             const handleAuthClick = async () => {
                 if (!googleConfig.apiKey || !googleConfig.clientId) { alert("⚠️ FALTAN DATOS: Configura API Key y Client ID."); return; }
                 if (!gapiInited.current) await initializeGapiClient();
@@ -222,7 +218,6 @@
                 }, 500);
             };
 
-            // 4. Logout
             const handleSignOutClick = () => {
                 const token = window.gapi.client.getToken();
                 if (token !== null) {
@@ -233,83 +228,102 @@
                 }
             };
 
-            // 5. FETCH EVENTS (V7.2 MULTI-CALENDAR + FIX RACE CONDITION)
+            // --- FETCH & SYNC LOGIC UPDATED ---
             const fetchGoogleEvents = async () => {
                 setIsSyncing(true);
                 try {
-                    // --- FIX INICIO: Carga de seguridad ---
-                    // Si gapi.client.calendar es undefined, lo cargamos manualmente aquí.
                     if (!window.gapi.client.calendar) {
                         console.warn("⚠️ API Calendar no detectada. Cargando dinámicamente...");
                         await window.gapi.client.load('calendar', 'v3');
                     }
-                    // --- FIX FIN ---
 
-                    // A. Rango: Desde Enero
                     const startOfYear = new Date(new Date().getFullYear(), 0, 1).toISOString();
-
-                    // B. Obtener LISTA de calendarios
                     const calendarListResponse = await window.gapi.client.calendar.calendarList.list();
-                    const calendars = calendarListResponse.result.items;
+                    const rawCalendars = calendarListResponse.result.items;
+
+                    // Actualizar metadatos de calendarios (preservando visibilidad si ya existe)
+                    const updatedCalendars = { ...calendars };
+                    rawCalendars.forEach(cal => {
+                        if (!updatedCalendars[cal.id]) {
+                            updatedCalendars[cal.id] = { 
+                                id: cal.id, 
+                                summary: cal.summary, 
+                                color: cal.backgroundColor, 
+                                visible: true // Por defecto visible
+                            };
+                        } else {
+                            // Actualizar color/nombre por si cambiaron en Google
+                            updatedCalendars[cal.id].summary = cal.summary;
+                            updatedCalendars[cal.id].color = cal.backgroundColor;
+                        }
+                    });
+                    setCalendars(updatedCalendars);
 
                     let allFetchedEvents = [];
-
-                    // C. Descarga Paralela
-                    const promises = calendars.map(async (cal) => {
+                    const promises = rawCalendars.map(async (cal) => {
                         try {
                             const response = await window.gapi.client.calendar.events.list({
                                 'calendarId': cal.id,
                                 'timeMin': startOfYear,
                                 'showDeleted': false,
                                 'singleEvents': true,
-                                'maxResults': 100,
+                                'maxResults': 150,
                                 'orderBy': 'startTime',
                             });
 
                             return response.result.items.map(item => {
                                 const calName = (cal.summary || '').toLowerCase();
                                 const title = (item.summary || '').toLowerCase();
-                                let category = 'task';
+                                const desc = (item.description || '').toLowerCase();
                                 
-                                // Auto-etiquetado "Clase"
-                                if (calName.includes('clase') || calName.includes('uni') || calName.includes('escuela') || calName.includes('school') || title.includes('clase')) {
-                                    category = 'class';
+                                // Lógica de Categorización V7.4
+                                // Clases = Eventos fijos. Tareas = Cosas a planificar.
+                                let isClass = false;
+                                
+                                // Heurística para detectar clases
+                                if (
+                                    calName.includes('clase') || calName.includes('uni') || calName.includes('horario') || 
+                                    title.includes('clase') || desc.includes('profesor')
+                                ) {
+                                    isClass = true;
                                 }
 
                                 return {
                                     id: item.id,
+                                    calendarId: cal.id, // Enlace al calendario padre
                                     title: item.summary || '(Sin título)',
                                     date: item.start.dateTime ? item.start.dateTime.split('T')[0] : (item.start.date || ''),
                                     time: item.start.dateTime ? item.start.dateTime.split('T')[1].substring(0,5) : '',
                                     type: 'google',
-                                    notes: (item.description || '') + `\n[Cal: ${cal.summary}]`,
-                                    category: category,
-                                    quadrant: 'q2'
+                                    notes: item.description || '',
+                                    category: isClass ? 'class' : 'task', // 'class' no se muestra en Matriz
+                                    quadrant: isClass ? null : 'q2', // Clases no tienen cuadrante
+                                    googleColor: cal.backgroundColor // Guardamos el HEX original
                                 };
                             });
-                        } catch (err) {
-                            console.warn(`Skip Cal: ${cal.summary}`);
-                            return [];
-                        }
+                        } catch (err) { console.warn(`Skip Cal: ${cal.summary}`); return []; }
                     });
 
                     const results = await Promise.all(promises);
                     allFetchedEvents = results.flat();
 
-                    // D. Guardar
                     const localEvents = events.filter(e => e.type !== 'google');
                     const sortedGoogle = allFetchedEvents.sort((a, b) => new Date(a.date + 'T' + (a.time || '00:00')) - new Date(b.date + 'T' + (b.time || '00:00')));
 
                     setEvents([...localEvents, ...sortedGoogle]);
-                    // Feedback visual en consola en vez de alerta invasiva
-                    console.log(`✅ SYNC COMPLETE\nCalendarios: ${calendars.length}\nEventos: ${allFetchedEvents.length}`);
+                    console.log(`✅ SYNC COMPLETE. Events: ${allFetchedEvents.length}`);
 
                 } catch (err) {
                     console.error(err);
                     alert("⚠️ Error Sync: " + (err.message || JSON.stringify(err)));
-                } finally {
-                    setIsSyncing(false);
-                }
+                } finally { setIsSyncing(false); }
+            };
+
+            const toggleCalendarVisibility = (calId) => {
+                setCalendars(prev => ({
+                    ...prev,
+                    [calId]: { ...prev[calId], visible: !prev[calId].visible }
+                }));
             };
 
             // --- HELPER LOGIC ---
@@ -327,10 +341,25 @@
                 return d;
             }, [currentDate]);
 
+            // --- FILTROS DE VISUALIZACIÓN ---
+            // 1. Filtro Global: Respetar si el calendario está oculto en Settings
+            const visibleEvents = useMemo(() => {
+                return events.filter(ev => {
+                    if (ev.type === 'google' && ev.calendarId) {
+                        // Si tenemos metadata del calendario, verificamos visibilidad
+                        if (calendars[ev.calendarId] && calendars[ev.calendarId].visible === false) return false;
+                    }
+                    return true;
+                });
+            }, [events, calendars]);
+
+            // 2. Filtro Matriz: Solo TAREAS (excluir clases)
+            const matrixEvents = useMemo(() => {
+                return visibleEvents.filter(ev => ev.category !== 'class'); 
+            }, [visibleEvents]);
+
             const handleWidgetClick = () => {
-                let newIndex;
-                if (BIO_DB.length > 1) do { newIndex = Math.floor(Math.random() * BIO_DB.length); } while (newIndex === bioIndex);
-                else newIndex = 0;
+                let newIndex = BIO_DB.length > 1 ? Math.floor(Math.random() * BIO_DB.length) : 0;
                 setBioIndex(newIndex);
                 setShowBioModal(true);
             };
@@ -363,9 +392,10 @@
 
             const eventsByDate = useMemo(() => {
                 const grouped = {};
-                events.forEach(ev => { if (!grouped[ev.date]) grouped[ev.date] = []; grouped[ev.date].push(ev); });
+                // En el Drawer/Agenda mostramos TODO (visibleEvents), incluyendo clases
+                visibleEvents.forEach(ev => { if (!grouped[ev.date]) grouped[ev.date] = []; grouped[ev.date].push(ev); });
                 return Object.keys(grouped).sort().map(date => ({ date, items: grouped[date] }));
-            }, [events]);
+            }, [visibleEvents]);
 
             // --- RENDER ---
             return React.createElement('div', { 
@@ -408,24 +438,24 @@
                                 React.createElement('button', { onClick: () => setCurrentDate(new Date()), className: "px-2 text-xs font-bold text-neutral-400 hover:text-white" }, "HOY"),
                                 React.createElement('button', { onClick: () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1)), className: "p-2 text-neutral-400 hover:text-white" }, React.createElement(ChevronRight, { size: 20 }))
                             ]),
-                            activeTabId === 'tab2' && React.createElement('button', { 
-                                onClick: () => { setEventFormData({ title: '', date: new Date().toISOString().split('T')[0], time: '09:00', type: 'general', notes: '', category: 'task', quadrant: 'q1' }); setModalMode('create'); },
-                                className: "flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--theme-color)] text-black font-black text-xs hover:brightness-110 shadow-[0_0_10px_var(--theme-glow)]"
-                            }, [React.createElement(Plus, { size: 16 }), "NUEVA TAREA"]),
                             
+                            // Botón de Sync
                             React.createElement('button', { 
                                 onClick: isGoogleSignedIn ? fetchGoogleEvents : handleAuthClick,
                                 className: `flex items-center gap-2 px-3 py-2 rounded-lg border bg-neutral-900 active:scale-95 transition-all ${isSyncing ? 'border-[var(--theme-color)] text-[var(--theme-color)]' : 'border-neutral-800 text-neutral-400'}`
                             }, [React.createElement(RefreshCw, { size: 18, className: isSyncing ? 'animate-spin' : '' }), React.createElement('span', { className: "hidden md:inline text-[10px] font-black" }, "SYNC")]),
+                            
                             React.createElement('button', { onClick: () => setShowSettings(true), className: "p-2.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white hover:border-white transition-colors" }, React.createElement(Settings, { size: 20 }))
                         ])
                     ]),
 
+                    // VISTA TAB 2: MATRIZ DE TAREAS (Solo Tareas, sin Clases)
                     activeTabId === 'tab2' 
                     ? React.createElement('div', { className: "flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-2 grid-rows-2 gap-2 md:gap-4 pb-20 md:pb-0" }, 
                         ['q1', 'q2', 'q3', 'q4'].map(qKey => {
                             const qData = QUADRANTS[qKey];
-                            const qEvents = events.filter(e => (e.quadrant || 'q2') === qKey);
+                            // FILTRO: Usamos matrixEvents que YA excluye las clases
+                            const qEvents = matrixEvents.filter(e => (e.quadrant || 'q2') === qKey);
                             return React.createElement('div', { 
                                 key: qKey, onDragOver: handleDragOver, onDragLeave: handleDragLeave, onDrop: (e) => handleDrop(e, qKey),
                                 className: "droppable-area bg-neutral-900/40 border border-neutral-800/60 rounded-xl p-3 flex flex-col relative overflow-hidden backdrop-blur-sm"
@@ -444,9 +474,7 @@
                                         className: "draggable-item bg-black/60 border border-neutral-800 hover:border-white/30 p-2.5 rounded-lg group transition-all active:scale-95"
                                     }, [
                                         React.createElement('div', { className: "flex items-start gap-2" }, [
-                                            React.createElement('div', { className: `mt-0.5 ${ev.category === 'class' ? 'text-blue-400' : 'text-emerald-400'}` }, 
-                                                ev.category === 'class' ? React.createElement(GraduationCap, { size: 14 }) : React.createElement(CheckCircle, { size: 14 })
-                                            ),
+                                            React.createElement('div', { className: "mt-0.5 text-emerald-400" }, React.createElement(CheckCircle, { size: 14 })),
                                             React.createElement('div', { className: "flex-1 min-w-0" }, [
                                                 React.createElement('p', { className: "text-xs font-bold text-white truncate leading-tight" }, ev.title),
                                                 React.createElement('div', { className: "flex items-center gap-2 mt-1" }, [
@@ -461,6 +489,7 @@
                             ])
                         })
                       )
+                    // VISTA TAB 1: CALENDARIO (Tareas + Clases)
                     : React.createElement('div', { className: "flex-1 bg-neutral-900/30 backdrop-blur-sm rounded-xl border border-neutral-800 overflow-hidden flex flex-col relative shadow-[0_0_100px_rgba(0,0,0,0.5)]" }, [
                         React.createElement('div', { className: "grid grid-cols-7 bg-black border-b border-neutral-800" }, 
                             ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'].map(day => React.createElement('div', { key: day, className: "py-2 text-center text-[10px] md:text-xs font-black tracking-[0.2em] text-neutral-600" }, day))
@@ -468,7 +497,8 @@
                         React.createElement('div', { className: "grid grid-cols-7 flex-1 auto-rows-fr" }, 
                             days.map((dayObj, index) => {
                                 if (dayObj.isPadding) return React.createElement('div', { key: index, className: "border-r border-b border-neutral-800/40 bg-neutral-950/40" });
-                                const dayEvents = events.filter(e => e.date === dayObj.date);
+                                // FILTRO: Aquí usamos visibleEvents (Incluye Clases)
+                                const dayEvents = visibleEvents.filter(e => e.date === dayObj.date);
                                 const isToday = dayObj.date === new Date().toISOString().split('T')[0];
                                 return React.createElement('div', {
                                     key: index,
@@ -477,15 +507,24 @@
                                 }, [
                                     React.createElement('span', { className: `text-xs font-bold flex items-center justify-center w-6 h-6 rounded ${isToday ? 'bg-[var(--theme-color)] text-black' : 'text-neutral-600 group-hover:text-white'}` }, dayObj.day),
                                     React.createElement('div', { className: "mt-1 flex flex-col gap-1 overflow-y-auto max-h-[80px] no-scrollbar" }, 
-                                        dayEvents.map(event => React.createElement('div', {
-                                            key: event.id,
-                                            onClick: (e) => { e.stopPropagation(); setEventFormData({ ...event }); setSelectedEventId(event.id); setModalMode('edit'); },
-                                            className: `text-[9px] md:text-[10px] font-bold truncate px-1.5 py-0.5 rounded border-l-[3px] hover:brightness-125 transition-transform ${event.type === 'google' ? 'bg-blue-900/30 text-blue-200 border-blue-500' : 'bg-neutral-800 text-neutral-300'}`,
-                                            style: { borderLeftColor: event.type !== 'google' ? activeTab.color : undefined }
-                                        }, [
-                                            event.category === 'class' && React.createElement(GraduationCap, { size: 8, className: "inline mr-1" }),
-                                            event.time ? `${event.time} ${event.title}` : event.title
-                                        ]))
+                                        dayEvents.map(event => {
+                                            // ESTILO: Usar color de Google si existe
+                                            const eventColor = event.googleColor || activeTab.color;
+                                            return React.createElement('div', {
+                                                key: event.id,
+                                                onClick: (e) => { e.stopPropagation(); setEventFormData({ ...event }); setSelectedEventId(event.id); setModalMode('edit'); },
+                                                className: `text-[9px] md:text-[10px] font-bold truncate px-1.5 py-0.5 rounded border-l-[3px] hover:brightness-125 transition-transform`,
+                                                // Aplicamos el estilo dinámico aquí
+                                                style: { 
+                                                    borderLeftColor: eventColor,
+                                                    backgroundColor: `${eventColor}20`, // 20 es transparencia hex (aprox 12%)
+                                                    color: '#e2e8f0' 
+                                                }
+                                            }, [
+                                                event.category === 'class' && React.createElement(GraduationCap, { size: 8, className: "inline mr-1" }),
+                                                event.time ? `${event.time} ${event.title}` : event.title
+                                            ]);
+                                        })
                                     )
                                 ])
                             })
@@ -493,7 +532,7 @@
                     ])
                 ),
 
-                // 3. DRAWER
+                // 3. DRAWER (Agenda Completa)
                 React.createElement('div', { 
                     className: `fixed bottom-0 left-0 right-[60px] z-50 rounded-tr-2xl glass-panel flex flex-col ${!isDragging ? 'drawer-transition' : ''}`, 
                     style: { height: `${drawerHeight}px` }
@@ -508,20 +547,24 @@
                             React.createElement('div', { className: "text-[10px] font-black text-[var(--theme-color)] uppercase tracking-widest border-b border-white/10 pb-1 mb-2" }, 
                                 new Date(group.date).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })
                             ),
-                            group.items.map(ev => React.createElement('div', { 
-                                key: ev.id,
-                                onClick: (e) => { setEventFormData({ ...ev }); setSelectedEventId(ev.id); setModalMode('edit'); },
-                                className: "bg-black/40 border border-white/10 p-3 rounded hover:border-[var(--theme-color)] transition-colors cursor-pointer backdrop-blur-sm"
-                            }, [
-                                React.createElement('div', { className: "flex justify-between items-start mb-1" }, [
-                                    React.createElement('span', { className: "text-xs font-bold text-white truncate flex items-center gap-1" }, [
-                                        ev.category === 'class' && React.createElement(GraduationCap, { size: 10, className: "text-blue-400" }),
-                                        ev.title
+                            group.items.map(ev => {
+                                const evColor = ev.googleColor || '#ffffff';
+                                return React.createElement('div', { 
+                                    key: ev.id,
+                                    onClick: (e) => { setEventFormData({ ...ev }); setSelectedEventId(ev.id); setModalMode('edit'); },
+                                    className: "bg-black/40 border-l-4 p-3 rounded hover:brightness-125 transition-colors cursor-pointer backdrop-blur-sm",
+                                    style: { borderLeftColor: evColor }
+                                }, [
+                                    React.createElement('div', { className: "flex justify-between items-start mb-1" }, [
+                                        React.createElement('span', { className: "text-xs font-bold text-white truncate flex items-center gap-1" }, [
+                                            ev.category === 'class' && React.createElement(GraduationCap, { size: 10, style: { color: evColor } }),
+                                            ev.title
+                                        ]),
+                                        React.createElement('span', { className: "text-[9px] text-neutral-400 font-mono" }, ev.time)
                                     ]),
-                                    React.createElement('span', { className: "text-[9px] text-neutral-400 font-mono" }, ev.time)
-                                ]),
-                                ev.notes && React.createElement('div', { className: "text-[9px] text-neutral-500 line-clamp-2 italic" }, ev.notes)
-                            ]))
+                                    ev.notes && React.createElement('div', { className: "text-[9px] text-neutral-500 line-clamp-2 italic" }, ev.notes)
+                                ]);
+                            })
                         ]))
                     )
                 ]),
@@ -548,18 +591,35 @@
                             React.createElement('button', { onClick: () => setShowSettings(false) }, React.createElement(X))
                         ]),
                         React.createElement('div', { className: "flex-1 overflow-y-auto p-6 space-y-6" }, [
+                            
+                            // SECCIÓN: CALENDARIOS (Nueva V7.4)
+                            Object.keys(calendars).length > 0 && React.createElement('div', { className: "space-y-4" }, [
+                                React.createElement('h4', { className: "text-xs font-bold text-neutral-500 uppercase tracking-widest border-b border-neutral-800 pb-2" }, "Calendarios Detectados"),
+                                React.createElement('div', { className: "space-y-2" }, 
+                                    Object.values(calendars).map(cal => React.createElement('div', { key: cal.id, className: "flex items-center justify-between p-3 bg-black/50 border border-neutral-800 rounded-lg" }, [
+                                        React.createElement('div', { className: "flex items-center gap-3" }, [
+                                            React.createElement('div', { className: "w-3 h-3 rounded-full", style: { backgroundColor: cal.color } }),
+                                            React.createElement('span', { className: "text-sm font-bold text-white" }, cal.summary)
+                                        ]),
+                                        React.createElement('button', { onClick: () => toggleCalendarVisibility(cal.id), className: `p-2 rounded hover:bg-white/10 ${cal.visible ? 'text-green-400' : 'text-neutral-600'}` }, 
+                                            cal.visible ? React.createElement(Eye, { size: 18 }) : React.createElement(EyeOff, { size: 18 })
+                                        )
+                                    ]))
+                                )
+                            ]),
+
                             React.createElement('div', { className: "space-y-4" }, [
-                                React.createElement('h4', { className: "text-xs font-bold text-neutral-500 uppercase tracking-widest border-b border-neutral-800 pb-2" }, "Estilo"),
+                                React.createElement('h4', { className: "text-xs font-bold text-neutral-500 uppercase tracking-widest border-b border-neutral-800 pb-2" }, "Estilo UI"),
                                 React.createElement('div', { className: "space-y-3" }, tabs.map(tab => React.createElement('div', { key: tab.id, className: "bg-black border border-neutral-800 p-3 rounded-lg flex items-center gap-4" }, [
                                     React.createElement('input', { type: "color", value: tab.color, onChange: (e) => setTabs(tabs.map(t => t.id === tab.id ? {...t, color: e.target.value} : t)), className: "w-8 h-8 cursor-pointer rounded bg-transparent" }),
                                     React.createElement('input', { className: "bg-transparent text-white font-bold text-sm w-full outline-none", value: tab.label, onChange: (e) => setTabs(tabs.map(t => t.id === tab.id ? {...t, label: e.target.value} : t)) })
                                 ])))
                             ]),
+
                             React.createElement('div', { className: "space-y-2 pt-4" }, [
                                 React.createElement('h4', { className: "text-xs font-bold text-neutral-500 uppercase tracking-widest border-b border-neutral-800 pb-2" }, "Google API (GIS V2)"),
                                 React.createElement('div', { className: "p-3 bg-black/50 rounded border border-neutral-800 space-y-2" }, [
-                                    React.createElement('p', { className: "text-[10px] text-neutral-500 mb-2" }, "Ingresa tus credenciales de Google Cloud (OAuth 2.0 Client ID)"),
-                                    React.createElement('input', { type: "password", placeholder: "Client ID (termina en .apps.googleusercontent.com)", className: "w-full bg-transparent border-b border-neutral-700 text-xs p-1 text-white outline-none", value: googleConfig.clientId, onChange: (e) => setGoogleConfig({...googleConfig, clientId: e.target.value}) }),
+                                    React.createElement('input', { type: "password", placeholder: "Client ID", className: "w-full bg-transparent border-b border-neutral-700 text-xs p-1 text-white outline-none", value: googleConfig.clientId, onChange: (e) => setGoogleConfig({...googleConfig, clientId: e.target.value}) }),
                                     React.createElement('input', { type: "password", placeholder: "API Key", className: "w-full bg-transparent border-b border-neutral-700 text-xs p-1 text-white outline-none", value: googleConfig.apiKey, onChange: (e) => setGoogleConfig({...googleConfig, apiKey: e.target.value}) }),
                                     React.createElement('button', { onClick: isGoogleSignedIn ? handleSignOutClick : handleAuthClick, className: `w-full py-2 mt-2 rounded text-xs font-bold ${isGoogleSignedIn ? 'bg-red-900/30 text-red-400' : 'bg-blue-900/30 text-blue-400'}` }, isGoogleSignedIn ? "DESCONECTAR" : "CONECTAR Y SINCRONIZAR")
                                 ])
@@ -574,7 +634,7 @@
                         React.createElement('div', { className: "p-4 bg-black flex justify-between items-center border-b border-neutral-800 shrink-0" }, [
                             React.createElement('span', { className: "font-bold text-white text-sm tracking-wider flex items-center gap-2" }, [
                                 modalMode === 'edit' ? React.createElement(Edit3, { size: 16 }) : React.createElement(Plus, { size: 16 }),
-                                modalMode === 'edit' ? "EDITAR DETALLES" : "NUEVA ENTRADA"
+                                modalMode === 'edit' ? "EDITAR" : "NUEVO"
                             ]),
                             React.createElement('button', { onClick: () => setModalMode(null) }, React.createElement(X, { size: 20 }))
                         ]),
@@ -583,7 +643,8 @@
                                 React.createElement('button', { key: cat.id, onClick: () => setEventFormData({...eventFormData, category: cat.id}), className: `flex-1 py-2 rounded border text-xs font-black ${eventFormData.category === cat.id ? 'bg-[var(--theme-color)] text-black' : 'text-neutral-500 border-neutral-700'}` }, [React.createElement(cat.icon, { size: 14, className: "inline mr-2" }), cat.label])
                             )),
                             React.createElement('input', { autoFocus: true, type: "text", placeholder: "Título...", className: "w-full bg-black border border-neutral-700 rounded p-3 text-white font-bold outline-none", value: eventFormData.title, onChange: (e) => setEventFormData({...eventFormData, title: e.target.value}) }),
-                            React.createElement('div', { className: "grid grid-cols-2 gap-2" }, Object.values(QUADRANTS).map(q => React.createElement('button', { key: q.id, onClick: () => setEventFormData({...eventFormData, quadrant: q.id}), className: `p-2 rounded border text-[10px] font-bold uppercase ${eventFormData.quadrant === q.id ? 'bg-white/10 text-white' : 'text-neutral-600 border-neutral-800'}` }, q.title))),
+                            // Mostrar selección de cuadrante SOLO SI ES TAREA
+                            eventFormData.category !== 'class' && React.createElement('div', { className: "grid grid-cols-2 gap-2" }, Object.values(QUADRANTS).map(q => React.createElement('button', { key: q.id, onClick: () => setEventFormData({...eventFormData, quadrant: q.id}), className: `p-2 rounded border text-[10px] font-bold uppercase ${eventFormData.quadrant === q.id ? 'bg-white/10 text-white' : 'text-neutral-600 border-neutral-800'}` }, q.title))),
                             React.createElement('div', { className: "grid grid-cols-2 gap-3" }, [
                                 React.createElement('input', { type: "date", className: "w-full bg-black border border-neutral-700 rounded p-2 text-sm text-white", value: eventFormData.date, onChange: (e) => setEventFormData({...eventFormData, date: e.target.value}) }),
                                 React.createElement('input', { type: "time", className: "w-full bg-black border border-neutral-700 rounded p-2 text-sm text-white", value: eventFormData.time, onChange: (e) => setEventFormData({...eventFormData, time: e.target.value}) }),
