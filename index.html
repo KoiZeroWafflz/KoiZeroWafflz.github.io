@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Centro de Mando V7.3: Omni-Sync Fix</title>
+    <title>Centro de Mando V7.3:Fix</title>
     
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#000000">
@@ -112,7 +112,6 @@
             q4: { id: 'q4', title: 'ELIMINAR', subtitle: 'No Urgente + No Importante', color: '#64748b' }
         };
 
-        // --- CORRECCIÓN APLICADA AQUÍ: Scope ampliado para permitir listar calendarios ---
         const SCOPES = "https://www.googleapis.com/auth/calendar.readonly";
         const DISCOVERY_DOC = "https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest";
 
@@ -211,10 +210,10 @@
                 } catch (err) { console.error("GIS Init Error:", err); alert("Error inicializando Google Identity Services."); }
             };
 
-            // 3. Auth Trigger
-            const handleAuthClick = () => {
+            // 3. Auth Trigger (CORREGIDO: async + await)
+            const handleAuthClick = async () => {
                 if (!googleConfig.apiKey || !googleConfig.clientId) { alert("⚠️ FALTAN DATOS: Configura API Key y Client ID."); return; }
-                if (!gapiInited.current) initializeGapiClient();
+                if (!gapiInited.current) await initializeGapiClient();
                 if (!gisInited.current) initializeGisClient();
 
                 setTimeout(() => {
@@ -234,10 +233,18 @@
                 }
             };
 
-            // 5. FETCH EVENTS (V7.2 MULTI-CALENDAR + FULL HISTORY)
+            // 5. FETCH EVENTS (V7.2 MULTI-CALENDAR + FIX RACE CONDITION)
             const fetchGoogleEvents = async () => {
                 setIsSyncing(true);
                 try {
+                    // --- FIX INICIO: Carga de seguridad ---
+                    // Si gapi.client.calendar es undefined, lo cargamos manualmente aquí.
+                    if (!window.gapi.client.calendar) {
+                        console.warn("⚠️ API Calendar no detectada. Cargando dinámicamente...");
+                        await window.gapi.client.load('calendar', 'v3');
+                    }
+                    // --- FIX FIN ---
+
                     // A. Rango: Desde Enero
                     const startOfYear = new Date(new Date().getFullYear(), 0, 1).toISOString();
 
@@ -294,7 +301,8 @@
                     const sortedGoogle = allFetchedEvents.sort((a, b) => new Date(a.date + 'T' + (a.time || '00:00')) - new Date(b.date + 'T' + (b.time || '00:00')));
 
                     setEvents([...localEvents, ...sortedGoogle]);
-                    alert(`✅ SYNC COMPLETE\n\nCalendarios: ${calendars.length}\nEventos: ${allFetchedEvents.length}`);
+                    // Feedback visual en consola en vez de alerta invasiva
+                    console.log(`✅ SYNC COMPLETE\nCalendarios: ${calendars.length}\nEventos: ${allFetchedEvents.length}`);
 
                 } catch (err) {
                     console.error(err);
