@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Centro de Mando V7.6: Icons & Limits</title>
+    <title>Centro de Mando V7.6: Fitness & Unlimited</title>
     
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#000000">
@@ -55,9 +55,9 @@
         }
         .draggable-item:active { cursor: grabbing; }
         
-        /* HTML Content Reset */
-        .html-content b { font-weight: 900; color: white; }
-        .html-content i { font-style: italic; opacity: 0.8; }
+        /* Renderizado HTML seguro */
+        .rich-text b, .rich-text strong { color: inherit; font-weight: 900; }
+        .rich-text i, .rich-text em { font-style: italic; opacity: 0.9; }
     </style>
 </head>
 <body>
@@ -73,9 +73,11 @@
             GraduationCap, Eye, EyeOff, Dumbbell
         } from 'https://esm.sh/lucide-react@0.292.0';
 
+        // AÑADIDO: Dumbbell al mapa de iconos
         const ICON_MAP = { 
             Calendar, CheckSquare, Target, Folder, BookOpen, Menu, Settings, Clock, 
-            Dna, Microscope, Activity, Leaf, Zap, Globe, Database, Cpu, Layout, PenTool, Hash, Briefcase, Terminal, Dumbbell
+            Dna, Microscope, Activity, Leaf, Zap, Globe, Database, Cpu, Layout, PenTool, Hash, Briefcase, Terminal,
+            GraduationCap, Dumbbell
         };
         
         const BIO_DB = [
@@ -223,7 +225,7 @@
                 }
             };
 
-            // --- FETCH & SYNC LOGIC UPDATED (V7.6) ---
+            // --- FETCH & SYNC LOGIC (V7.6 - FIXED LIMITS & ICONS) ---
             const fetchGoogleEvents = async () => {
                 setIsSyncing(true);
                 try {
@@ -235,7 +237,6 @@
                     const calendarListResponse = await window.gapi.client.calendar.calendarList.list();
                     const rawCalendars = calendarListResponse.result.items;
 
-                    // Metadatos
                     const updatedCalendars = { ...calendars };
                     rawCalendars.forEach(cal => {
                         if (!updatedCalendars[cal.id]) {
@@ -255,7 +256,7 @@
                                 'timeMin': startOfYear,
                                 'showDeleted': false,
                                 'singleEvents': true,
-                                'maxResults': 2500, // FIX 1: Límite aumentado drásticamente
+                                'maxResults': 2500, // FIX 1: AUMENTADO DE 150 A 2500
                                 'orderBy': 'startTime',
                             });
 
@@ -264,19 +265,25 @@
                                 const title = (item.summary || '').toLowerCase();
                                 const desc = (item.description || '').toLowerCase();
                                 
-                                // FIX 2: Categorización detallada (Fitness vs Clase vs Tarea)
+                                // Lógica de Categorización V7.6 (SEPARADA)
                                 let category = 'task';
+                                let quadrant = 'q2';
                                 
-                                // Detectar Fitness
-                                if (calName.includes('fitness') || calName.includes('gym') || calName.includes('rutina')) {
-                                    category = 'fitness';
+                                // 1. Detectar Fitness/Gym (Prioridad)
+                                if (
+                                    calName.includes('fitness') || calName.includes('gym') || calName.includes('rutina') || 
+                                    calName.includes('entreno') || title.includes('gym')
+                                ) {
+                                    category = 'fitness'; // Nueva categoría
+                                    quadrant = null;      // No mostrar en matriz
                                 }
-                                // Detectar Clases (si no es fitness)
+                                // 2. Detectar Clases/Universidad
                                 else if (
                                     calName.includes('clase') || calName.includes('uni') || calName.includes('horario') || 
                                     title.includes('clase') || desc.includes('profesor')
                                 ) {
                                     category = 'class';
+                                    quadrant = null;
                                 }
 
                                 return {
@@ -287,8 +294,8 @@
                                     time: item.start.dateTime ? item.start.dateTime.split('T')[1].substring(0,5) : '',
                                     type: 'google',
                                     notes: item.description || '',
-                                    category: category,
-                                    quadrant: (category === 'class' || category === 'fitness') ? null : 'q2',
+                                    category: category, 
+                                    quadrant: quadrant,
                                     googleColor: cal.backgroundColor 
                                 };
                             });
@@ -342,7 +349,7 @@
                 });
             }, [events, calendars]);
 
-            // Tareas = Eventos que NO son clases NI fitness
+            // Matriz solo muestra TAREAS (excluye clases y fitness)
             const matrixEvents = useMemo(() => {
                 return visibleEvents.filter(ev => ev.category !== 'class' && ev.category !== 'fitness'); 
             }, [visibleEvents]);
@@ -463,9 +470,8 @@
                                         React.createElement('div', { className: "flex items-start gap-2" }, [
                                             React.createElement('div', { className: "mt-0.5 text-emerald-400" }, React.createElement(CheckCircle, { size: 14 })),
                                             React.createElement('div', { className: "flex-1 min-w-0" }, [
-                                                // RENDER: HTML + Emojis (FIX 3)
                                                 React.createElement('p', { 
-                                                    className: "text-xs font-bold text-white truncate leading-tight html-content",
+                                                    className: "text-xs font-bold text-white truncate leading-tight rich-text",
                                                     dangerouslySetInnerHTML: { __html: ev.title }
                                                 }),
                                                 React.createElement('div', { className: "flex items-center gap-2 mt-1" }, [
@@ -509,12 +515,13 @@
                                                     color: '#e2e8f0' 
                                                 }
                                             }, [
-                                                // ICONOS CONDICIONALES
+                                                // ICONO DE CLASE
                                                 event.category === 'class' && React.createElement(GraduationCap, { size: 8, className: "inline mr-1" }),
+                                                // ICONO DE FITNESS (NUEVO)
                                                 event.category === 'fitness' && React.createElement(Dumbbell, { size: 8, className: "inline mr-1" }),
-                                                // HTML
+                                                
                                                 React.createElement('span', { 
-                                                    className: "html-content",
+                                                    className: "rich-text",
                                                     dangerouslySetInnerHTML: { __html: event.time ? `${event.time} ${event.title}` : event.title } 
                                                 })
                                             ]);
@@ -551,16 +558,16 @@
                                 }, [
                                     React.createElement('div', { className: "flex justify-between items-start mb-1" }, [
                                         React.createElement('span', { className: "text-xs font-bold text-white truncate flex items-center gap-1" }, [
+                                            // ICONOS EN AGENDA
                                             ev.category === 'class' && React.createElement(GraduationCap, { size: 10, style: { color: evColor } }),
                                             ev.category === 'fitness' && React.createElement(Dumbbell, { size: 10, style: { color: evColor } }),
-                                            // HTML
-                                            React.createElement('span', { className: "html-content", dangerouslySetInnerHTML: { __html: ev.title } })
+                                            
+                                            React.createElement('span', { className: "rich-text", dangerouslySetInnerHTML: { __html: ev.title } })
                                         ]),
                                         React.createElement('span', { className: "text-[9px] text-neutral-400 font-mono" }, ev.time)
                                     ]),
-                                    // HTML Notas
                                     ev.notes && React.createElement('div', { 
-                                        className: "text-[9px] text-neutral-500 line-clamp-2 italic html-content",
+                                        className: "text-[9px] text-neutral-500 line-clamp-2 italic rich-text",
                                         dangerouslySetInnerHTML: { __html: ev.notes }
                                     })
                                 ]);
@@ -639,8 +646,9 @@
                             React.createElement('button', { onClick: () => setModalMode(null) }, React.createElement(X, { size: 20 }))
                         ]),
                         React.createElement('div', { className: "p-5 space-y-4 overflow-y-auto" }, [
-                            React.createElement('div', { className: "flex gap-2 mb-2" }, [ { id: 'task', label: 'TAREA', icon: CheckSquare }, { id: 'class', label: 'CLASE', icon: GraduationCap }, { id: 'fitness', label: 'FITNESS', icon: Dumbbell } ].map(cat => 
-                                React.createElement('button', { key: cat.id, onClick: () => setEventFormData({...eventFormData, category: cat.id}), className: `flex-1 py-2 rounded border text-xs font-black ${eventFormData.category === cat.id ? 'bg-[var(--theme-color)] text-black' : 'text-neutral-500 border-neutral-700'}` }, [React.createElement(cat.icon, { size: 14, className: "inline mr-2" }), cat.label])
+                            React.createElement('div', { className: "flex gap-2 mb-2" }, 
+                                [ { id: 'task', label: 'TAREA', icon: CheckSquare }, { id: 'class', label: 'CLASE', icon: GraduationCap }, { id: 'fitness', label: 'FITNESS', icon: Dumbbell } ].map(cat => 
+                                React.createElement('button', { key: cat.id, onClick: () => setEventFormData({...eventFormData, category: cat.id}), className: `flex-1 py-2 rounded border text-[10px] md:text-xs font-black ${eventFormData.category === cat.id ? 'bg-[var(--theme-color)] text-black' : 'text-neutral-500 border-neutral-700'}` }, [React.createElement(cat.icon, { size: 14, className: "inline mr-1" }), cat.label])
                             )),
                             React.createElement('input', { autoFocus: true, type: "text", placeholder: "Título...", className: "w-full bg-black border border-neutral-700 rounded p-3 text-white font-bold outline-none", value: eventFormData.title, onChange: (e) => setEventFormData({...eventFormData, title: e.target.value}) }),
                             // Mostrar selección de cuadrante SOLO SI ES TAREA
