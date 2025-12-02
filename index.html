@@ -1,743 +1,225 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Centro de Mando V8:Account Fix</title>
-    
-    <link rel="manifest" href="./manifest.json">
-    <meta name="theme-color" content="#000000">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2666/2666505.png">
-
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } }
-        }
-    </script>
-    
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="https://apis.google.com/js/api.js" async defer></script>
-    
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
-        
-        body { background-color: #000; touch-action: none; overscroll-behavior: none; }
-        
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        /* Efecto Cristal (Glass) */
-        .glass-panel {
-            background: rgba(10, 10, 10, 0.65);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 -10px 50px rgba(0, 0, 0, 0.8);
-        }
-
-        .drawer-transition { transition: height 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
-
-        @keyframes scanline {
-            0% { transform: translateY(-100%); }
-            100% { transform: translateY(100%); }
-        }
-        .bio-scan::after {
-            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.1), transparent);
-            animation: scanline 2s linear infinite; pointer-events: none;
-        }
-
-        .droppable-area.drag-over {
-            background-color: rgba(255, 255, 255, 0.05);
-            border-color: var(--theme-color);
-            box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.05);
-        }
-        .draggable-item:active { cursor: grabbing; }
-        
-        /* Renderizado HTML seguro */
-        .rich-text b, .rich-text strong { color: inherit; font-weight: 900; }
-        .rich-text i, .rich-text em { font-style: italic; opacity: 0.9; }
-    </style>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>CMD V8.1:Optimized</title>
+<link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif']}}}}</script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://apis.google.com/js/api.js" async defer></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
+body{background:#000;touch-action:none;overscroll-behavior:none}.no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+.glass{background:rgba(10,10,10,.65);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid rgba(255,255,255,.1);box-shadow:0 -10px 50px #000c}
+.tr-h{transition:height .4s cubic-bezier(.2,.8,.2,1)}
+@keyframes sl{0%{transform:translateY(-100%)}100%{transform:translateY(100%)}}
+.scan::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,transparent,#ffffff1a,transparent);animation:sl 2s linear infinite;pointer-events:none}
+.drag-over{background:#ffffff0d;border-color:var(--theme-color);box-shadow:inset 0 0 20px #ffffff0d}.rich b{color:inherit;font-weight:900}
+</style>
 </head>
-<body>
-    <div id="root"></div>
+<body><div id="root"></div>
+<script type="module">
+import React,{useState,useEffect,useRef,useMemo}from'https://esm.sh/react@18.2.0';
+import{createRoot}from'https://esm.sh/react-dom@18.2.0/client';
+import*as L from'https://esm.sh/lucide-react@0.292.0';
 
-    <script type="module">
-        import React, { useState, useEffect, useRef, useMemo, useCallback } from 'https://esm.sh/react@18.2.0';
-        import { createRoot } from 'https://esm.sh/react-dom@18.2.0/client';
-        import { 
-            Calendar, CheckSquare, Settings, RefreshCw, Plus, ChevronLeft, ChevronRight, Menu, X, 
-            Target, Folder, BookOpen, Clock, Trash2, Edit3, GripHorizontal, CheckCircle,
-            Dna, Microscope, Activity, Leaf, Zap, Globe, Database, Cpu, Layout, PenTool, Hash, Briefcase, Terminal,
-            GraduationCap, Eye, EyeOff, Dumbbell
-        } from 'https://esm.sh/lucide-react@0.292.0';
+const h=React.createElement, F=React.Fragment;
+const ICONS={Calendar:L.Calendar,CheckSquare:L.CheckSquare,Target:L.Target,Folder:L.Folder,BookOpen:L.BookOpen,Menu:L.Menu,Settings:L.Settings,Clock:L.Clock,Dna:L.Dna,Microscope:L.Microscope,Activity:L.Activity,Leaf:L.Leaf,Zap:L.Zap,Globe:L.Globe,Database:L.Database,Cpu:L.Cpu,Layout:L.Layout,PenTool:L.PenTool,Hash:L.Hash,Briefcase:L.Briefcase,Terminal:L.Terminal,GraduationCap:L.GraduationCap,Dumbbell:L.Dumbbell,Edit3:L.Edit3,Plus:L.Plus,X:L.X,RefreshCw:L.RefreshCw,Trash2:L.Trash2,GripHorizontal:L.GripHorizontal,CheckCircle:L.CheckCircle,Eye:L.Eye,EyeOff:L.EyeOff};
 
-        const ICON_MAP = { 
-            Calendar, CheckSquare, Target, Folder, BookOpen, Menu, Settings, Clock, 
-            Dna, Microscope, Activity, Leaf, Zap, Globe, Database, Cpu, Layout, PenTool, Hash, Briefcase, Terminal,
-            GraduationCap, Dumbbell
-        };
-        
-        const BIO_DB = [
-            {
-                id: 1, name: "Cuervo Grande", scientific: "Corvus corax",
-                taxonomy: { kingdom: "Animalia", phylum: "Chordata", class: "Aves", order: "Passeriformes", family: "Corvidae", genus: "Corvus" },
-                desc: "Inteligencia comparable a primates. Capaz de usar herramientas.",
-                fact: "Reconocen rostros humanos y guardan rencor.",
-                img: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Corvus_corax_%28Common_Raven%29.jpg/800px-Corvus_corax_%28Common_Raven%29.jpg" 
-            },
-            {
-                id: 2, name: "Araña Saltadora Audaz", scientific: "Phidippus audax",
-                taxonomy: { kingdom: "Animalia", phylum: "Arthropoda", class: "Arachnida", order: "Araneae", family: "Salticidae", genus: "Phidippus" },
-                desc: "Depredador visual con quelíceros iridiscentes.",
-                fact: "Saltan 50 veces su longitud corporal.",
-                img: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Phidippus_audax_male.jpg/800px-Phidippus_audax_male.jpg"
-            }
-        ];
+const BIO=[{id:1,name:"Cuervo Grande",sci:"Corvus corax",tx:"Aves/Corvidae",desc:"Inteligencia primate. Usa herramientas.",fact:"Reconocen rostros y guardan rencor.",img:"https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Corvus_corax_%28Common_Raven%29.jpg/800px-Corvus_corax_%28Common_Raven%29.jpg"},{id:2,name:"Araña Saltadora",sci:"Phidippus audax",tx:"Arachnida/Salticidae",desc:"Depredador visual, quelíceros verdes.",fact:"Salta 50x su longitud.",img:"https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Phidippus_audax_male.jpg/800px-Phidippus_audax_male.jpg"}];
+const TABS=[{id:'t1',l:'EVENTOS',i:'Calendar',c:'#3b82f6'},{id:'t2',l:'TAREAS',i:'CheckSquare',c:'#ef4444'},{id:'t3',l:'NOTAS',i:'BookOpen',c:'#eab308'},{id:'t4',l:'PROY',i:'Folder',c:'#22c55e'}];
+const Q={q1:{t:'HACER YA',s:'Urgente+Imp',c:'#ef4444'},q2:{t:'PLANIFICAR',s:'NoUrg+Imp',c:'#3b82f6'},q3:{t:'DELEGAR',s:'Urg+NoImp',c:'#eab308'},q4:{t:'ELIMINAR',s:'NiUrg+NiImp',c:'#64748b'}};
 
-        const DEFAULT_TABS = [
-            { id: 'tab1', label: 'EVENTOS', iconKey: 'Calendar', color: '#3b82f6' },
-            { id: 'tab2', label: 'TAREAS', iconKey: 'CheckSquare', color: '#ef4444' },
-            { id: 'tab3', label: 'NOTAS', iconKey: 'BookOpen', color: '#eab308' },
-            { id: 'tab4', label: 'PROYECTOS', iconKey: 'Folder', color: '#22c55e' },
-        ];
+function App(){
+    const [tabs,ST]=useState(TABS),[act,SA]=useState('t1'),[date,SD]=useState(new Date()),[evs,SE]=useState([]);
+    const [modal,SM]=useState(null),[selId,SSI]=useState(null),[form,SF]=useState({title:'',date:'',time:'',type:'gen',notes:'',cat:'task',quad:'q2'});
+    const [sets,SS]=useState(false),[cals,SC]=useState({}),[bioIx,SB]=useState(0),[bioShow,SBS]=useState(false);
+    const [sync,SSy]=useState(false),[gCfg,SG]=useState({apiKey:'',clientId:''}),[gSign,SGS]=useState(false);
+    const [dH,SH]=useState(40),[drag,SDr]=useState(false),[dragId,SDId]=useState(null);
+    const fM=useRef(new Set()),tC=useRef(null),gI=useRef(false),gsI=useRef(false),tS=useRef(null),tE=useRef(null),dY=useRef(0),dH0=useRef(0);
+    const curTab=tabs.find(t=>t.id===act)||tabs[0], thStyle={'--theme-color':curTab.c,'--theme-glow':curTab.c+'60'};
 
-        const QUADRANTS = {
-            q1: { id: 'q1', title: 'HACER YA', subtitle: 'Urgente + Importante', color: '#ef4444' },
-            q2: { id: 'q2', title: 'PLANIFICAR', subtitle: 'No Urgente + Importante', color: '#3b82f6' },
-            q3: { id: 'q3', title: 'DELEGAR', subtitle: 'Urgente + No Importante', color: '#eab308' },
-            q4: { id: 'q4', title: 'ELIMINAR', subtitle: 'No Urgente + No Importante', color: '#64748b' }
-        };
-
-        const SCOPES = "https://www.googleapis.com/auth/calendar.readonly";
-        const DISCOVERY_DOC = "https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest";
-
-        function CommandCenterV7() {
-            // --- STATES ---
-            const [tabs, setTabs] = useState(DEFAULT_TABS);
-            const [activeTabId, setActiveTabId] = useState('tab1');
-            const [currentDate, setCurrentDate] = useState(new Date());
-            const [events, setEvents] = useState([]); 
-            
-            // UI
-            const [modalMode, setModalMode] = useState(null); 
-            const [selectedEventId, setSelectedEventId] = useState(null);
-            const [eventFormData, setEventFormData] = useState({ title: '', date: '', time: '', type: 'general', notes: '', category: 'task', quadrant: 'q2' });
-            const [showSettings, setShowSettings] = useState(false);
-
-            // CALENDAR MANAGEMENT & SWIPE LOGIC
-            const [calendars, setCalendars] = useState({}); 
-            const fetchedMonths = useRef(new Set());
-            
-            // Variables para el SWIPE (Gestos táctiles)
-            const touchStartX = useRef(null);
-            const touchEndX = useRef(null);
-            const minSwipeDistance = 50; // Distancia mínima para considerar un swipe
-
-            // BIO
-            const [bioIndex, setBioIndex] = useState(0); 
-            const [showBioModal, setShowBioModal] = useState(false);
-
-            // GOOGLE (GIS)
-            const [isSyncing, setIsSyncing] = useState(false);
-            const [googleConfig, setGoogleConfig] = useState({ apiKey: '', clientId: '' });
-            const [isGoogleSignedIn, setIsGoogleSignedIn] = useState(false);
-            
-            const tokenClient = useRef(null);
-            const gapiInited = useRef(false);
-            const gisInited = useRef(false);
-
-            // DRAWER
-            const [drawerHeight, setDrawerHeight] = useState(40); 
-            const [isDragging, setIsDragging] = useState(false);
-            const dragStartY = useRef(0);
-            const dragStartHeight = useRef(0);
-            const [draggedEventId, setDraggedEventId] = useState(null);
-
-            const activeTab = tabs.find(t => t.id === activeTabId) || tabs[0];
-            const themeStyle = { '--theme-color': activeTab.color, '--theme-glow': `${activeTab.color}60` };
-            const bioOrganism = BIO_DB[bioIndex];
-
-            // --- INIT ---
-            useEffect(() => {
-                const savedEvents = localStorage.getItem('cmd_events_v7');
-                const savedTabs = localStorage.getItem('cmd_tabs_v7');
-                const savedConfig = localStorage.getItem('cmd_google_config');
-                const savedCalendars = localStorage.getItem('cmd_calendars_meta');
-                
-                if (savedEvents) {
-                    try { setEvents(JSON.parse(savedEvents)); } catch(e) { console.log("Reset events"); }
-                } else {
-                    setEvents([{ id: 1, title: 'INIT_SYSTEM_V7', date: new Date().toISOString().split('T')[0], time: '09:00', type: 'work', category: 'task', quadrant: 'q1' }]);
-                }
-                
-                if (savedTabs) setTabs(JSON.parse(savedTabs));
-                if (savedConfig) setGoogleConfig(JSON.parse(savedConfig));
-                if (savedCalendars) setCalendars(JSON.parse(savedCalendars));
-
-                if (window.gapi) window.gapi.load('client', initializeGapiClient);
-            }, []);
-
-            useEffect(() => { localStorage.setItem('cmd_events_v7', JSON.stringify(events)); }, [events]);
-            useEffect(() => { localStorage.setItem('cmd_tabs_v7', JSON.stringify(tabs)); }, [tabs]);
-            useEffect(() => { localStorage.setItem('cmd_google_config', JSON.stringify(googleConfig)); }, [googleConfig]);
-            useEffect(() => { localStorage.setItem('cmd_calendars_meta', JSON.stringify(calendars)); }, [calendars]);
-
-            // --- LAZY LOADING TRIGGER ---
-            useEffect(() => {
-                if (isGoogleSignedIn && googleConfig.apiKey) {
-                    const year = currentDate.getFullYear();
-                    const month = currentDate.getMonth();
-                    const key = `${year}-${month}`; 
-                    const nextMonthDate = new Date(year, month + 1, 1);
-                    const nextKey = `${nextMonthDate.getFullYear()}-${nextMonthDate.getMonth()}`;
-
-                    if (!fetchedMonths.current.has(key) || !fetchedMonths.current.has(nextKey)) {
-                        fetchGoogleEvents(currentDate);
-                    }
-                }
-            }, [currentDate, isGoogleSignedIn]);
-
-            // --- GOOGLE INTEGRATION ---
-            const initializeGapiClient = async () => {
-                if (!googleConfig.apiKey) return;
-                try {
-                    await window.gapi.client.init({ apiKey: googleConfig.apiKey, discoveryDocs: [DISCOVERY_DOC] });
-                    gapiInited.current = true;
-                } catch (err) { console.error("GAPI Init Error:", err); }
-            };
-
-            const initializeGisClient = () => {
-                if (!googleConfig.clientId) return;
-                try {
-                    tokenClient.current = window.google.accounts.oauth2.initTokenClient({
-                        client_id: googleConfig.clientId,
-                        scope: SCOPES,
-                        callback: async (resp) => {
-                            if (resp.error) { alert("Error Auth: " + JSON.stringify(resp)); return; }
-                            setIsGoogleSignedIn(true);
-                            fetchedMonths.current.clear(); 
-                            await fetchGoogleEvents(currentDate);
-                        },
-                    });
-                    gisInited.current = true;
-                } catch (err) { console.error("GIS Init Error:", err); }
-            };
-
-            const handleAuthClick = async () => {
-                if (!googleConfig.apiKey || !googleConfig.clientId) { alert("⚠️ FALTAN DATOS: Configura API Key y Client ID."); return; }
-                if (!gapiInited.current) await initializeGapiClient();
-                if (!gisInited.current) initializeGisClient();
-
-                setTimeout(() => {
-                    // AQUÍ ESTÁ EL CAMBIO CLAVE: prompt: 'select_account'
-                    if (tokenClient.current) tokenClient.current.requestAccessToken({ prompt: 'select_account' });
-                    else { initializeGisClient(); if(tokenClient.current) tokenClient.current.requestAccessToken({ prompt: 'select_account' }); }
-                }, 500);
-            };
-
-            const handleSignOutClick = () => {
-                const token = window.gapi.client.getToken();
-                if (token !== null) {
-                    window.google.accounts.oauth2.revoke(token.access_token);
-                    window.gapi.client.setToken('');
-                    setIsGoogleSignedIn(false);
-                    setEvents(prev => prev.filter(e => e.type !== 'google'));
-                    fetchedMonths.current.clear();
-                }
-            };
-
-            // --- OPTIMIZED FETCH ---
-            const fetchGoogleEvents = async (targetDate = new Date()) => {
-                setIsSyncing(true);
-                try {
-                    if (!window.gapi.client.calendar) {
-                        await window.gapi.client.load('calendar', 'v3');
-                    }
-                    const year = targetDate.getFullYear();
-                    const month = targetDate.getMonth();
-                    
-                    const timeMin = new Date(year, month - 1, 1).toISOString();
-                    const timeMax = new Date(year, month + 2, 0).toISOString();
-                    
-                    fetchedMonths.current.add(`${year}-${month}`);
-                    fetchedMonths.current.add(`${year}-${month+1}`);
-
-                    const calendarListResponse = await window.gapi.client.calendar.calendarList.list();
-                    const rawCalendars = calendarListResponse.result.items;
-
-                    const updatedCalendars = { ...calendars };
-                    rawCalendars.forEach(cal => {
-                        if (!updatedCalendars[cal.id]) {
-                            updatedCalendars[cal.id] = { id: cal.id, summary: cal.summary, color: cal.backgroundColor, visible: true };
-                        } else {
-                            updatedCalendars[cal.id].summary = cal.summary;
-                            updatedCalendars[cal.id].color = cal.backgroundColor;
-                        }
-                    });
-                    setCalendars(updatedCalendars);
-
-                    let allFetchedEvents = [];
-                    const promises = rawCalendars.map(async (cal) => {
-                        if (calendars[cal.id] && !calendars[cal.id].visible) return [];
-                        try {
-                            const response = await window.gapi.client.calendar.events.list({
-                                'calendarId': cal.id, 'timeMin': timeMin, 'timeMax': timeMax, 'showDeleted': false, 'singleEvents': true, 'maxResults': 2500, 'orderBy': 'startTime',
-                            });
-                            return response.result.items.map(item => {
-                                const calName = (cal.summary || '').toLowerCase();
-                                const title = (item.summary || '').toLowerCase();
-                                const desc = (item.description || '').toLowerCase();
-                                let category = 'task'; let quadrant = 'q2';
-                                if (calName.includes('fitness') || calName.includes('gym') || title.includes('gym')) { category = 'fitness'; quadrant = null; } 
-                                else if (calName.includes('clase') || title.includes('clase')) { category = 'class'; quadrant = null; }
-
-                                return {
-                                    id: item.id, calendarId: cal.id, title: item.summary || '(Sin título)',
-                                    date: item.start.dateTime ? item.start.dateTime.split('T')[0] : (item.start.date || ''),
-                                    time: item.start.dateTime ? item.start.dateTime.split('T')[1].substring(0,5) : '',
-                                    type: 'google', notes: item.description || '', category: category, quadrant: quadrant, googleColor: cal.backgroundColor 
-                                };
-                            });
-                        } catch (err) { return []; }
-                    });
-
-                    const results = await Promise.all(promises);
-                    allFetchedEvents = results.flat();
-
-                    setEvents(prevEvents => {
-                        const localEvents = prevEvents.filter(e => e.type !== 'google');
-                        const googleEventsOld = prevEvents.filter(e => e.type === 'google');
-                        const newEventsMap = new Map(allFetchedEvents.map(e => [e.id, e]));
-                        const keptGoogleEvents = googleEventsOld.filter(oldEv => {
-                            const inFetchRange = oldEv.date >= timeMin.split('T')[0] && oldEv.date <= timeMax.split('T')[0];
-                            if (inFetchRange) return newEventsMap.has(oldEv.id);
-                            return true;
-                        });
-                        const finalMap = new Map();
-                        localEvents.forEach(e => finalMap.set(e.id, e));
-                        keptGoogleEvents.forEach(e => finalMap.set(e.id, e));
-                        allFetchedEvents.forEach(e => finalMap.set(e.id, e));
-                        return Array.from(finalMap.values());
-                    });
-                } catch (err) { console.error(err); } finally { setIsSyncing(false); }
-            };
-
-            const toggleCalendarVisibility = (calId) => {
-                setCalendars(prev => ({ ...prev, [calId]: { ...prev[calId], visible: !prev[calId].visible } }));
-            };
-
-            // --- HELPER LOGIC ---
-            const days = useMemo(() => {
-                const year = currentDate.getFullYear();
-                const month = currentDate.getMonth();
-                const firstDay = new Date(year, month, 1);
-                const lastDay = new Date(year, month + 1, 0);
-                const d = [];
-                const startPadding = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1; 
-                for (let i = 0; i < startPadding; i++) d.push({ day: '', date: null, isPadding: true });
-                for (let i = 1; i <= lastDay.getDate(); i++) {
-                    d.push({ day: i, date: new Date(year, month, i).toISOString().split('T')[0], isPadding: false });
-                }
-                return d;
-            }, [currentDate]);
-
-            const { eventLookup, matrixEvents, upcomingEventsForDrawer } = useMemo(() => {
-                const lookup = {}; const matrix = []; const upcoming = []; const todayStr = new Date().toISOString().split('T')[0];
-                events.forEach(ev => {
-                    if (ev.type === 'google' && ev.calendarId && calendars[ev.calendarId] && calendars[ev.calendarId].visible === false) return;
-                    if (ev.date) { if (!lookup[ev.date]) lookup[ev.date] = []; lookup[ev.date].push(ev); }
-                    if (ev.category !== 'class' && ev.category !== 'fitness') matrix.push(ev);
-                    if (ev.date >= todayStr) upcoming.push(ev);
-                });
-                upcoming.sort((a, b) => { if (a.date !== b.date) return a.date.localeCompare(b.date); return (a.time || '00:00').localeCompare(b.time || '00:00'); });
-                Object.keys(lookup).forEach(key => { lookup[key].sort((a, b) => (a.time || '00:00').localeCompare(b.time || '00:00')); });
-                return { eventLookup: lookup, matrixEvents: matrix, upcomingEventsForDrawer: upcoming.slice(0, 60) };
-            }, [events, calendars]);
-
-            const handleWidgetClick = () => {
-                let newIndex = BIO_DB.length > 1 ? Math.floor(Math.random() * BIO_DB.length) : 0;
-                setBioIndex(newIndex); setShowBioModal(true);
-            };
-
-            // --- TOUCH SWIPE LOGIC (CALENDAR) ---
-            const onCalendarTouchStart = (e) => {
-                touchEndX.current = null;
-                touchStartX.current = e.targetTouches[0].clientX;
-            }
-            const onCalendarTouchMove = (e) => {
-                touchEndX.current = e.targetTouches[0].clientX;
-            }
-            const onCalendarTouchEnd = () => {
-                if (!touchStartX.current || !touchEndX.current) return;
-                const distance = touchStartX.current - touchEndX.current;
-                const isLeftSwipe = distance > minSwipeDistance;
-                const isRightSwipe = distance < -minSwipeDistance;
-
-                if (isLeftSwipe) {
-                    // Siguiente Mes
-                    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
-                }
-                if (isRightSwipe) {
-                    // Mes Anterior
-                    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
-                }
-            }
-
-            // --- DRAG (MATRIX) ---
-            const handleDragStart = (e, eventId) => { setDraggedEventId(eventId); e.dataTransfer.effectAllowed = "move"; };
-            const handleDragOver = (e) => { e.preventDefault(); e.currentTarget.classList.add('drag-over'); };
-            const handleDragLeave = (e) => { e.currentTarget.classList.remove('drag-over'); };
-            const handleDrop = (e, targetQuadrantId) => {
-                e.preventDefault(); e.currentTarget.classList.remove('drag-over');
-                if (!draggedEventId) return;
-                setEvents(prev => prev.map(ev => ev.id === draggedEventId ? { ...ev, quadrant: targetQuadrantId } : ev));
-                setDraggedEventId(null);
-            };
-
-            // --- DRAWER ---
-            const handleTouchStart = (e) => { setIsDragging(true); dragStartY.current = e.touches[0].clientY; dragStartHeight.current = drawerHeight; };
-            const handleTouchMove = (e) => {
-                if (!isDragging) return;
-                const deltaY = dragStartY.current - e.touches[0].clientY; 
-                const newHeight = Math.min(window.innerHeight - 50, Math.max(40, dragStartHeight.current + deltaY));
-                setDrawerHeight(newHeight);
-            };
-            const handleTouchEnd = () => {
-                setIsDragging(false); const screenH = window.innerHeight;
-                if (drawerHeight > screenH * 0.75) setDrawerHeight(screenH - 20);
-                else if (drawerHeight > screenH * 0.3) setDrawerHeight(screenH * 0.5);
-                else setDrawerHeight(40);
-            };
-
-            const eventsByDate = useMemo(() => {
-                const grouped = {};
-                upcomingEventsForDrawer.forEach(ev => { if (!grouped[ev.date]) grouped[ev.date] = []; grouped[ev.date].push(ev); });
-                return Object.keys(grouped).map(date => ({ date, items: grouped[date] }));
-            }, [upcomingEventsForDrawer]);
-
-            // --- RENDER ---
-            return React.createElement('div', { 
-                className: "h-screen w-screen bg-black text-slate-200 font-sans overflow-hidden flex flex-col relative",
-                style: themeStyle
-            }, [
-                // BG
-                React.createElement('div', { className: "absolute inset-0 pointer-events-none" }, 
-                    React.createElement('div', { className: "absolute inset-0 opacity-10", style: { backgroundImage: `radial-gradient(circle at 50% 0%, var(--theme-color), transparent 80%)` } }),
-                    React.createElement('div', { className: "absolute inset-0 opacity-20", style: { backgroundImage: `linear-gradient(#222 1px, transparent 1px), linear-gradient(90deg, #222 1px, transparent 1px)`, backgroundSize: '40px 40px' } })
-                ),
-
-                // 1. HEADER
-                React.createElement('header', { className: "relative z-20 flex flex-col pt-2 bg-black/90 border-b border-white/10 shrink-0" }, 
-                    React.createElement('div', { className: "flex overflow-x-auto no-scrollbar px-4 gap-2" }, 
-                        tabs.map(tab => {
-                            const Icon = ICON_MAP[tab.iconKey] || Menu;
-                            const isActive = activeTabId === tab.id;
-                            return React.createElement('button', {
-                                key: tab.id, onClick: () => setActiveTabId(tab.id),
-                                style: { borderColor: isActive ? tab.color : 'transparent', color: isActive ? tab.color : '#525252', backgroundColor: isActive ? `${tab.color}10` : 'transparent' },
-                                className: "flex items-center gap-2 px-6 py-4 rounded-t-lg text-sm font-black tracking-widest transition-all duration-300 border-b-4 hover:bg-white/5 uppercase shrink-0"
-                            }, [React.createElement(Icon, { size: 18, strokeWidth: 2.5 }), tab.label])
-                        })
-                    )
-                ),
-
-                // 2. MAIN
-                React.createElement('main', { className: "flex-1 px-2 pb-2 md:px-6 md:pb-8 overflow-hidden flex flex-col relative z-10" }, 
-                    React.createElement('div', { className: "py-4 flex flex-row items-center justify-between shrink-0" }, [
-                        React.createElement('div', { className: "flex flex-col md:flex-row md:items-baseline gap-2" }, [
-                            activeTabId === 'tab2' 
-                                ? React.createElement('h1', { className: "text-4xl md:text-5xl font-black text-white tracking-tighter m-0 leading-none" }, "MATRIZ TÁCTICA")
-                                : React.createElement('h1', { className: "text-4xl md:text-5xl font-black text-white tracking-tighter m-0 leading-none" }, currentDate.toLocaleString('es-ES', { month: 'long' }).toUpperCase()),
-                            activeTabId === 'tab1' && React.createElement('span', { className: "text-neutral-500 font-bold text-2xl" }, currentDate.getFullYear())
-                        ]),
-                        React.createElement('div', { className: "flex items-center gap-3" }, [
-                            activeTabId === 'tab1' && React.createElement('div', { className: "hidden md:flex items-center bg-neutral-900 border border-neutral-800 rounded-lg p-1 mr-2" }, [
-                                // FLECHAS ELIMINADAS AQUÍ, SOLO QUEDA HOY
-                                React.createElement('button', { onClick: () => setCurrentDate(new Date()), className: "px-4 py-1 text-xs font-bold text-neutral-400 hover:text-white" }, "HOY"),
-                            ]),
-                            
-                            // Botón de Sync
-                            React.createElement('button', { 
-                                onClick: isGoogleSignedIn ? () => fetchGoogleEvents(currentDate) : handleAuthClick,
-                                className: `flex items-center gap-2 px-3 py-2 rounded-lg border bg-neutral-900 active:scale-95 transition-all ${isSyncing ? 'border-[var(--theme-color)] text-[var(--theme-color)]' : 'border-neutral-800 text-neutral-400'}`
-                            }, [React.createElement(RefreshCw, { size: 18, className: isSyncing ? 'animate-spin' : '' }), React.createElement('span', { className: "hidden md:inline text-[10px] font-black" }, "SYNC")]),
-                            
-                            React.createElement('button', { onClick: () => setShowSettings(true), className: "p-2.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white hover:border-white transition-colors" }, React.createElement(Settings, { size: 20 }))
-                        ])
-                    ]),
-
-                    // VISTA TAB 2: MATRIZ DE TAREAS
-                    activeTabId === 'tab2' 
-                    ? React.createElement('div', { className: "flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-2 grid-rows-2 gap-2 md:gap-4 pb-20 md:pb-0" }, 
-                        ['q1', 'q2', 'q3', 'q4'].map(qKey => {
-                            const qData = QUADRANTS[qKey];
-                            const qEvents = matrixEvents.filter(e => (e.quadrant || 'q2') === qKey);
-                            return React.createElement('div', { 
-                                key: qKey, onDragOver: handleDragOver, onDragLeave: handleDragLeave, onDrop: (e) => handleDrop(e, qKey),
-                                className: "droppable-area bg-neutral-900/40 border border-neutral-800/60 rounded-xl p-3 flex flex-col relative overflow-hidden backdrop-blur-sm"
-                            }, [
-                                React.createElement('div', { className: "flex justify-between items-center mb-3 pb-2 border-b border-white/5" }, [
-                                    React.createElement('div', { className: "flex flex-col" }, [
-                                        React.createElement('h3', { className: "text-sm font-black tracking-widest", style: { color: qData.color } }, qData.title),
-                                        React.createElement('span', { className: "text-[9px] text-neutral-500 font-mono uppercase" }, qData.subtitle)
-                                    ]),
-                                    React.createElement('span', { className: "bg-neutral-800 text-neutral-400 text-[10px] font-bold px-2 py-0.5 rounded-full" }, qEvents.length)
-                                ]),
-                                React.createElement('div', { className: "flex-1 overflow-y-auto space-y-2 no-scrollbar" }, 
-                                    qEvents.map(ev => React.createElement('div', {
-                                        key: ev.id, draggable: true, onDragStart: (e) => handleDragStart(e, ev.id),
-                                        onClick: () => { setEventFormData({ ...ev }); setSelectedEventId(ev.id); setModalMode('edit'); },
-                                        className: "draggable-item bg-black/60 border border-neutral-800 hover:border-white/30 p-2.5 rounded-lg group transition-all active:scale-95"
-                                    }, [
-                                        React.createElement('div', { className: "flex items-start gap-2" }, [
-                                            React.createElement('div', { className: "mt-0.5 text-emerald-400" }, React.createElement(CheckCircle, { size: 14 })),
-                                            React.createElement('div', { className: "flex-1 min-w-0" }, [
-                                                React.createElement('p', { 
-                                                    className: "text-xs font-bold text-white truncate leading-tight rich-text",
-                                                    dangerouslySetInnerHTML: { __html: ev.title }
-                                                }),
-                                                React.createElement('div', { className: "flex items-center gap-2 mt-1" }, [
-                                                    ev.time && React.createElement('span', { className: "text-[9px] text-neutral-500 font-mono bg-neutral-900 px-1 rounded" }, ev.time),
-                                                    ev.date && React.createElement('span', { className: "text-[9px] text-neutral-600 font-mono" }, ev.date.substring(5))
-                                                ])
-                                            ]),
-                                            React.createElement(GripHorizontal, { size: 14, className: "text-neutral-700 group-hover:text-neutral-500" })
-                                        ])
-                                    ]))
-                                )
-                            ])
-                        })
-                      )
-                    // VISTA TAB 1: CALENDARIO (TACTIL ACTIVADO)
-                    : React.createElement('div', { 
-                        // EVENTOS TACTILES AQUI
-                        onTouchStart: onCalendarTouchStart,
-                        onTouchMove: onCalendarTouchMove,
-                        onTouchEnd: onCalendarTouchEnd,
-                        className: "flex-1 bg-neutral-900/30 backdrop-blur-sm rounded-xl border border-neutral-800 overflow-hidden flex flex-col relative shadow-[0_0_100px_rgba(0,0,0,0.5)]" 
-                    }, [
-                        React.createElement('div', { className: "grid grid-cols-7 bg-black border-b border-neutral-800" }, 
-                            ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'].map(day => React.createElement('div', { key: day, className: "py-2 text-center text-[10px] md:text-xs font-black tracking-[0.2em] text-neutral-600" }, day))
-                        ),
-                        React.createElement('div', { className: "grid grid-cols-7 flex-1 auto-rows-fr" }, 
-                            days.map((dayObj, index) => {
-                                if (dayObj.isPadding) return React.createElement('div', { key: index, className: "border-r border-b border-neutral-800/40 bg-neutral-950/40" });
-                                
-                                const dayEvents = dayObj.date ? (eventLookup[dayObj.date] || []) : [];
-                                const isToday = dayObj.date === new Date().toISOString().split('T')[0];
-                                
-                                // ESTILO NUEVO PARA EL DÍA ACTUAL (MÁS DESTACADO)
-                                const todayStyle = isToday ? {
-                                    backgroundColor: `${activeTab.color}33`, // Fondo del color del tema (semi-transparente)
-                                    borderColor: activeTab.color,       
-                                    color: '#ffffff', // Texto blanco para contraste
-                                    boxShadow: `0 0 20px ${activeTab.color}50`, // Resplandor fuerte
-                                    borderWidth: '2px', // Borde más grueso
-                                    fontWeight: '900',
-                                    transform: 'scale(1.02)', // Ligero pop
-                                    zIndex: 10
-                                } : {};
-
-                                return React.createElement('div', {
-                                    key: index,
-                                    onClick: () => { setEventFormData({ title: '', date: dayObj.date, time: '09:00', type: 'general', notes: '', category: 'task', quadrant: 'q2' }); setModalMode('create'); },
-                                    className: `relative border-r border-b border-neutral-800/40 p-1 md:p-2 transition-colors cursor-pointer group hover:bg-neutral-900`,
-                                    style: isToday ? todayStyle : {} // Aplicar estilo aquí al contenedor entero si se desea
-                                }, [
-                                    React.createElement('span', { 
-                                        className: `text-xs font-bold flex items-center justify-center w-6 h-6 rounded ${!isToday ? 'text-neutral-600 group-hover:text-white' : ''}`,
-                                        // Si prefieres que solo el numerito brille, mueve todayStyle aquí.
-                                        // Pero para "fondo de un dia seleccionado se vea mas", lo dejo en el div padre arriba si posible, 
-                                        // o para mantener consistencia con diseño anterior, lo aplico al numerito pero más fuerte:
-                                        style: isToday ? { backgroundColor: activeTab.color, color: 'black', boxShadow: `0 0 10px ${activeTab.color}` } : {}
-                                    }, dayObj.day),
-                                    React.createElement('div', { className: "mt-1 flex flex-col gap-1 overflow-y-auto max-h-[80px] no-scrollbar" }, 
-                                        dayEvents.map(event => {
-                                            const eventColor = event.googleColor || activeTab.color;
-                                            return React.createElement('div', {
-                                                key: event.id,
-                                                onClick: (e) => { e.stopPropagation(); setEventFormData({ ...event }); setSelectedEventId(event.id); setModalMode('edit'); },
-                                                className: `text-[9px] md:text-[10px] font-bold truncate px-1.5 py-0.5 rounded border-l-[3px] hover:brightness-125 transition-transform`,
-                                                style: { 
-                                                    borderLeftColor: eventColor,
-                                                    backgroundColor: `${eventColor}20`,
-                                                    color: '#e2e8f0' 
-                                                }
-                                            }, [
-                                                event.category === 'class' && React.createElement(GraduationCap, { size: 8, className: "inline mr-1" }),
-                                                event.category === 'fitness' && React.createElement(Dumbbell, { size: 8, className: "inline mr-1" }),
-                                                React.createElement('span', { 
-                                                    className: "rich-text",
-                                                    dangerouslySetInnerHTML: { __html: event.time ? `${event.time} ${event.title}` : event.title } 
-                                                })
-                                            ]);
-                                        })
-                                    )
-                                ])
-                            })
-                        )
-                    ])
-                ),
-
-                // 3. DRAWER
-                React.createElement('div', { 
-                    className: `fixed bottom-0 left-0 right-[60px] z-50 rounded-tr-2xl glass-panel flex flex-col ${!isDragging ? 'drawer-transition' : ''}`, 
-                    style: { height: `${drawerHeight}px` }
-                }, [
-                    React.createElement('div', { 
-                        className: "w-full h-8 flex items-center justify-center cursor-grab active:cursor-grabbing shrink-0 touch-none",
-                        onTouchStart: handleTouchStart, onTouchMove: handleTouchMove, onTouchEnd: handleTouchEnd
-                    }, React.createElement('div', { className: "w-16 h-1 bg-white/30 rounded-full" })),
-                    
-                    React.createElement('div', { className: "flex-1 overflow-x-auto p-4 flex gap-4 no-scrollbar" }, 
-                        eventsByDate.length > 0 ? eventsByDate.map(group => React.createElement('div', { key: group.date, className: "min-w-[220px] w-[220px] flex flex-col gap-2 opacity-90" }, [
-                            React.createElement('div', { className: "text-[10px] font-black text-[var(--theme-color)] uppercase tracking-widest border-b border-white/10 pb-1 mb-2" }, 
-                                new Date(group.date).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })
-                            ),
-                            group.items.map(ev => {
-                                const evColor = ev.googleColor || '#ffffff';
-                                return React.createElement('div', { 
-                                    key: ev.id,
-                                    onClick: (e) => { setEventFormData({ ...ev }); setSelectedEventId(ev.id); setModalMode('edit'); },
-                                    className: "bg-black/40 border-l-4 p-3 rounded hover:brightness-125 transition-colors cursor-pointer backdrop-blur-sm",
-                                    style: { borderLeftColor: evColor }
-                                }, [
-                                    React.createElement('div', { className: "flex justify-between items-start mb-1" }, [
-                                        React.createElement('span', { className: "text-xs font-bold text-white truncate flex items-center gap-1" }, [
-                                            ev.category === 'class' && React.createElement(GraduationCap, { size: 10, style: { color: evColor } }),
-                                            ev.category === 'fitness' && React.createElement(Dumbbell, { size: 10, style: { color: evColor } }),
-                                            React.createElement('span', { className: "rich-text", dangerouslySetInnerHTML: { __html: ev.title } })
-                                        ]),
-                                        React.createElement('span', { className: "text-[9px] text-neutral-400 font-mono" }, ev.time)
-                                    ]),
-                                    ev.notes && React.createElement('div', { 
-                                        className: "text-[9px] text-neutral-500 line-clamp-2 italic rich-text",
-                                        dangerouslySetInnerHTML: { __html: ev.notes }
-                                    })
-                                ]);
-                            })
-                        ])) : React.createElement('div', { className: "flex items-center justify-center w-full text-neutral-500 text-xs italic" }, "No hay eventos próximos (mostrando 60 días)")
-                    )
-                ]),
-
-                // 4. BIO
-                React.createElement('div', {
-                    onClick: handleWidgetClick,
-                    className: `fixed bottom-0 right-0 w-32 z-[60] flex items-center justify-center cursor-pointer hover:bg-black/50 active:scale-95 overflow-hidden rounded-tl-[30px] group shadow-[0_0_30px_rgba(0,0,0,0.8)] backdrop-blur-md ${!isDragging ? 'drawer-transition' : ''}`, 
-                    style: { 
-                        height: `${drawerHeight}px`, backgroundColor: 'rgba(0, 0, 0, 0.4)', 
-                        borderLeft: `2px solid ${activeTab.color}`, borderTop: `2px solid ${activeTab.color}`,
-                        boxShadow: `0 0 20px ${activeTab.color}40, inset 0 0 10px ${activeTab.color}10`
-                    } 
-                }, [
-                    React.createElement(Dna, { size: 28, className: "group-hover:animate-spin transition-transform duration-700", style: { color: activeTab.color } }),
-                    React.createElement('div', { className: "absolute inset-0 bg-gradient-to-tr from-transparent to-white/10 pointer-events-none" })
-                ]),
-
-                // 5. SETTINGS
-                showSettings && React.createElement('div', { className: "fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in" }, 
-                    React.createElement('div', { className: "w-full max-w-2xl h-[80vh] bg-neutral-900 border border-neutral-700 rounded-2xl overflow-hidden shadow-2xl flex flex-col" }, [
-                        React.createElement('div', { className: "p-4 bg-black flex justify-between items-center border-b border-neutral-800" }, [
-                            React.createElement('h3', { className: "font-bold text-white flex gap-2" }, [React.createElement(Settings, { size: 18 }), "CONFIGURACIÓN"]),
-                            React.createElement('button', { onClick: () => setShowSettings(false) }, React.createElement(X))
-                        ]),
-                        React.createElement('div', { className: "flex-1 overflow-y-auto p-6 space-y-6" }, [
-                            Object.keys(calendars).length > 0 && React.createElement('div', { className: "space-y-4" }, [
-                                React.createElement('h4', { className: "text-xs font-bold text-neutral-500 uppercase tracking-widest border-b border-neutral-800 pb-2" }, "Calendarios Detectados"),
-                                React.createElement('div', { className: "space-y-2" }, 
-                                    Object.values(calendars).map(cal => React.createElement('div', { key: cal.id, className: "flex items-center justify-between p-3 bg-black/50 border border-neutral-800 rounded-lg" }, [
-                                        React.createElement('div', { className: "flex items-center gap-3" }, [
-                                            React.createElement('div', { className: "w-3 h-3 rounded-full", style: { backgroundColor: cal.color } }),
-                                            React.createElement('span', { className: "text-sm font-bold text-white" }, cal.summary)
-                                        ]),
-                                        React.createElement('button', { onClick: () => toggleCalendarVisibility(cal.id), className: `p-2 rounded hover:bg-white/10 ${cal.visible ? 'text-green-400' : 'text-neutral-600'}` }, 
-                                            cal.visible ? React.createElement(Eye, { size: 18 }) : React.createElement(EyeOff, { size: 18 })
-                                        )
-                                    ]))
-                                )
-                            ]),
-                            React.createElement('div', { className: "space-y-4" }, [
-                                React.createElement('h4', { className: "text-xs font-bold text-neutral-500 uppercase tracking-widest border-b border-neutral-800 pb-2" }, "Estilo UI"),
-                                React.createElement('div', { className: "space-y-3" }, tabs.map(tab => React.createElement('div', { key: tab.id, className: "bg-black border border-neutral-800 p-3 rounded-lg flex items-center gap-4" }, [
-                                    React.createElement('input', { type: "color", value: tab.color, onChange: (e) => setTabs(tabs.map(t => t.id === tab.id ? {...t, color: e.target.value} : t)), className: "w-8 h-8 cursor-pointer rounded bg-transparent" }),
-                                    React.createElement('input', { className: "bg-transparent text-white font-bold text-sm w-full outline-none", value: tab.label, onChange: (e) => setTabs(tabs.map(t => t.id === tab.id ? {...t, label: e.target.value} : t)) })
-                                ])))
-                            ]),
-                            React.createElement('div', { className: "space-y-2 pt-4" }, [
-                                React.createElement('h4', { className: "text-xs font-bold text-neutral-500 uppercase tracking-widest border-b border-neutral-800 pb-2" }, "Google API (GIS V2)"),
-                                React.createElement('div', { className: "p-3 bg-black/50 rounded border border-neutral-800 space-y-2" }, [
-                                    React.createElement('input', { type: "password", placeholder: "Client ID", className: "w-full bg-transparent border-b border-neutral-700 text-xs p-1 text-white outline-none", value: googleConfig.clientId, onChange: (e) => setGoogleConfig({...googleConfig, clientId: e.target.value}) }),
-                                    React.createElement('input', { type: "password", placeholder: "API Key", className: "w-full bg-transparent border-b border-neutral-700 text-xs p-1 text-white outline-none", value: googleConfig.apiKey, onChange: (e) => setGoogleConfig({...googleConfig, apiKey: e.target.value}) }),
-                                    React.createElement('button', { onClick: isGoogleSignedIn ? handleSignOutClick : handleAuthClick, className: `w-full py-2 mt-2 rounded text-xs font-bold ${isGoogleSignedIn ? 'bg-red-900/30 text-red-400' : 'bg-blue-900/30 text-blue-400'}` }, isGoogleSignedIn ? "DESCONECTAR" : "CONECTAR Y SINCRONIZAR")
-                                ])
-                            ])
-                        ])
-                    ])
-                ),
-
-                // 6. MODAL FORM
-                modalMode && React.createElement('div', { className: "fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in" }, 
-                    React.createElement('div', { className: "w-full max-w-md bg-neutral-900 border border-neutral-700 rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]" }, [
-                        React.createElement('div', { className: "p-4 bg-black flex justify-between items-center border-b border-neutral-800 shrink-0" }, [
-                            React.createElement('span', { className: "font-bold text-white text-sm tracking-wider flex items-center gap-2" }, [
-                                modalMode === 'edit' ? React.createElement(Edit3, { size: 16 }) : React.createElement(Plus, { size: 16 }),
-                                modalMode === 'edit' ? "EDITAR" : "NUEVO"
-                            ]),
-                            React.createElement('button', { onClick: () => setModalMode(null) }, React.createElement(X, { size: 20 }))
-                        ]),
-                        React.createElement('div', { className: "p-5 space-y-4 overflow-y-auto" }, [
-                            React.createElement('div', { className: "flex gap-2 mb-2" }, 
-                                [ { id: 'task', label: 'TAREA', icon: CheckSquare }, { id: 'class', label: 'CLASE', icon: GraduationCap }, { id: 'fitness', label: 'FITNESS', icon: Dumbbell } ].map(cat => 
-                                React.createElement('button', { key: cat.id, onClick: () => setEventFormData({...eventFormData, category: cat.id}), className: `flex-1 py-2 rounded border text-[10px] md:text-xs font-black ${eventFormData.category === cat.id ? 'bg-[var(--theme-color)] text-black' : 'text-neutral-500 border-neutral-700'}` }, [React.createElement(cat.icon, { size: 14, className: "inline mr-1" }), cat.label])
-                            )),
-                            React.createElement('input', { autoFocus: true, type: "text", placeholder: "Título...", className: "w-full bg-black border border-neutral-700 rounded p-3 text-white font-bold outline-none", value: eventFormData.title, onChange: (e) => setEventFormData({...eventFormData, title: e.target.value}) }),
-                            (eventFormData.category !== 'class' && eventFormData.category !== 'fitness') && React.createElement('div', { className: "grid grid-cols-2 gap-2" }, Object.values(QUADRANTS).map(q => React.createElement('button', { key: q.id, onClick: () => setEventFormData({...eventFormData, quadrant: q.id}), className: `p-2 rounded border text-[10px] font-bold uppercase ${eventFormData.quadrant === q.id ? 'bg-white/10 text-white' : 'text-neutral-600 border-neutral-800'}` }, q.title))),
-                            React.createElement('div', { className: "grid grid-cols-2 gap-3" }, [
-                                React.createElement('input', { type: "date", className: "w-full bg-black border border-neutral-700 rounded p-2 text-sm text-white", value: eventFormData.date, onChange: (e) => setEventFormData({...eventFormData, date: e.target.value}) }),
-                                React.createElement('input', { type: "time", className: "w-full bg-black border border-neutral-700 rounded p-2 text-sm text-white", value: eventFormData.time, onChange: (e) => setEventFormData({...eventFormData, time: e.target.value}) }),
-                            ]),
-                            React.createElement('textarea', { rows: 4, className: "w-full bg-black border border-neutral-700 rounded p-3 text-sm text-neutral-300 outline-none resize-none", placeholder: "Notas...", value: eventFormData.notes, onChange: (e) => setEventFormData({...eventFormData, notes: e.target.value}) }),
-                            React.createElement('div', { className: "pt-2 flex gap-3" }, [
-                                modalMode === 'edit' && React.createElement('button', { onClick: () => { setEvents(events.filter(ev => ev.id !== selectedEventId)); setModalMode(null); }, className: "p-3 rounded bg-red-900/20 text-red-500 border border-red-900" }, React.createElement(Trash2, { size: 18 })),
-                                React.createElement('button', { onClick: () => { if (!eventFormData.title) return; if (modalMode === 'create') setEvents([...events, { id: Date.now(), ...eventFormData }]); else setEvents(events.map(ev => ev.id === selectedEventId ? { ...ev, ...eventFormData } : ev)); setModalMode(null); }, className: "flex-1 py-3 rounded bg-[var(--theme-color)] text-black font-black uppercase" }, "CONFIRMAR")
-                            ])
-                        ])
-                    ])
-                ),
-
-                // 7. BIO MODAL
-                showBioModal && bioOrganism && React.createElement('div', { className: "fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in" }, 
-                    React.createElement('div', { className: "w-full max-w-3xl rounded-lg overflow-hidden flex flex-col md:flex-row relative shadow-2xl", style: { backgroundColor: 'rgba(10, 10, 10, 0.8)', borderColor: activeTab.color, borderWidth: '1px' } }, [
-                        React.createElement('button', { onClick: () => setShowBioModal(false), style: { color: activeTab.color }, className: "absolute top-4 right-4 z-50 p-2 rounded-full hover:brightness-125" }, React.createElement(X)),
-                        React.createElement('div', { className: "w-full md:w-1/2 h-64 md:h-auto relative bio-scan overflow-hidden bg-black" }, [
-                            React.createElement('img', { src: bioOrganism.img, className: "w-full h-full object-cover opacity-80", onError: (e) => { e.target.src = "https://images.unsplash.com/photo-1530026405186-ed1f139313f8?auto=format&fit=crop&q=80&w=800"; } }),
-                            React.createElement('div', { className: "absolute bottom-0 left-0 p-4 bg-gradient-to-t from-black to-transparent w-full" }, React.createElement('h2', { className: "text-2xl font-black italic tracking-tighter text-white" }, bioOrganism.name.toUpperCase()))
-                        ]),
-                        React.createElement('div', { className: "w-full md:w-1/2 p-6 md:p-8 flex flex-col justify-center space-y-6 relative" }, [
-                            React.createElement('div', { className: "absolute top-0 right-0 p-2 opacity-10", style: { color: activeTab.color } }, React.createElement(Microscope, { size: 100 })),
-                            React.createElement('div', { className: "space-y-3 border-l-4 pl-4", style: { borderLeftColor: activeTab.color } }, [
-                                React.createElement('p', { className: "text-xs font-mono uppercase tracking-widest", style: { color: activeTab.color } }, "CLASIFICACIÓN TAXONÓMICA"),
-                                React.createElement('p', { className: "text-lg font-serif italic text-white" }, bioOrganism.scientific),
-                            ]),
-                            React.createElement('p', { className: "text-sm text-neutral-300" }, bioOrganism.desc),
-                            React.createElement('div', { className: "p-4 rounded-lg border", style: { backgroundColor: `${activeTab.color}15`, borderColor: `${activeTab.color}40` } }, [
-                                React.createElement('div', { className: "flex items-center gap-2 mb-2" }, [ React.createElement(Activity, { size: 14, style: { color: activeTab.color } }), React.createElement('span', { className: "text-[10px] font-black uppercase", style: { color: activeTab.color } }, "DATO VITAL") ]),
-                                React.createElement('p', { className: "text-xs text-white opacity-80" }, bioOrganism.fact)
-                            ])
-                        ])
-                    ])
-                )
-            ]);
+    const ls=(k,v)=>v?localStorage.setItem(k,JSON.stringify(v)):JSON.parse(localStorage.getItem(k));
+    useEffect(()=>{
+        const e=ls('ev_v8'),t=ls('tb_v8'),g=ls('gc_v8'),c=ls('cm_v8');
+        if(e)try{SE(e)}catch(x){}else SE([{id:1,title:'INIT_V8',date:new Date().toISOString().split('T')[0],time:'09:00',type:'work',cat:'task',quad:'q1'}]);
+        if(t)ST(t);if(g)SG(g);if(c)SC(c);
+        if(window.gapi)window.gapi.load('client',initGapi);
+    },[]);
+    useEffect(()=>{ls('ev_v8',evs);ls('tb_v8',tabs);ls('gc_v8',gCfg);ls('cm_v8',cals)},[evs,tabs,gCfg,cals]);
+    useEffect(()=>{
+        if(gSign&&gCfg.apiKey){
+            const k=`${date.getFullYear()}-${date.getMonth()}`,nk=`${date.getFullYear()}-${date.getMonth()+1}`;
+            if(!fM.current.has(k)||!fM.current.has(nk)) fetchG(date);
         }
+    },[date,gSign]);
 
-        const root = createRoot(document.getElementById('root'));
-        root.render(React.createElement(CommandCenterV7));
-    </script>
+    const initGapi=async()=>{if(gCfg.apiKey){await window.gapi.client.init({apiKey:gCfg.apiKey,discoveryDocs:["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"]});gI.current=true}};
+    const initGis=()=>{if(gCfg.clientId){tC.current=window.google.accounts.oauth2.initTokenClient({client_id:gCfg.clientId,scope:"https://www.googleapis.com/auth/calendar.readonly",callback:async(r)=>{if(!r.error){SGS(true);fM.current.clear();await fetchG(date)}}});gsI.current=true}};
+    const auth=async()=>{if(!gCfg.apiKey||!gCfg.clientId)return alert("Faltan Credenciales");if(!gI.current)await initGapi();if(!gsI.current)initGis();setTimeout(()=>tC.current.requestAccessToken({prompt:'select_account'}),500)};
     
-    <script>
-      if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); }); }
-    </script>
+    const fetchG=async(td=new Date())=>{
+        SSy(true);try{
+            if(!window.gapi.client.calendar) await window.gapi.client.load('calendar','v3');
+            const y=td.getFullYear(),m=td.getMonth(),min=new Date(y,m-1,1).toISOString(),max=new Date(y,m+2,0).toISOString();
+            fM.current.add(`${y}-${m}`);fM.current.add(`${y}-${m+1}`);
+            const cl=await window.gapi.client.calendar.calendarList.list(), rC=cl.result.items, uC={...cals};
+            rC.forEach(c=>{if(!uC[c.id])uC[c.id]={id:c.id,summary:c.summary,color:c.backgroundColor,visible:true};else{uC[c.id].summary=c.summary;uC[c.id].color=c.backgroundColor}});
+            SC(uC);
+            const all=await Promise.all(rC.map(async c=>{
+                if(cals[c.id]&&!cals[c.id].visible)return[];
+                try{
+                    const r=await window.gapi.client.calendar.events.list({calendarId:c.id,timeMin:min,timeMax:max,singleEvents:true,maxResults:999,orderBy:'startTime'});
+                    return r.result.items.map(i=>{
+                        const t=(i.summary||'').toLowerCase(), cn=(c.summary||'').toLowerCase();
+                        let cat='task',q='q2'; if(cn.includes('fit')||t.includes('gym')){cat='fitness';q=null}else if(cn.includes('clase')||t.includes('clase')){cat='class';q=null}
+                        return {id:i.id,calId:c.id,title:i.summary||'(No Title)',date:i.start.dateTime?.split('T')[0]||i.start.date,time:i.start.dateTime?.split('T')[1].substring(0,5)||'',type:'google',notes:i.description||'',cat,quad:q,gCol:c.backgroundColor}
+                    })
+                }catch(e){return[]}
+            }));
+            const flat=all.flat(), map=new Map(flat.map(e=>[e.id,e]));
+            SE(p=>{
+                const loc=p.filter(e=>e.type!=='google'), goog=p.filter(e=>e.type==='google' && (e.date<min.split('T')[0]||e.date>max.split('T')[0]));
+                const merged=new Map(); loc.forEach(e=>merged.set(e.id,e)); goog.forEach(e=>merged.set(e.id,e)); flat.forEach(e=>merged.set(e.id,e));
+                return Array.from(merged.values())
+            });
+        }catch(e){console.error(e)}finally{SSy(false)};
+    };
+
+    const days=useMemo(()=>{
+        const y=date.getFullYear(),m=date.getMonth(),d=[],last=new Date(y,m+1,0).getDate(),pad=(new Date(y,m,1).getDay()||7)-1;
+        for(let i=0;i<pad;i++)d.push({d:'',dt:null}); for(let i=1;i<=last;i++)d.push({d:i,dt:new Date(y,m,i).toISOString().split('T')[0]});
+        return d;
+    },[date]);
+
+    const {lk,mx,up}=useMemo(()=>{
+        const l={},m=[],u=[],now=new Date().toISOString().split('T')[0];
+        evs.forEach(e=>{
+            if(e.type==='google'&&cals[e.calId]&&!cals[e.calId].visible)return;
+            if(e.date){if(!l[e.date])l[e.date]=[];l[e.date].push(e)}
+            if(e.cat!=='class'&&e.cat!=='fitness')m.push(e);
+            if(e.date>=now)u.push(e);
+        });
+        u.sort((a,b)=>a.date.localeCompare(b.date)||(a.time||'').localeCompare(b.time||''));
+        Object.keys(l).forEach(k=>l[k].sort((a,b)=>(a.time||'').localeCompare(b.time||'')));
+        return {lk:l,mx:m,up:u.slice(0,60)};
+    },[evs,cals]);
+
+    const calTouch={
+        s:e=>{tE.current=null;tS.current=e.targetTouches[0].clientX},
+        e:()=>{if(!tS.current||!tE.current)return; const d=tS.current-tE.current;
+        if(Math.abs(d)>50) SD(new Date(date.getFullYear(),date.getMonth()+(d>0?1:-1),1))}
+    };
+    const drwTouch={
+        s:e=>{SDr(true);dY.current=e.touches[0].clientY;dH0.current=dH},
+        m:e=>{if(drag) SH(Math.min(window.innerHeight-50,Math.max(40,dH0.current+(dY.current-e.touches[0].clientY))))},
+        e:()=>{SDr(false);const h=window.innerHeight; SH(dH>h*.75?h-20:dH>h*.3?h*.5:40)}
+    };
+
+    const saveEv=()=>{
+        const pl={...form,id:modal==='c'?Date.now():selId};
+        SE(modal==='c'?[...evs,pl]:evs.map(e=>e.id===selId?pl:e)); SM(null);
+    };
+
+    // UI RENDERS
+    const Icon=(n,s=18,c)=>h(ICONS[n]||L.Circle,{size:s,className:c});
+    return h('div',{className:"h-screen w-screen bg-black text-slate-200 font-sans overflow-hidden flex flex-col relative",style:thStyle},
+        h('div',{className:"absolute inset-0 pointer-events-none"},
+            h('div',{className:"absolute inset-0 opacity-10",style:{backgroundImage:`radial-gradient(circle at 50% 0%,var(--theme-color),transparent 80%)`}}),
+            h('div',{className:"absolute inset-0 opacity-20",style:{backgroundImage:`linear-gradient(#222 1px,transparent 1px),linear-gradient(90deg,#222 1px,transparent 1px)`,backgroundSize:'40px 40px'}})
+        ),
+        // HEADER
+        h('header',{className:"z-20 flex flex-col pt-2 bg-black/90 border-b border-white/10 shrink-0"},
+            h('div',{className:"flex overflow-x-auto no-scrollbar px-4 gap-2"}, tabs.map(t=>
+                h('button',{key:t.id,onClick:()=>SA(t.id),style:{borderColor:act===t.id?t.c:'transparent',color:act===t.id?t.c:'#525252',backgroundColor:act===t.id?t.c+'10':'transparent'},className:"flex items-center gap-2 px-6 py-4 rounded-t-lg text-sm font-black tracking-widest transition-all border-b-4 hover:bg-white/5 uppercase shrink-0"},Icon(t.i),t.l)
+            ))
+        ),
+        // MAIN
+        h('main',{className:"flex-1 px-2 pb-2 md:px-6 md:pb-8 overflow-hidden flex flex-col z-10"},
+            h('div',{className:"py-4 flex justify-between shrink-0"},
+                h('div',{className:"flex items-baseline gap-2"},
+                    h('h1',{className:"text-4xl md:text-5xl font-black text-white tracking-tighter leading-none"}, act==='t2'?"MATRIZ":date.toLocaleString('es-ES',{month:'long'}).toUpperCase()),
+                    act==='t1'&&h('span',{className:"text-neutral-500 font-bold text-2xl"},date.getFullYear())
+                ),
+                h('div',{className:"flex gap-3"},
+                    act==='t1'&&h('button',{onClick:()=>SD(new Date()),className:"hidden md:block px-4 py-1 text-xs font-bold text-neutral-400 border border-neutral-800 rounded-lg"},"HOY"),
+                    h('button',{onClick:gSign?()=>fetchG(date):auth,className:`flex items-center gap-2 px-3 py-2 rounded-lg border bg-neutral-900 active:scale-95 ${sync?'border-[var(--theme-color)] text-[var(--theme-color)]':'border-neutral-800 text-neutral-400'}`},Icon('RefreshCw',18,sync?'animate-spin':''),h('span',{className:"hidden md:inline text-[10px] font-black"},"SYNC")),
+                    h('button',{onClick:()=>SS(true),className:"p-2.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-400"},Icon('Settings',20))
+                )
+            ),
+            act==='t2' // MATRIX
+            ? h('div',{className:"flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-2 grid-rows-2 gap-2 pb-20 md:pb-0"}, Object.keys(Q).map(k=>
+                h('div',{key:k,onDragOver:e=>{e.preventDefault();e.currentTarget.classList.add('drag-over')},onDragLeave:e=>e.currentTarget.classList.remove('drag-over'),onDrop:e=>{e.preventDefault();e.currentTarget.classList.remove('drag-over');if(dragId)SE(prev=>prev.map(x=>x.id===dragId?{...x,quad:k}:x));SDId(null)},className:"bg-neutral-900/40 border border-neutral-800/60 rounded-xl p-3 flex flex-col relative overflow-hidden backdrop-blur-sm"},
+                    h('div',{className:"flex justify-between items-center mb-3 pb-2 border-b border-white/5"},
+                        h('div',{},h('h3',{className:"text-sm font-black tracking-widest",style:{color:Q[k].c}},Q[k].t),h('span',{className:"text-[9px] text-neutral-500 font-mono uppercase"},Q[k].s)),
+                        h('span',{className:"bg-neutral-800 text-neutral-400 text-[10px] font-bold px-2 py-0.5 rounded-full"},mx.filter(e=>(e.quad||'q2')===k).length)
+                    ),
+                    h('div',{className:"flex-1 overflow-y-auto space-y-2 no-scrollbar"}, mx.filter(e=>(e.quad||'q2')===k).map(e=>
+                        h('div',{key:e.id,draggable:true,onDragStart:ev=>{SDId(e.id);ev.dataTransfer.effectAllowed="move"},onClick:()=>{SF({...e});SSI(e.id);SM('e')},className:"bg-black/60 border border-neutral-800 hover:border-white/30 p-2.5 rounded-lg group transition-all active:scale-95"},
+                            h('div',{className:"flex items-start gap-2"},h('div',{className:"mt-0.5 text-emerald-400"},Icon('CheckCircle',14)),h('div',{className:"flex-1 min-w-0"},h('p',{className:"text-xs font-bold text-white truncate rich",dangerouslySetInnerHTML:{__html:e.title}})),Icon('GripHorizontal',14,"text-neutral-700"))
+                        )
+                    ))
+                )
+            )) // CALENDAR
+            : h('div',{onTouchStart:calTouch.s,onTouchMove:e=>tE.current=e.targetTouches[0].clientX,onTouchEnd:calTouch.e,className:"flex-1 bg-neutral-900/30 backdrop-blur-sm rounded-xl border border-neutral-800 overflow-hidden flex flex-col relative shadow-[0_0_100px_rgba(0,0,0,0.5)]"},
+                h('div',{className:"grid grid-cols-7 bg-black border-b border-neutral-800"},['L','M','X','J','V','S','D'].map(d=>h('div',{key:d,className:"py-2 text-center text-[10px] md:text-xs font-black tracking-[0.2em] text-neutral-600"},d))),
+                h('div',{className:"grid grid-cols-7 flex-1 auto-rows-fr"}, days.map((d,i)=>{
+                    const isT=d.dt===new Date().toISOString().split('T')[0], evs=d.dt?(lk[d.dt]||[]):[];
+                    return h('div',{key:i,onClick:()=>{if(d.dt){SF({title:'',date:d.dt,time:'09:00',type:'gen',notes:'',cat:'task',quad:'q2'});SM('c')}},className:`relative border-r border-b border-neutral-800/40 p-1 md:p-2 cursor-pointer group hover:bg-neutral-900`,style:isT?{background:curTab.c+'33',borderColor:curTab.c,boxShadow:`0 0 20px ${curTab.c}50`,zIndex:10,fontWeight:900}:null},
+                        d.d&&h('span',{className:`text-xs font-bold flex items-center justify-center w-6 h-6 rounded ${!isT?'text-neutral-600 group-hover:text-white':''}`,style:isT?{background:curTab.c,color:'black'}:null},d.d),
+                        h('div',{className:"mt-1 flex flex-col gap-1 overflow-y-auto max-h-[80px] no-scrollbar"},evs.map(e=>
+                            h('div',{key:e.id,onClick:ev=>{ev.stopPropagation();SF({...e});SSI(e.id);SM('e')},className:"text-[9px] md:text-[10px] font-bold truncate px-1.5 py-0.5 rounded border-l-[3px] hover:brightness-125",style:{borderLeftColor:e.gCol||curTab.c,backgroundColor:(e.gCol||curTab.c)+'20',color:'#e2e8f0'}},
+                                e.cat==='class'&&Icon('GraduationCap',8,"inline mr-1"),e.cat==='fitness'&&Icon('Dumbbell',8,"inline mr-1"),e.time+' '+e.title
+                            )
+                        ))
+                    )
+                }))
+            )
+        ),
+        // DRAWER
+        h('div',{className:`fixed bottom-0 left-0 right-[60px] z-50 rounded-tr-2xl glass flex flex-col ${!drag?'tr-h':''}`,style:{height:dH}},
+            h('div',{className:"w-full h-8 flex justify-center items-center cursor-grab touch-none",onTouchStart:drwTouch.s,onTouchMove:drwTouch.m,onTouchEnd:drwTouch.e},h('div',{className:"w-16 h-1 bg-white/30 rounded-full"})),
+            h('div',{className:"flex-1 overflow-x-auto p-4 flex gap-4 no-scrollbar"}, up.length?up.map(e=>
+                h('div',{key:e.id,onClick:()=>{SF({...e});SSI(e.id);SM('e')},className:"min-w-[220px] w-[220px] bg-black/40 border-l-4 p-3 rounded hover:brightness-125 cursor-pointer backdrop-blur-sm",style:{borderLeftColor:e.gCol||'white'}},
+                    h('div',{className:"flex justify-between items-start mb-1"},h('span',{className:"text-xs font-bold text-white truncate"},e.title),h('span',{className:"text-[9px] text-neutral-400 font-mono"},new Date(e.date).toLocaleDateString('es',{day:'numeric',month:'short'})+' '+e.time)),
+                    e.notes&&h('div',{className:"text-[9px] text-neutral-500 line-clamp-2 italic",dangerouslySetInnerHTML:{__html:e.notes}})
+                )
+            ):h('div',{className:"w-full text-center text-neutral-500 text-xs italic"},"No upcoming events"))
+        ),
+        // BIO WIDGET
+        h('div',{onClick:()=>{SB(BIO.length>1?Math.floor(Math.random()*BIO.length):0);SBS(true)},className:`fixed bottom-0 right-0 w-32 z-[60] flex items-center justify-center cursor-pointer hover:bg-black/50 overflow-hidden rounded-tl-[30px] group shadow-[0_0_30px_#000c] backdrop-blur-md ${!drag?'tr-h':''}`,style:{height:dH,background:'#0006',borderLeft:`2px solid ${curTab.c}`,borderTop:`2px solid ${curTab.c}`}},
+            Icon('Dna',28,`group-hover:animate-spin transition-transform duration-700 text-[${curTab.c}]`)
+        ),
+        // MODALS
+        (sets||modal||bioShow)&&h('div',{className:"fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in"},
+            sets?h('div',{className:"w-full max-w-2xl h-[80vh] bg-neutral-900 border border-neutral-700 rounded-2xl overflow-hidden shadow-2xl flex flex-col"},
+                h('div',{className:"p-4 bg-black flex justify-between border-b border-neutral-800"},h('h3',{className:"font-bold text-white"},"CONFIG"),h('button',{onClick:()=>SS(false)},Icon('X'))),
+                h('div',{className:"p-6 space-y-6 overflow-y-auto"},
+                    h('div',{},h('h4',{className:"text-xs font-bold text-neutral-500 uppercase border-b border-neutral-800 pb-2"},"Calendarios"),Object.values(cals).map(c=>h('div',{key:c.id,className:"flex justify-between p-3 border-b border-neutral-800"},h('span',{style:{color:c.color}},c.summary),h('button',{onClick:()=>SC(p=>({...p,[c.id]:{...p[c.id],visible:!p[c.id].visible}}))},Icon(c.visible?'Eye':'EyeOff'))))),
+                    h('div',{},h('h4',{className:"text-xs font-bold text-neutral-500 uppercase border-b border-neutral-800 pb-2"},"Estilo"),tabs.map(t=>h('div',{key:t.id,className:"flex items-center gap-4 mt-2"},h('input',{type:'color',value:t.c,onChange:e=>ST(tabs.map(tb=>tb.id===t.id?{...tb,c:e.target.value}:tb)),className:"w-8 h-8 bg-transparent"}),h('input',{value:t.l,onChange:e=>ST(tabs.map(tb=>tb.id===t.id?{...tb,l:e.target.value}:tb)),className:"bg-transparent text-white font-bold"})))),
+                    h('div',{},h('h4',{className:"text-xs font-bold text-neutral-500 uppercase border-b border-neutral-800 pb-2"},"Google API"),h('input',{placeholder:"Client ID",value:gCfg.clientId,onChange:e=>SG({...gCfg,clientId:e.target.value}),className:"w-full bg-black border-b border-neutral-700 text-xs p-2 text-white outline-none mt-2"}),h('input',{placeholder:"API Key",value:gCfg.apiKey,onChange:e=>SG({...gCfg,apiKey:e.target.value}),className:"w-full bg-black border-b border-neutral-700 text-xs p-2 text-white outline-none mt-2"}))
+                )
+            ):bioShow?h('div',{className:"w-full max-w-3xl rounded-lg overflow-hidden flex flex-col md:flex-row relative shadow-2xl bg-neutral-900 border",style:{borderColor:curTab.c}},
+                h('button',{onClick:()=>SBS(false),className:"absolute top-4 right-4 z-50 text-white"},Icon('X')),
+                h('div',{className:"w-full md:w-1/2 h-64 md:h-auto relative scan overflow-hidden bg-black"},h('img',{src:BIO[bioIx].img,className:"w-full h-full object-cover opacity-80"}),h('div',{className:"absolute bottom-0 left-0 p-4 bg-gradient-to-t from-black w-full"},h('h2',{className:"text-2xl font-black italic text-white"},BIO[bioIx].name))),
+                h('div',{className:"w-full md:w-1/2 p-6 flex flex-col justify-center space-y-4"},h('p',{className:"text-lg italic text-white"},BIO[bioIx].sci),h('p',{className:"text-sm text-neutral-300"},BIO[bioIx].desc),h('div',{className:"p-3 rounded border",style:{borderColor:curTab.c,background:curTab.c+'15'}},h('p',{className:"text-xs text-white"},BIO[bioIx].fact)))
+            ):h('div',{className:"w-full max-w-md bg-neutral-900 border border-neutral-700 rounded-2xl overflow-hidden shadow-2xl flex flex-col"},
+                h('div',{className:"p-4 bg-black flex justify-between border-b border-neutral-800"},h('span',{className:"font-bold text-white"},modal==='e'?'EDITAR':'NUEVO'),h('button',{onClick:()=>SM(null)},Icon('X'))),
+                h('div',{className:"p-5 space-y-4"},
+                    h('div',{className:"flex gap-2"},[{id:'task',l:'TAREA',i:'CheckSquare'},{id:'class',l:'CLASE',i:'GraduationCap'},{id:'fitness',l:'GYM',i:'Dumbbell'}].map(c=>h('button',{key:c.id,onClick:()=>SF({...form,cat:c.id}),className:`flex-1 py-2 rounded border text-xs font-black ${form.cat===c.id?'bg-[var(--theme-color)] text-black':'text-neutral-500 border-neutral-700'}`},Icon(c.i,12,"inline mr-1"),c.l))),
+                    h('input',{autoFocus:true,placeholder:"Título...",className:"w-full bg-black border border-neutral-700 rounded p-3 text-white font-bold outline-none",value:form.title,onChange:e=>SF({...form,title:e.target.value})}),
+                    !['class','fitness'].includes(form.cat)&&h('div',{className:"grid grid-cols-2 gap-2"},Object.values(Q).map(q=>h('button',{key:q.t,onClick:()=>SF({...form,quad:Object.keys(Q).find(k=>Q[k]===q)}),className:`p-2 rounded border text-[10px] font-bold uppercase ${form.quad===Object.keys(Q).find(k=>Q[k]===q)?'bg-white/10 text-white':'text-neutral-600 border-neutral-800'}`},q.t))),
+                    h('div',{className:"grid grid-cols-2 gap-3"},h('input',{type:'date',className:"bg-black border border-neutral-700 rounded p-2 text-white",value:form.date,onChange:e=>SF({...form,date:e.target.value})}),h('input',{type:'time',className:"bg-black border border-neutral-700 rounded p-2 text-white",value:form.time,onChange:e=>SF({...form,time:e.target.value})})),
+                    h('textarea',{rows:3,className:"w-full bg-black border border-neutral-700 rounded p-3 text-sm text-neutral-300 outline-none",placeholder:"Notas...",value:form.notes,onChange:e=>SF({...form,notes:e.target.value})}),
+                    h('div',{className:"flex gap-3"},modal==='e'&&h('button',{onClick:()=>{SE(evs.filter(e=>e.id!==selId));SM(null)},className:"p-3 rounded bg-red-900/20 text-red-500 border border-red-900"},Icon('Trash2')),h('button',{onClick:saveEv,className:"flex-1 py-3 rounded bg-[var(--theme-color)] text-black font-black"},"CONFIRMAR"))
+                )
+            )
+        )
+    );
+}
+const root=createRoot(document.getElementById('root'));root.render(h(App));
+</script>
+<script>if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js'));</script>
 </body>
 </html>
