@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V8.8:Clean test</title>
+<title>CMD V8.9:TouchNative</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif']}}}}</script>
@@ -23,6 +23,15 @@ body{background:#000;touch-action:none;overscroll-behavior:none;user-select:none
 .anim-n { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 .anim-p { animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 .fade-content { transition: opacity 0.2s ease-out; }
+
+/* FIX DEFINITIVO PARA TABLETS: Solo aplica hover si hay ratón fisico */
+@media (hover: hover) {
+    .safe-hover:hover { background-color: rgba(23, 23, 23, 1); } /* neutral-900 */
+    .safe-bright:hover { filter: brightness(1.25); }
+    .safe-border:hover { border-color: rgba(255, 255, 255, 0.3); }
+}
+/* Feedback táctil nativo */
+.touch-feedback:active { background-color: rgba(23, 23, 23, 1); transform: scale(0.98); }
 </style>
 </head>
 <body><div id="root"></div>
@@ -185,8 +194,7 @@ function App(){
         // HEADER
         h('header',{className:"z-20 flex flex-col pt-2 bg-black/90 border-b border-white/10 shrink-0"},
             h('div',{className:"flex overflow-x-auto no-scrollbar px-4 gap-2"}, tabs.map(t=>
-                // FIX: md:hover para evitar hover sticky en movil
-                h('button',{key:t.id,onClick:()=>SA(t.id),style:{borderColor:act===t.id?t.c:'transparent',color:act===t.id?t.c:'#525252',backgroundColor:act===t.id?t.c+'10':'transparent'},className:"flex items-center gap-2 px-6 py-4 rounded-t-lg text-sm font-black tracking-widest transition-all border-b-4 md:hover:bg-white/5 active:bg-white/10 uppercase shrink-0"},Icon(t.i),t.l)
+                h('button',{key:t.id,onClick:()=>SA(t.id),style:{borderColor:act===t.id?t.c:'transparent',color:act===t.id?t.c:'#525252',backgroundColor:act===t.id?t.c+'10':'transparent'},className:"flex items-center gap-2 px-6 py-4 rounded-t-lg text-sm font-black tracking-widest transition-all border-b-4 safe-border safe-hover active:bg-white/10 uppercase shrink-0 outline-none"},Icon(t.i),t.l)
             ))
         ),
         // MAIN
@@ -197,14 +205,14 @@ function App(){
                     act==='t1'&&h('span',{className:"text-neutral-500 font-bold text-2xl"},date.getFullYear())
                 ),
                 h('div',{className:"flex gap-3"},
-                    act==='t1'&&h('button',{onClick:()=>SD(new Date()),className:"hidden md:block px-4 py-1 text-xs font-bold text-neutral-400 border border-neutral-800 rounded-lg"},"HOY"),
-                    h('button',{onClick:gSign?()=>fetchG(date):auth,className:`flex items-center gap-2 px-3 py-2 rounded-lg border bg-neutral-900 active:scale-95 ${sync?'border-[var(--theme-color)] text-[var(--theme-color)]':'border-neutral-800 text-neutral-400'}`},Icon('RefreshCw',18,sync?'animate-spin':''),h('span',{className:"hidden md:inline text-[10px] font-black"},"SYNC")),
-                    h('button',{onClick:()=>SS(true),className:"p-2.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-400"},Icon('Settings',20))
+                    act==='t1'&&h('button',{onClick:()=>SD(new Date()),className:"hidden md:block px-4 py-1 text-xs font-bold text-neutral-400 border border-neutral-800 rounded-lg safe-hover active:scale-95"},"HOY"),
+                    h('button',{onClick:gSign?()=>fetchG(date):auth,className:`flex items-center gap-2 px-3 py-2 rounded-lg border bg-neutral-900 active:scale-95 outline-none ${sync?'border-[var(--theme-color)] text-[var(--theme-color)]':'border-neutral-800 text-neutral-400'}`},Icon('RefreshCw',18,sync?'animate-spin':''),h('span',{className:"hidden md:inline text-[10px] font-black"},"SYNC")),
+                    h('button',{onClick:()=>SS(true),className:"p-2.5 rounded-lg bg-neutral-900 border border-neutral-800 text-neutral-400 safe-hover active:scale-95 outline-none"},Icon('Settings',20))
                 )
             ),
             act==='t2' // MATRIX
             ? h('div',{className:"flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-2 grid-rows-2 gap-2 pb-20 md:pb-0"}, Object.keys(Q).map(k=>
-                h('div',{key:k,'data-quad':k, className:`bg-neutral-900/40 border rounded-xl p-3 flex flex-col relative overflow-hidden backdrop-blur-sm transition-colors ${dTask?'border-white/10 md:hover:bg-neutral-800/50':'border-neutral-800/60'}`},
+                h('div',{key:k,'data-quad':k, className:`bg-neutral-900/40 border rounded-xl p-3 flex flex-col relative overflow-hidden backdrop-blur-sm transition-colors ${dTask?'border-white/10 safe-hover':'border-neutral-800/60'}`},
                     h('div',{className:"flex justify-between items-center mb-3 pb-2 border-b border-white/5"},
                         h('div',{},h('h3',{className:"text-sm font-black tracking-widest",style:{color:Q[k].c}},Q[k].t),h('span',{className:"text-[9px] text-neutral-500 font-mono uppercase"},Q[k].s)),
                         h('span',{className:"bg-neutral-800 text-neutral-400 text-[10px] font-bold px-2 py-0.5 rounded-full"},mx.filter(e=>(e.quad||'q2')===k).length)
@@ -213,13 +221,12 @@ function App(){
                         h('div',{
                             key:e.id,
                             onClick:()=>{SF({...e});SSI(e.id);SM('e')},
-                            // FIX: md:hover y active para feedback
-                            className:"bg-black/60 border border-neutral-800 p-2.5 rounded-lg group transition-all active:scale-95 md:hover:border-white/30 flex items-start gap-2 relative"
+                            className:"bg-black/60 border border-neutral-800 p-2.5 rounded-lg group transition-all active:scale-95 safe-border flex items-start gap-2 relative outline-none"
                         },
                             h('div',{className:"mt-0.5 text-emerald-400"},Icon('CheckCircle',14)),
                             h('div',{className:"flex-1 min-w-0"},h('p',{className:"text-xs font-bold text-white truncate rich",dangerouslySetInnerHTML:{__html:e.title}})),
                             h('div',{
-                                className:"p-2 -m-2 cursor-grab active:cursor-grabbing text-neutral-600 md:group-hover:text-white active:text-white touch-none",
+                                className:"p-2 -m-2 cursor-grab active:cursor-grabbing text-neutral-600 active:text-white touch-none safe-hover",
                                 onTouchStart:(ev)=>{
                                     ev.stopPropagation(); ev.preventDefault();
                                     SDT({id:e.id, title:e.title, x:ev.touches[0].clientX, y:ev.touches[0].clientY, startQuad:k});
@@ -233,11 +240,11 @@ function App(){
                 h('div',{className:"grid grid-cols-7 bg-black border-b border-neutral-800"},['L','M','X','J','V','S','D'].map(d=>h('div',{key:d,className:"py-2 text-center text-[10px] md:text-xs font-black tracking-[0.2em] text-neutral-600"},d))),
                 h('div',{key:date.toISOString(),className:`grid grid-cols-7 flex-1 auto-rows-fr ${dir==='n'?'anim-n':'anim-p'}`}, days.map((d,i)=>{
                     const isT=d.dt===new Date().toISOString().split('T')[0], evs=d.dt?(lk[d.dt]||[]):[];
-                    // FIX: Eliminado hover genérico, usado md:hover para desktop y active para movil
-                    return h('div',{key:i,onClick:()=>{if(d.dt){SF({title:'',date:d.dt,time:'09:00',type:'gen',notes:'',cat:'task',quad:'q2'});SM('c')}},className:`relative border-r border-b border-neutral-800/40 p-1 md:p-2 cursor-pointer group active:bg-neutral-900 md:hover:bg-neutral-900 transition-colors`,style:isT?{background:curTab.c+'1A',borderColor:curTab.c,boxShadow:`0 0 15px ${curTab.c}30`,zIndex:10,fontWeight:900}:null},
-                        d.d&&h('span',{className:`text-xs font-bold flex items-center justify-center w-6 h-6 rounded ${!isT?'text-neutral-600 group-active:text-white md:group-hover:text-white':''}`,style:isT?{background:curTab.c,color:'black'}:null},d.d),
+                    // FIX: Reemplazo completo de hover por safe-hover y touch-feedback
+                    return h('div',{key:i,onClick:()=>{if(d.dt){SF({title:'',date:d.dt,time:'09:00',type:'gen',notes:'',cat:'task',quad:'q2'});SM('c')}},className:`relative border-r border-b border-neutral-800/40 p-1 md:p-2 cursor-pointer group touch-feedback safe-hover transition-colors outline-none`,style:isT?{background:curTab.c+'1A',borderColor:curTab.c,boxShadow:`0 0 15px ${curTab.c}30`,zIndex:10,fontWeight:900}:null},
+                        d.d&&h('span',{className:`text-xs font-bold flex items-center justify-center w-6 h-6 rounded ${!isT?'text-neutral-600 group-active:text-white safe-hover':''}`,style:isT?{background:curTab.c,color:'black'}:null},d.d),
                         h('div',{className:"mt-1 flex flex-col gap-1 overflow-y-auto max-h-[80px] no-scrollbar"},evs.map(e=>
-                            h('div',{key:e.id,onClick:ev=>{ev.stopPropagation();SF({...e});SSI(e.id);SM('e')},className:"text-[9px] md:text-[10px] font-bold truncate px-1.5 py-0.5 rounded border-l-[3px] active:brightness-125 md:hover:brightness-125",style:{borderLeftColor:e.gCol||curTab.c,backgroundColor:(e.gCol||curTab.c)+'20',color:'#e2e8f0'}},
+                            h('div',{key:e.id,onClick:ev=>{ev.stopPropagation();SF({...e});SSI(e.id);SM('e')},className:"text-[9px] md:text-[10px] font-bold truncate px-1.5 py-0.5 rounded border-l-[3px] active:brightness-125 safe-bright outline-none",style:{borderLeftColor:e.gCol||curTab.c,backgroundColor:(e.gCol||curTab.c)+'20',color:'#e2e8f0'}},
                                 e.cat==='class'&&Icon('GraduationCap',8,"inline mr-1"),e.cat==='fitness'&&Icon('Dumbbell',8,"inline mr-1"),e.time+' '+e.title
                             )
                         ))
@@ -252,8 +259,7 @@ function App(){
                 h('div',{key:dStr,className:"flex flex-col gap-2 min-w-[200px]"},
                     h('div',{className:"sticky top-0 z-10"},h('span',{className:"text-[10px] font-black tracking-widest text-neutral-500 uppercase bg-black/50 px-2 py-1 rounded"},fmtD(dStr))),
                     evs.map(e=>
-                        // FIX: md:hover en drawer
-                        h('div',{key:e.id,onClick:()=>{SF({...e});SSI(e.id);SM('e')},className:"w-full bg-black/40 border-l-4 p-3 rounded active:brightness-125 md:hover:brightness-125 cursor-pointer backdrop-blur-sm transition-transform active:scale-95",style:{borderLeftColor:e.gCol||'white'}},
+                        h('div',{key:e.id,onClick:()=>{SF({...e});SSI(e.id);SM('e')},className:"w-full bg-black/40 border-l-4 p-3 rounded active:brightness-125 safe-bright cursor-pointer backdrop-blur-sm transition-transform active:scale-95 outline-none",style:{borderLeftColor:e.gCol||'white'}},
                             h('div',{className:"flex justify-between items-start mb-1"},h('span',{className:"text-xs font-bold text-white truncate"},e.title),h('span',{className:"text-[9px] text-neutral-400 font-mono"},e.time)),
                             (e.cat==='class'||e.title.toLowerCase().includes('clase'))&&h('div',{className:"text-[9px] text-blue-300 font-bold"},"CLASE"),
                             e.notes&&h('div',{className:"text-[9px] text-neutral-500 line-clamp-1 italic",dangerouslySetInnerHTML:{__html:e.notes}})
@@ -263,9 +269,8 @@ function App(){
             ):h('div',{className:"w-full text-center text-neutral-500 text-xs italic"},"No upcoming events"))
         ),
         // BIO WIDGET
-        // FIX: md:hover para evitar que se quede iluminado (recuadro fantasma)
-        h('div',{onClick:()=>{SB(BIO.length>1?Math.floor(Math.random()*BIO.length):0);SBS(true)},className:`fixed bottom-0 right-0 w-32 z-[60] flex items-center justify-center cursor-pointer active:bg-black/50 md:hover:bg-black/50 overflow-hidden rounded-tl-[30px] group shadow-[0_0_30px_#000c] backdrop-blur-md ${!drag?'tr-h':''}`,style:{height:dH,background:'#0006',borderLeft:`2px solid ${curTab.c}`,borderTop:`2px solid ${curTab.c}`}},
-            Icon('Dna',28,`group-active:animate-spin md:group-hover:animate-spin transition-transform duration-700 text-[${curTab.c}]`)
+        h('div',{onClick:()=>{SB(BIO.length>1?Math.floor(Math.random()*BIO.length):0);SBS(true)},className:`fixed bottom-0 right-0 w-32 z-[60] flex items-center justify-center cursor-pointer active:bg-black/50 safe-hover overflow-hidden rounded-tl-[30px] group shadow-[0_0_30px_#000c] backdrop-blur-md ${!drag?'tr-h':''}`,style:{height:dH,background:'#0006',borderLeft:`2px solid ${curTab.c}`,borderTop:`2px solid ${curTab.c}`}},
+            Icon('Dna',28,`group-active:animate-spin safe-hover transition-transform duration-700 text-[${curTab.c}]`)
         ),
         // MODALS
         (sets||modal||bioShow)&&h('div',{className:"fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in"},
