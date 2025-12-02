@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Centro de Mando V7.9: Quantum Flow</title>
+    <title>Centro de Mando V7.9: Infinity</title>
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#000000">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -13,12 +13,10 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
         body{background:#000;touch-action:none;overscroll-behavior:none;user-select:none}
-        .glass{background:rgba(10,10,10,0.9);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid rgba(255,255,255,0.1)}
-        /* Optimizaciones de GPU */
-        .gpu-layer { transform: translateZ(0); will-change: transform; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .animate-pulse-fast { animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+        .glass{background:rgba(10,10,10,0.85);backdrop-filter:blur(15px);-webkit-backdrop-filter:blur(15px);border-top:1px solid rgba(255,255,255,0.1)}
+        /* Scrollbar oculta pero funcional */
+        .no-scroll::-webkit-scrollbar { display: none; }
+        .no-scroll { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body>
@@ -31,273 +29,346 @@
         const h = React.createElement;
         const Icon = (n, s=16, c='currentColor') => h(Lucide[n] || Lucide.Circle, { size: s, style: { color: c } });
 
-        // --- CONSTANTES ---
-        const TABS = [{id:'t1',l:'CAL',i:'Calendar',c:'#3b82f6'},{id:'t2',l:'TASK',i:'CheckSquare',c:'#ef4444'}];
+        // --- PERSONALIZACIÓN & DATOS ESTÁTICOS ---
+        const BIO_DB = [
+            { id: 1, name: "Cuervo", sc: "Corvus corax", tax: "Aves > Corvidae", d: "Inteligencia compleja.", img: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Corvus_corax_%28Common_Raven%29.jpg/800px-Corvus_corax_%28Common_Raven%29.jpg" },
+            { id: 2, name: "Saltadora", sc: "Phidippus audax", tax: "Arachnida > Salticidae", d: "Cazadora visual.", img: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Phidippus_audax_male.jpg/800px-Phidippus_audax_male.jpg" }
+        ];
+        const TABS = [{id:'t1',l:'CAL',i:'Calendar',c:'#3b82f6'},{id:'t2',l:'TASK',i:'CheckSquare',c:'#ef4444'},{id:'t3',l:'MEMO',i:'BookOpen',c:'#eab308'},{id:'t4',l:'PROJ',i:'Folder',c:'#22c55e'}];
         const QUAD = { q1:{t:'URGENTE',c:'#ef4444'}, q2:{t:'PLAN',c:'#3b82f6'}, q3:{t:'DELEGAR',c:'#eab308'}, q4:{t:'BORRAR',c:'#64748b'}};
 
-        // --- MANEJADOR DE FECHAS (OPTIMIZADO) ---
-        const getMonthRange = (date) => {
-            const y = date.getFullYear(), m = date.getMonth();
-            return {
-                start: new Date(y, m, 1).toISOString(),
-                end: new Date(y, m + 1, 0, 23, 59, 59).toISOString(),
-                key: `${y}-${m}` // Clave para caché
-            };
-        };
-
         function App() {
-            // --- ESTADO ---
+            // --- ESTADO PRINCIPAL ---
+            // viewDate: Controla qué mes estamos "mirando". Es la clave de la paginación infinita.
+            const [viewDate, setViewDate] = useState(new Date()); 
             const [tab, setTab] = useState('t1');
-            const [date, setDate] = useState(new Date()); // Fecha base del calendario
-            const [eventsStore, setEventsStore] = useState({}); // ALMACÉN POR MES: { '2025-10': [eventos...] }
+            
+            // events: Almacena SOLO los eventos del mes visible + eventos de agenda cercana.
+            const [events, setEvents] = useState([]); 
             const [cals, setCals] = useState({});
             
-            // UI
-            const [loading, setLoading] = useState(false);
-            const [mod, setMod] = useState(null);
-            const [form, setForm] = useState({ title:'', date:'', time:'', type:'gen', cat:'task', q:'q2', notes:'' });
+            // UI States
+            const [bio, setBio] = useState(0);
+            const [mod, setMod] = useState(null); 
             const [selEv, setSelEv] = useState(null);
-            const [drawerH, setDrawerH] = useState(60);
-
-            // API
+            const [form, setForm] = useState({ title:'', date:'', time:'', type:'gen', cat:'task', q:'q2', notes:'' });
+            const [dH, setDH] = useState(50); // Drawer Height
+            const [loading, setLoading] = useState(false);
             const [gConf, setGConf] = useState({ key:'', id:'' });
-            const tokenClient = useRef(null);
 
             const activeT = TABS.find(t=>t.id===tab)||TABS[0];
             const theme = { '--tc': activeT.c };
-            const range = useMemo(() => getMonthRange(date), [date]);
 
             // --- INIT ---
             useEffect(() => {
                 const ls = localStorage;
-                // Cargar config y caché parcial
                 try {
+                    // Cargar config y eventos cacheados (si existen) para inicio rápido
                     const sc = ls.getItem('v7_cals'); if(sc) setCals(JSON.parse(sc));
                     const sg = ls.getItem('v7_gconf'); if(sg) setGConf(JSON.parse(sg));
                 } catch(e){}
                 
-                // Init GAPI
                 if(window.gapi) window.gapi.load('client', async()=>{ 
                     if(gConf.key) await window.gapi.client.init({ apiKey: gConf.key, discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"] });
                 });
             }, []);
 
-            // --- TRIGGER DE CARGA INTELIGENTE ---
-            // Cada vez que cambia el mes ('range.key'), verificamos si ya tenemos datos.
+            // --- EFECTO "INFINITY": CARGA BAJO DEMANDA ---
+            // Cada vez que cambia 'viewDate' (el mes), disparamos la carga.
             useEffect(() => {
-                if (!eventsStore[range.key] && gConf.id) {
-                    // Si NO tenemos datos de este mes en memoria, y hay config, pedir a Google.
-                    fetchMonthEvents(range.start, range.end, range.key);
+                if (gConf.id && gConf.key && window.gapi?.client?.calendar) {
+                    fetchMonthEvents(viewDate);
                 }
-            }, [range.key, gConf.id]);
+            }, [viewDate, gConf]); // Dependencia crítica: viewDate
 
-            // --- GOOGLE API FETCH (POR RANGO EXACTO) ---
-            const fetchMonthEvents = async (timeMin, timeMax, monthKey) => {
-                if (!window.gapi?.client?.calendar) return; // Esperar a que GAPI cargue
+            // --- LOGICA DE CARGA OPTIMIZADA (Estilo Google) ---
+            const fetchMonthEvents = async (targetDate) => {
                 setLoading(true);
-                
                 try {
                     const g = window.gapi.client.calendar;
-                    // 1. Obtener lista de calendarios (si no la tenemos actualizada)
-                    const list = await g.calendarList.list();
-                    const newCals = {...cals};
-                    list.result.items.forEach(c => {
-                        newCals[c.id] = { id: c.id, s: c.summary, c: c.backgroundColor, v: newCals[c.id]?.v ?? true };
-                    });
-                    setCals(newCals);
-                    localStorage.setItem('v7_cals', JSON.stringify(newCals));
+                    
+                    // 1. Definir la ventana de tiempo EXACTA (1er día del mes al último)
+                    const y = targetDate.getFullYear(), m = targetDate.getMonth();
+                    const timeMin = new Date(y, m, 1).toISOString();
+                    const timeMax = new Date(y, m + 1, 0, 23, 59, 59).toISOString();
 
-                    // 2. Pedir eventos SOLO para este mes
-                    // Esto permite "singleEvents: true" sin matar la memoria, porque son solo 30 días.
-                    // Google expande la recurrencia automáticamente aquí.
-                    const promises = list.result.items.map(async (cal) => {
-                        if (newCals[cal.id].v === false) return [];
+                    // 2. Definir ventana para la AGENDA (Drawer inferior) - Próximos 7 días fijos
+                    const now = new Date();
+                    const agendaMin = now.toISOString();
+                    const agendaMax = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+                    // Obtener lista de calendarios si no tenemos
+                    let currentCals = cals;
+                    if (Object.keys(cals).length === 0) {
+                        const list = await g.calendarList.list();
+                        const newCals = {};
+                        list.result.items.forEach(c => {
+                            newCals[c.id] = { id: c.id, s: c.summary, c: c.backgroundColor, v: true };
+                        });
+                        setCals(newCals);
+                        currentCals = newCals;
+                    }
+
+                    // 3. Ejecutar peticiones en paralelo pero LIMITADAS
+                    // Google expande las repeticiones aquí. Al pedir solo 1 mes, es muy rápido.
+                    let allEvents = [];
+                    
+                    const fetchForCal = async (calId, tMin, tMax) => {
                         try {
                             const res = await g.events.list({
-                                calendarId: cal.id,
-                                timeMin: timeMin,
-                                timeMax: timeMax,
-                                singleEvents: true, // CLAVE: Expande "Cada Lunes" en eventos individuales
-                                orderBy: 'startTime'
+                                calendarId: calId,
+                                timeMin: tMin,
+                                timeMax: tMax,
+                                singleEvents: true, // CLAVE: Expande "Cada Lunes" a fechas individuales
+                                orderBy: 'startTime',
+                                maxResults: 250 // Límite de seguridad por calendario/mes
                             });
-                            return res.result.items.map(i => processEvent(i, cal));
-                        } catch (e) { return []; }
-                    });
+                            return res.result.items;
+                        } catch(e) { return []; }
+                    };
 
-                    const results = await Promise.all(promises);
-                    const monthEvents = results.flat().sort((a,b) => a._ts - b._ts);
+                    const visibleCals = Object.values(currentCals).filter(c => c.v);
+                    
+                    for (const cal of visibleCals) {
+                        // Pedimos datos del MES VISIBLE
+                        const monthData = await fetchForCal(cal.id, timeMin, timeMax);
+                        // Pedimos datos de la AGENDA (para que el drawer no se quede vacío si ves otro mes)
+                        const agendaData = await fetchForCal(cal.id, agendaMin, agendaMax);
+                        
+                        // Unificar y formatear
+                        [...monthData, ...agendaData].forEach(i => {
+                            // Evitar duplicados por ID
+                            if (allEvents.find(e => e.id === i.id)) return;
 
-                    // 3. Guardar en el "Store" bajo la llave del mes
-                    setEventsStore(prev => ({ ...prev, [monthKey]: monthEvents }));
+                            const t = (i.summary||'').toLowerCase();
+                            let cat = 'task', q = 'q2';
+                            if(t.includes('gym')||t.includes('fit')) { cat = 'fit'; q = null; }
+                            else if(t.includes('clase')||t.includes('uni')) { cat = 'class'; q = null; }
+                            
+                            const start = i.start.dateTime || i.start.date;
+                            allEvents.push({
+                                id: i.id, cid: cal.id, title: i.summary||'(Sin título)',
+                                date: start.substring(0,10), 
+                                time: start.includes('T') ? start.substring(11,16) : '',
+                                type: 'g', notes: i.description||'', cat, q, gc: cal.backgroundColor,
+                                _ts: new Date(start).getTime()
+                            });
+                        });
+                        
+                        // Pequeña pausa para no bloquear UI
+                        await new Promise(r => setTimeout(r, 2));
+                    }
+                    
+                    setEvents(allEvents.sort((a,b) => a._ts - b._ts));
 
-                } catch (e) { console.error("Sync Error", e); }
-                finally { setLoading(false); }
-            };
-
-            const processEvent = (i, cal) => {
-                const t = (i.summary||'').toLowerCase();
-                let cat = 'task', q = 'q2';
-                // Lógica de categorización rápida
-                if(t.includes('gym')||t.includes('fit')||t.includes('entreno')) { cat = 'fit'; q = null; }
-                else if(t.includes('clase')||t.includes('uni')||t.includes('aula')) { cat = 'class'; q = null; }
-                
-                const start = i.start.dateTime || i.start.date;
-                return {
-                    id: i.id, cid: cal.id, title: i.summary||'(Sin título)',
-                    date: start.substring(0,10), 
-                    time: start.includes('T') ? start.substring(11,16) : '',
-                    notes: i.description||'', cat, q, gc: cal.backgroundColor,
-                    _ts: new Date(start).getTime()
-                };
+                } catch(e) { console.error(e); }
+                setLoading(false);
             };
 
             const handleAuth = () => {
-                tokenClient.current = window.google.accounts.oauth2.initTokenClient({
+                if(!gConf.id || !gConf.key) return alert("Configura API primero");
+                const token = window.google?.accounts?.oauth2?.initTokenClient({
                     client_id: gConf.id, scope: "https://www.googleapis.com/auth/calendar.readonly",
-                    callback: (r) => { if(!r.error) fetchMonthEvents(range.start, range.end, range.key); }
+                    callback: (r) => { if(!r.error) fetchMonthEvents(viewDate); }
                 });
-                tokenClient.current.requestAccessToken();
+                token.requestAccessToken();
             };
 
-            // --- COMPUTED DATA (Solo del mes actual) ---
-            const currentMonthEvents = useMemo(() => {
-                return eventsStore[range.key] || [];
-            }, [eventsStore, range.key]);
+            // --- PROCESAMIENTO DE DATOS (Mapeo rápido) ---
+            const { daysMap, matrixItems, drawerItems } = useMemo(() => {
+                const map = {};
+                const mat = [];
+                const draw = [];
+                const nowTs = new Date().setHours(0,0,0,0);
 
-            const daysGrid = useMemo(() => {
-                const y = date.getFullYear(), m = date.getMonth();
-                const d = new Date(y, m, 1), days = [];
-                const pad = d.getDay() === 0 ? 6 : d.getDay() - 1;
+                events.forEach(e => {
+                    // Mapa Calendario
+                    if (!map[e.date]) map[e.date] = [];
+                    map[e.date].push(e);
+
+                    // Matriz (Solo tareas generales)
+                    if (e.cat === 'task') mat.push(e);
+
+                    // Drawer (Solo futuros cercanos)
+                    if (e._ts >= nowTs) draw.push(e);
+                });
+
+                // Agrupar Drawer
+                const groupedDraw = {};
+                draw.forEach(e => {
+                    if(!groupedDraw[e.date]) groupedDraw[e.date] = [];
+                    groupedDraw[e.date].push(e);
+                });
+                
+                // Ordenar y limitar drawer a 30 items para renderizado ultra-rápido
+                const finalDraw = Object.keys(groupedDraw).sort().slice(0, 14).map(d => ({ date: d, items: groupedDraw[d] }));
+
+                return { daysMap: map, matrixItems: mat, drawerItems: finalDraw };
+            }, [events]);
+
+            // --- GENERADOR DE GRID (Calendario) ---
+            const calendarGrid = useMemo(() => {
+                const y = viewDate.getFullYear(), m = viewDate.getMonth();
+                const d = new Date(y, m, 1);
+                const days = [];
+                const pad = d.getDay() === 0 ? 6 : d.getDay() - 1; 
                 for(let i=0; i<pad; i++) days.push(null);
                 const last = new Date(y, m+1, 0).getDate();
                 for(let i=1; i<=last; i++) days.push(new Date(y, m, i).toISOString().split('T')[0]);
                 return days;
-            }, [date]);
+            }, [viewDate]);
 
-            // --- RENDER HELPERS ---
-            const renderCalendar = () => h('div', { className: "flex-1 flex flex-col bg-neutral-900/40 rounded-xl border border-white/10 overflow-hidden" }, [
-                h('div', { className: "grid grid-cols-7 bg-black/60 border-b border-white/10 shrink-0" }, ['L','M','X','J','V','S','D'].map(d => h('div', { key: d, className: "py-2 text-center text-[10px] text-gray-500 font-black" }, d))),
-                h('div', { className: "flex-1 grid grid-cols-7 auto-rows-fr overflow-y-auto gpu-layer" }, daysGrid.map((d, i) => {
-                    if (!d) return h('div', { key: i, className: "bg-white/5 border-r border-b border-white/5" });
+            // --- RENDERERS ---
+            const renderCal = () => h('div', { className: "flex-1 flex flex-col bg-neutral-900/40 rounded-xl border border-white/10 overflow-hidden relative" }, [
+                // Loading indicator discreto
+                loading && h('div', { className: "absolute top-0 left-0 right-0 h-1 bg-[var(--tc)] animate-pulse z-20" }),
+                
+                h('div', { className: "grid grid-cols-7 bg-black/60 border-b border-white/10 shrink-0" }, ['L','M','X','J','V','S','D'].map(d => h('div', { key: d, className: "py-2 text-center text-[10px] text-neutral-500 font-bold" }, d))),
+                h('div', { className: "flex-1 grid grid-cols-7 auto-rows-fr overflow-y-auto no-scroll" }, calendarGrid.map((d, i) => {
+                    if (!d) return h('div', { key: i, className: "bg-black/20 border-r border-b border-white/5" });
                     
-                    const evs = currentMonthEvents.filter(e => e.date === d);
+                    const dayEvents = daysMap[d] || [];
                     const isToday = d === new Date().toISOString().split('T')[0];
                     
                     return h('div', { 
-                        key: i, onClick: () => { setForm({...form, date:d}); setMod('create'); },
-                        className: `border-r border-b border-white/5 p-1 relative min-h-[50px] transition-colors hover:bg-white/10 cursor-pointer group ${isToday ? 'bg-white/5' : ''}` 
+                        key: d,
+                        onClick: () => { setForm({...form, date: d}); setMod('create'); },
+                        className: `border-r border-b border-white/5 p-1 relative hover:bg-white/5 transition-colors group ${isToday ? 'bg-white/5' : ''}`
                     }, [
-                        h('span', { className: `text-[10px] font-bold block mb-1 ${isToday ? 'text-[var(--tc)]' : 'text-gray-600 group-hover:text-gray-300'}` }, d.split('-')[2]),
-                        // Renderizado simplificado para velocidad
-                        h('div', { className: "flex flex-col gap-0.5" }, evs.slice(0, 4).map(e => 
-                            h('div', { key: e.id, className: "h-3 rounded-[1px] w-full flex items-center px-1 overflow-hidden", style: { backgroundColor: `${e.gc}30`, borderLeft: `2px solid ${e.gc}` } }, 
-                                h('span', { className: "text-[8px] font-medium text-gray-300 truncate leading-none" }, e.title)
-                            )
+                        h('span', { className: `text-[10px] font-bold block mb-1 ${isToday ? 'text-[var(--tc)]' : 'text-neutral-600 group-hover:text-white'}` }, d.split('-')[2]),
+                        h('div', { className: "flex flex-col gap-0.5" }, dayEvents.slice(0, 4).map(e => 
+                            h('div', { 
+                                key: e.id,
+                                onClick: (ev) => { ev.stopPropagation(); setSelEv(e); setForm(e); setMod('edit'); },
+                                className: "truncate px-1 rounded text-[9px] font-medium border-l-[2px] cursor-pointer",
+                                style: { backgroundColor: `${e.gc || activeT.c}20`, borderLeftColor: e.gc || activeT.c, color: '#ddd' }
+                            }, e.time ? `${e.time} ${e.title}` : e.title)
                         )),
-                        evs.length > 4 && h('div', { className: "text-[8px] text-center text-gray-500 font-bold" }, `+${evs.length-4}`)
+                        dayEvents.length > 4 && h('div', { className: "text-[8px] text-neutral-500 text-center font-bold" }, `+${dayEvents.length - 4}`)
                     ]);
                 }))
             ]);
 
-            const renderMatrix = () => h('div', { className: "flex-1 grid grid-cols-1 gap-2 overflow-y-auto pb-20" }, 
-                ['q1','q2'].map(k => { // Simplificado a 2 columnas principales para movil, o cambiar layout
-                    const items = currentMonthEvents.filter(e => e.cat !== 'class' && e.cat !== 'fit' && (e.q||'q2') === k);
-                    return h('div', { key: k, className: "bg-neutral-900/50 border border-white/10 rounded-xl p-3" }, [
-                        h('h3', { className: "text-xs font-black mb-2", style:{color: QUAD[k].c} }, QUAD[k].t),
-                        h('div', { className: "space-y-2" }, items.map(e => 
-                            h('div', { key: e.id, className: "bg-black p-2 rounded border border-white/5 flex justify-between" }, [
-                                h('span', { className: "text-xs font-bold text-gray-300 truncate" }, e.title),
-                                h('span', { className: "text-[9px] text-gray-500" }, e.date.substring(5))
-                            ])
+            const renderMatrix = () => h('div', { className: "flex-1 grid grid-cols-1 md:grid-cols-2 grid-rows-2 gap-2 pb-16 overflow-y-auto no-scroll" }, 
+                ['q1','q2','q3','q4'].map(k => {
+                    const q = QUAD[k], items = matrixItems.filter(e => (e.q||'q2') === k);
+                    return h('div', { key: k, className: "bg-neutral-900/40 border border-white/5 rounded-xl p-2 flex flex-col" }, [
+                        h('div', { className: "flex justify-between border-b border-white/5 pb-1 mb-2" }, [
+                            h('span', { className: "text-xs font-black", style:{color:q.c} }, q.t),
+                            h('span', { className: "text-[9px] bg-white/10 px-1.5 rounded" }, items.length)
+                        ]),
+                        h('div', { className: "flex-1 overflow-y-auto space-y-1 no-scroll" }, items.map(e => 
+                            h('div', { 
+                                key: e.id, onClick: ()=>{setSelEv(e);setForm(e);setMod('edit')},
+                                className: "bg-black/60 border border-white/5 p-2 rounded hover:border-white/20" 
+                            }, h('p', { className: "text-xs font-bold text-gray-300 truncate" }, e.title))
                         ))
-                    ])
+                    ]);
                 })
             );
 
-            // --- APP SHELL ---
-            return h('div', { className: "h-screen w-screen bg-black text-gray-200 font-sans flex flex-col fixed inset-0", style: theme }, [
-                // TOP BAR
-                h('div', { className: "shrink-0 flex items-center justify-between p-4 bg-neutral-900/90 border-b border-white/10 z-20" }, [
+            // --- APP LAYOUT ---
+            return h('div', { className: "h-screen w-screen bg-black text-slate-200 font-sans flex flex-col overflow-hidden relative", style: theme }, [
+                // Header
+                h('header', { className: "shrink-0 flex items-center justify-between p-3 bg-neutral-900/90 border-b border-white/10" }, [
                     h('div', { className: "flex flex-col" }, [
-                        h('h1', { className: "text-xl font-black tracking-tighter leading-none flex items-center gap-2" }, [
-                            date.toLocaleString('es-ES', { month: 'long' }).toUpperCase(),
-                            loading && h('span', { className: "w-2 h-2 rounded-full bg-[var(--tc)] animate-ping" })
-                        ]),
-                        h('span', { className: "text-[10px] text-gray-500 font-bold tracking-widest" }, date.getFullYear())
+                        h('h1', { className: "text-2xl font-black tracking-tighter leading-none" }, viewDate.toLocaleString('es-ES', { month: 'long' }).toUpperCase()),
+                        h('span', { className: "text-[10px] text-[var(--tc)] font-bold tracking-widest" }, viewDate.getFullYear())
                     ]),
                     h('div', { className: "flex gap-2" }, [
-                        h('button', { onClick: handleAuth, className: "p-2 rounded bg-white/5 border border-white/10" }, Icon('RefreshCw', 16, loading ? 'var(--tc)' : 'gray')),
-                        h('button', { onClick: ()=>setMod('conf'), className: "p-2 rounded bg-white/5 border border-white/10" }, Icon('Settings', 16)),
-                        h('div', { className: "flex rounded bg-black border border-white/10" }, [
-                            h('button', { onClick: ()=>setDate(new Date(date.getFullYear(), date.getMonth()-1, 1)), className: "p-2 hover:bg-white/10" }, Icon('ChevronLeft')),
-                            h('button', { onClick: ()=>setDate(new Date(date.getFullYear(), date.getMonth()+1, 1)), className: "p-2 hover:bg-white/10" }, Icon('ChevronRight'))
+                        h('button', { onClick: handleAuth, className: "p-2 rounded bg-white/5 border border-white/10" }, Icon('RefreshCw', 16, loading ? 'var(--tc)' : 'white')),
+                        h('button', { onClick: ()=>setMod('sets'), className: "p-2 rounded bg-white/5 border border-white/10" }, Icon('Settings')),
+                        h('div', { className: "flex rounded bg-black/40 border border-white/10" }, [
+                            h('button', { onClick: ()=>setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth()-1)), className: "p-2 hover:bg-white/10" }, Icon('ChevronLeft')),
+                            h('button', { onClick: ()=>setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth()+1)), className: "p-2 hover:bg-white/10" }, Icon('ChevronRight'))
                         ])
                     ])
                 ]),
-
-                // TABS
-                h('div', { className: "flex p-2 gap-1 shrink-0" }, TABS.map(t => 
-                    h('button', { key: t.id, onClick: ()=>setTab(t.id), className: `flex-1 py-2 rounded text-[10px] font-black border transition-all ${tab===t.id ? 'bg-[var(--tc)] text-black border-[var(--tc)]' : 'border-white/10 text-gray-500 bg-neutral-900'}` }, t.l)
+                
+                // Tabs
+                h('div', { className: "shrink-0 flex gap-1 p-2" }, TABS.map(t => 
+                    h('button', { key: t.id, onClick: ()=>setTab(t.id), className: `flex-1 py-2 rounded text-[10px] font-black tracking-widest flex justify-center items-center gap-2 border transition-all ${tab===t.id ? 'bg-[var(--tc)] text-black border-[var(--tc)]' : 'border-white/10 text-gray-500 bg-neutral-900/50'}` }, [Icon(t.i, 14), t.l])
                 )),
 
-                // MAIN VIEW
-                h('main', { className: "flex-1 overflow-hidden p-2 flex flex-col relative" }, tab === 't1' ? renderCalendar() : renderMatrix()),
+                // Main View
+                h('main', { className: "flex-1 overflow-hidden relative flex flex-col px-2 pb-2" }, tab === 't1' ? renderCal() : renderMatrix()),
 
-                // DRAWER (Agenda Rápida del Día/Futuro cercano del mes actual)
+                // Drawer (Agenda) - Renderizado Optimizado
                 h('div', { 
-                    className: "fixed bottom-0 left-0 right-[60px] bg-black/90 glass rounded-tr-xl z-30 border-t border-r border-white/10 flex flex-col transition-all duration-300",
-                    style: { height: `${drawerH}px` } 
+                    className: "fixed bottom-0 left-0 right-[70px] bg-black/90 glass rounded-tr-2xl z-40 border-t border-r border-white/10 transition-all duration-300 flex flex-col shadow-2xl",
+                    style: { height: `${dH}px` } 
                 }, [
                     h('div', { 
-                        className: "w-full h-5 flex justify-center items-center cursor-ns-resize",
-                        onTouchMove: e => setDrawerH(Math.max(60, Math.min(window.innerHeight*0.7, window.innerHeight - e.touches[0].clientY)))
-                    }, h('div', { className: "w-8 h-1 bg-white/20 rounded-full" })),
-                    h('div', { className: "flex-1 overflow-x-auto flex items-center gap-3 px-3 pb-2" }, 
-                        // Filtramos eventos futuros del MES ACTUAL solamente para la barra rápida
-                        currentMonthEvents.filter(e => e._ts >= new Date().setHours(0,0,0,0)).slice(0, 15).map(e => 
-                            h('div', { key: e.id, className: "min-w-[140px] bg-neutral-800/50 border-l-[3px] p-2 rounded cursor-pointer hover:bg-white/10", style: { borderLeftColor: e.gc }, onClick: ()=>{setSelEv(e);setForm(e);setMod('edit')} }, [
-                                h('div', { className: "text-[10px] font-bold text-white truncate" }, e.title),
-                                h('div', { className: "text-[9px] text-gray-500" }, `${e.date.substring(8)} · ${e.time||'Todo el día'}`)
-                            ])
-                        )
+                        className: "h-6 w-full flex items-center justify-center shrink-0 cursor-ns-resize active:bg-white/5",
+                        onTouchMove: (e) => setDH(Math.max(50, Math.min(window.innerHeight * 0.8, window.innerHeight - e.touches[0].clientY)))
+                    }, h('div', { className: "w-12 h-1 bg-white/20 rounded-full" })),
+                    
+                    h('div', { className: "flex-1 overflow-x-auto flex gap-3 p-3 items-start content-start no-scroll" }, 
+                        drawerItems.length > 0 
+                        ? drawerItems.map(g => h('div', { key: g.date, className: "min-w-[160px] w-[160px] shrink-0" }, [
+                            h('div', { className: "text-[9px] font-black text-[var(--tc)] uppercase border-b border-white/10 mb-2 pb-1" }, new Date(g.date).toLocaleDateString('es-ES',{weekday:'short',day:'numeric'})),
+                            h('div', { className: "flex flex-col gap-1.5" }, g.items.map(e => 
+                                h('div', { 
+                                    key: e.id, onClick: ()=>{setSelEv(e);setForm(e);setMod('edit')},
+                                    className: "bg-neutral-800/50 p-2 rounded border-l-[3px] hover:bg-white/10 transition-colors",
+                                    style: { borderLeftColor: e.gc || '#555' }
+                                }, [
+                                    h('div', { className: "text-[10px] font-bold text-white truncate" }, e.title),
+                                    h('div', { className: "text-[8px] text-gray-500 font-mono" }, e.time || 'All day')
+                                ])
+                            ))
+                        ]))
+                        : h('div', { className: "flex items-center gap-2 text-xs text-gray-600 italic p-2" }, [Icon('Coffee', 14), "Tiempo libre"])
                     )
                 ]),
 
-                // SETTINGS MODAL
-                mod === 'conf' && h('div', { className: "fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-6 backdrop-blur-sm" }, 
-                    h('div', { className: "w-full max-w-sm bg-neutral-900 border border-white/10 rounded-xl p-4 space-y-4 shadow-2xl" }, [
-                        h('h2', { className: "font-black text-white" }, "CONFIGURACIÓN"),
-                        h('input', { className: "w-full bg-black p-2 rounded text-xs border border-white/10", placeholder: "Client ID", value: gConf.id, onChange: e=>setGConf({...gConf,id:e.target.value}) }),
-                        h('input', { className: "w-full bg-black p-2 rounded text-xs border border-white/10", placeholder: "API Key", value: gConf.key, onChange: e=>setGConf({...gConf,key:e.target.value}) }),
-                        h('button', { onClick: ()=>{localStorage.setItem('v7_gconf', JSON.stringify(gConf)); setMod(null);}, className: "w-full bg-[var(--tc)] text-black font-bold p-2 rounded" }, "GUARDAR Y CERRAR"),
-                        h('div', { className: "pt-2 space-y-2 border-t border-white/10 max-h-40 overflow-y-auto" }, Object.values(cals).map(c => 
-                            h('div', { key: c.id, className: "flex justify-between text-xs" }, [
-                                h('span', { style:{color:c.c} }, c.s),
-                                h('button', { onClick: ()=>setCals({...cals, [c.id]:{...c, v:!c.v}}) }, Icon(c.v?'Eye':'EyeOff', 14))
-                            ])
-                        ))
-                    ])
-                ),
+                // Bio Widget
+                h('div', { 
+                    onClick: () => { setBio((bio+1)%BIO_DB.length); setMod('bio'); },
+                    className: "fixed bottom-0 right-0 w-24 h-24 z-50 flex items-center justify-center glass rounded-tl-full border-t border-l border-white/10 active:scale-95 transition-transform shadow-[0_0_30px_rgba(0,0,0,0.5)] cursor-pointer",
+                    style: { borderColor: activeT.c }
+                }, Icon('Dna', 24, activeT.c)),
 
-                // EDIT/CREATE MODAL
-                (mod === 'create' || mod === 'edit') && h('div', { className: "fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm" }, 
-                    h('div', { className: "w-full max-w-sm bg-neutral-900 border border-white/10 rounded-xl overflow-hidden flex flex-col shadow-2xl" }, [
-                        h('div', { className: "p-3 bg-black flex justify-between" }, [
-                            h('span', { className: "font-bold text-sm" }, mod === 'create' ? 'NUEVO' : 'DETALLES'),
+                // Modales
+                mod && h('div', { className: "fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in" }, 
+                    h('div', { className: "w-full max-w-sm bg-neutral-900 border border-white/10 rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh]" }, [
+                        h('div', { className: "p-3 bg-black flex justify-between items-center border-b border-white/10" }, [
+                            h('span', { className: "font-black text-xs text-white" }, mod.toUpperCase()),
                             h('button', { onClick: ()=>setMod(null) }, Icon('X'))
                         ]),
-                        h('div', { className: "p-4 space-y-3" }, [
-                            h('input', { autoFocus:true, className: "w-full bg-transparent text-lg font-bold border-b border-white/20 p-1 outline-none", placeholder:"Título", value: form.title, onChange: e=>setForm({...form, title:e.target.value}) }),
-                            h('div', { className: "flex gap-2" }, [
-                                h('input', { type:'date', className: "bg-black/50 border border-white/10 p-2 rounded text-xs flex-1", value: form.date, onChange: e=>setForm({...form, date:e.target.value}) }),
-                                h('input', { type:'time', className: "bg-black/50 border border-white/10 p-2 rounded text-xs w-24", value: form.time, onChange: e=>setForm({...form, time:e.target.value}) }),
-                            ]),
-                            h('textarea', { className: "w-full bg-black/50 border border-white/10 p-2 rounded text-xs h-24 resize-none", placeholder:"Notas...", value: form.notes, onChange: e=>setForm({...form, notes:e.target.value}) }),
-                            h('div', { className: "flex justify-end gap-2" }, [
-                                mod === 'edit' && h('button', { className: "p-2 text-red-500", onClick: ()=>{ /* Delete logic local only */ setMod(null); } }, Icon('Trash2')),
-                                h('button', { className: "bg-[var(--tc)] text-black px-4 py-2 rounded font-bold", onClick: ()=>setMod(null) }, "OK")
-                            ])
-                        ])
+                        h('div', { className: "p-4 overflow-y-auto space-y-4" }, 
+                            mod === 'bio' ? [
+                                h('img', { src: BIO_DB[bio].img, className: "w-full h-48 object-cover rounded-lg border border-white/10" }),
+                                h('h2', { className: "text-2xl font-black italic text-white" }, BIO_DB[bio].name),
+                                h('p', { className: "text-xs text-[var(--tc)]" }, BIO_DB[bio].sc),
+                                h('p', { className: "text-sm text-gray-300" }, BIO_DB[bio].d)
+                            ] : mod === 'sets' ? [
+                                h('div', { className: "space-y-2" }, [
+                                    h('input', { className: "w-full bg-black border border-white/10 p-2 rounded text-xs text-white", placeholder: "Client ID", value: gConf.id, onChange: e=>{const n={...gConf,id:e.target.value};setGConf(n);localStorage.setItem('v7_gconf',JSON.stringify(n))} }),
+                                    h('input', { className: "w-full bg-black border border-white/10 p-2 rounded text-xs text-white", placeholder: "API Key", value: gConf.key, onChange: e=>{const n={...gConf,key:e.target.value};setGConf(n);localStorage.setItem('v7_gconf',JSON.stringify(n))} }),
+                                    h('button', { onClick: handleAuth, className: "w-full py-2 bg-[var(--tc)] text-black font-bold rounded text-xs" }, "CONECTAR GOOGLE")
+                                ]),
+                                h('div', { className: "pt-4 space-y-2" }, Object.values(cals).map(c => 
+                                    h('div', { key: c.id, className: "flex justify-between text-xs" }, [
+                                        h('span', { className: "truncate flex-1 pr-2", style:{color:c.c} }, c.s),
+                                        h('button', { onClick: ()=>setCals({...cals, [c.id]:{...c, v:!c.v}}) }, Icon(c.v?'Eye':'EyeOff', 14))
+                                    ])
+                                ))
+                            ] : [ // Form
+                                h('input', { autoFocus:true, className: "w-full bg-transparent border-b border-white/20 p-2 text-lg font-bold text-white outline-none", placeholder: "Título", value: form.title, onChange: e=>setForm({...form, title:e.target.value}) }),
+                                h('div', { className: "grid grid-cols-2 gap-2" }, [
+                                    h('input', { type:'date', className: "bg-black/50 border border-white/10 rounded p-2 text-xs text-white", value: form.date, onChange: e=>setForm({...form, date:e.target.value}) }),
+                                    h('input', { type:'time', className: "bg-black/50 border border-white/10 rounded p-2 text-xs text-white", value: form.time, onChange: e=>setForm({...form, time:e.target.value}) })
+                                ]),
+                                h('div', { className: "flex gap-1" }, Object.keys(QUAD).map(q => h('button', { key: q, onClick: ()=>setForm({...form, q}), className: `flex-1 py-1 text-[9px] font-bold border rounded ${form.q===q?'bg-white text-black':'border-white/10 text-gray-500'}` }, QUAD[q].t))),
+                                h('textarea', { rows: 3, className: "w-full bg-black/50 border border-white/10 rounded p-2 text-xs resize-none text-white", placeholder: "Notas...", value: form.notes, onChange: e=>setForm({...form, notes:e.target.value}) }),
+                                h('button', { className: "w-full bg-[var(--tc)] text-black font-black p-3 rounded", onClick: ()=>{
+                                    const ne = { ...form, id: mod==='create'?Date.now().toString():selEv.id, _ts: new Date(form.date).getTime() };
+                                    setEvents(prev => mod==='create'?[...prev, ne]:prev.map(e=>e.id===selEv.id?ne:e));
+                                    setMod(null);
+                                }}, "GUARDAR")
+                            ]
+                        )
                     ])
                 )
             ]);
