@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V8.3:Fixing</title>
+<title>CMD V8.4:ZenFix</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif']}}}}</script>
@@ -16,11 +16,13 @@ body{background:#000;touch-action:none;overscroll-behavior:none}.no-scrollbar::-
 @keyframes sl{0%{transform:translateY(-100%)}100%{transform:translateY(100%)}}
 .scan::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,transparent,#ffffff1a,transparent);animation:sl 2s linear infinite;pointer-events:none}
 .drag-over{background:#ffffff0d;border-color:var(--theme-color);box-shadow:inset 0 0 20px #ffffff0d}.rich b{color:inherit;font-weight:900}
-@keyframes sN { from { opacity:0; transform:translateX(30px); } to { opacity:1; transform:translateX(0); } }
-@keyframes sP { from { opacity:0; transform:translateX(-30px); } to { opacity:1; transform:translateX(0); } }
-.anim-n { animation: sN 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
-.anim-p { animation: sP 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
-/* Fade in del contenido del drawer */
+
+/* NUEVAS ANIMACIONES RELAJANTES */
+@keyframes softEntry { 
+    from { opacity: 0; transform: scale(0.96) translateY(10px); filter: blur(8px); } 
+    to { opacity: 1; transform: scale(1) translateY(0); filter: blur(0px); } 
+}
+.anim-n, .anim-p { animation: softEntry 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
 .fade-content { transition: opacity 0.3s ease-out; }
 </style>
 </head>
@@ -66,7 +68,7 @@ function App(){
     const initGis=()=>{if(gCfg.clientId){tC.current=window.google.accounts.oauth2.initTokenClient({client_id:gCfg.clientId,scope:"https://www.googleapis.com/auth/calendar.readonly",callback:async(r)=>{if(!r.error){SGS(true);fM.current.clear();await fetchG(date)}}});gsI.current=true}};
     const auth=async()=>{if(!gCfg.apiKey||!gCfg.clientId)return alert("Faltan Credenciales");if(!gI.current)await initGapi();if(!gsI.current)initGis();setTimeout(()=>tC.current.requestAccessToken({prompt:'select_account'}),500)};
     
-    // FIX CATEGORIZACION: Prioridad a clases
+    // FETCH GOOGLE OPTIMIZADO: MEJOR DETECCIÓN DE CLASES
     const fetchG=async(td=new Date())=>{
         SSy(true);try{
             if(!window.gapi.client.calendar) await window.gapi.client.load('calendar','v3');
@@ -82,9 +84,14 @@ function App(){
                     return r.result.items.map(i=>{
                         const t=(i.summary||'').toLowerCase(), cn=(c.summary||'').toLowerCase();
                         let cat='task',q='q2'; 
-                        // Lógica Refinada: Primero chequea clases/uni
-                        if(cn.includes('clase')||t.includes('clase')||cn.includes('aula')||t.includes('aula')||cn.includes('uni')){ cat='class'; q=null; }
-                        else if(cn.includes('fit')||t.includes('gym')||cn.includes('entren')){ cat='fitness'; q=null; }
+                        
+                        // KEYWORDS EXTENDIDAS PARA EVITAR CLASES EN TAREAS
+                        const kw=['clase','aula','uni','curso','materia','taller','laboratorio','examen','entrega','teoria','práctica','semestre','docente','school','college'];
+                        const fitKw=['fit','gym','entren','ejercicio','sport','correr','nadar'];
+
+                        if(kw.some(k=>cn.includes(k)||t.includes(k))){ cat='class'; q=null; }
+                        else if(fitKw.some(k=>cn.includes(k)||t.includes(k))){ cat='fitness'; q=null; }
+                        
                         return {id:i.id,calId:c.id,title:i.summary||'(No Title)',date:i.start.dateTime?.split('T')[0]||i.start.date,time:i.start.dateTime?.split('T')[1].substring(0,5)||'',type:'google',notes:i.description||'',cat,quad:q,gCol:c.backgroundColor}
                     })
                 }catch(e){return[]}
@@ -109,6 +116,7 @@ function App(){
         evs.forEach(e=>{
             if(e.type==='google'&&cals[e.calId]&&!cals[e.calId].visible)return;
             if(e.date){if(!l[e.date])l[e.date]=[];l[e.date].push(e)}
+            // FILTRO ESTRICTO PARA LA MATRIZ DE TAREAS
             if(e.cat!=='class'&&e.cat!=='fitness')m.push(e);
             if(e.date>=now)u.push(e);
         });
@@ -192,7 +200,7 @@ function App(){
         h('div',{className:`fixed bottom-0 left-0 right-[60px] z-50 rounded-tr-2xl glass flex flex-col ${!drag?'tr-h':''}`,style:{height:dH}},
             // HANDLE: Centrado absoluto
             h('div',{className:"w-full h-8 flex justify-center items-center cursor-grab touch-none shrink-0",onTouchStart:drwTouch.s,onTouchMove:drwTouch.m,onTouchEnd:drwTouch.e},h('div',{className:"w-16 h-1 bg-white/30 rounded-full"})),
-            // CONTENIDO: items-start evita estiramiento vertical
+            // CONTENIDO
             h('div',{className:`flex-1 overflow-x-auto p-4 flex items-start gap-4 no-scrollbar fade-content ${dH<80?'opacity-0 pointer-events-none':'opacity-100'}`}, up.length?up.map(e=>
                 h('div',{key:e.id,onClick:()=>{SF({...e});SSI(e.id);SM('e')},className:"min-w-[220px] w-[220px] h-auto bg-black/40 border-l-4 p-3 rounded hover:brightness-125 cursor-pointer backdrop-blur-sm",style:{borderLeftColor:e.gCol||'white'}},
                     h('div',{className:"flex justify-between items-start mb-1"},h('span',{className:"text-xs font-bold text-white truncate"},e.title),h('span',{className:"text-[9px] text-neutral-400 font-mono"},new Date(e.date).toLocaleDateString('es',{day:'numeric',month:'short'})+' '+e.time)),
