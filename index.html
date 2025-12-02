@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V8.8:CleanTouch</title>
+<title>CMD V8.8:Clean test</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif']}}}}</script>
@@ -10,16 +10,14 @@
 <script src="https://apis.google.com/js/api.js" async defer></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
-/* FIX: Elimina el resaltado azul/gris nativo y contornos al tocar en móviles */
-* { -webkit-tap-highlight-color: transparent; outline: none; }
-body{background:#000;touch-action:none;overscroll-behavior:none;user-select:none;-webkit-user-select:none}.no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+body{background:#000;touch-action:none;overscroll-behavior:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}.no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
 .glass{background:rgba(10,10,10,.85);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border-top:1px solid rgba(255,255,255,.1);box-shadow:0 -10px 50px #000}
 .tr-h{transition:height .4s cubic-bezier(.2,.8,.2,1)}
 @keyframes sl{0%{transform:translateY(-100%)}100%{transform:translateY(100%)}}
 .scan::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,transparent,#ffffff1a,transparent);animation:sl 2s linear infinite;pointer-events:none}
 .drag-over{background:#ffffff0d;border-color:var(--theme-color);box-shadow:inset 0 0 20px #ffffff0d}.rich b{color:inherit;font-weight:900}
 
-/* ANIMACIONES CRISP (SIN BLUR) */
+/* ANIMACIONES CRISP */
 @keyframes slideUp { from { opacity: 0; transform: translateY(25px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes slideDown { from { opacity: 0; transform: translateY(-25px); } to { opacity: 1; transform: translateY(0); } }
 .anim-n { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
@@ -46,9 +44,7 @@ function App(){
     const [sets,SS]=useState(false),[cals,SC]=useState({}),[bioIx,SB]=useState(0),[bioShow,SBS]=useState(false);
     const [sync,SSy]=useState(false),[gCfg,SG]=useState({apiKey:'',clientId:''}),[gSign,SGS]=useState(false);
     const [dH,SH]=useState(40),[drag,SDr]=useState(false),[dir,SDir]=useState('n');
-    
-    // CUSTOM TOUCH DRAG STATE
-    const [dTask, SDT] = useState(null);
+    const [dTask, SDT] = useState(null); 
 
     const fM=useRef(new Set()),tC=useRef(null),gI=useRef(false),gsI=useRef(false),tS=useRef(null),tE=useRef(null),dY=useRef(0),dH0=useRef(0);
     const curTab=tabs.find(t=>t.id===act)||tabs[0], thStyle={'--theme-color':curTab.c,'--theme-glow':curTab.c+'60'};
@@ -68,7 +64,6 @@ function App(){
         }
     },[date,gSign]);
 
-    // TOUCH DRAG LOGIC (GLOBAL)
     useEffect(() => {
         if (!dTask) return;
         const move = (e) => {
@@ -183,15 +178,15 @@ function App(){
             h('div',{className:"absolute inset-0 opacity-10",style:{backgroundImage:`radial-gradient(circle at 50% 0%,var(--theme-color),transparent 80%)`}}),
             h('div',{className:"absolute inset-0 opacity-20",style:{backgroundImage:`linear-gradient(#222 1px,transparent 1px),linear-gradient(90deg,#222 1px,transparent 1px)`,backgroundSize:'40px 40px'}})
         ),
-        // GHOST DRAG CARD
+        // GHOST DRAG
         dTask && h('div',{className:"fixed z-[100] bg-neutral-800/90 p-3 rounded-lg border border-white/50 pointer-events-none shadow-2xl w-48 backdrop-blur-md", style:{left:dTask.x, top:dTask.y, transform:'translate(-50%, -50%)'}},
             h('div',{className:"flex items-center gap-2 text-white font-bold text-xs"}, Icon('CheckSquare',14), dTask.title)
         ),
-
         // HEADER
         h('header',{className:"z-20 flex flex-col pt-2 bg-black/90 border-b border-white/10 shrink-0"},
             h('div',{className:"flex overflow-x-auto no-scrollbar px-4 gap-2"}, tabs.map(t=>
-                h('button',{key:t.id,onClick:()=>SA(t.id),style:{borderColor:act===t.id?t.c:'transparent',color:act===t.id?t.c:'#525252',backgroundColor:act===t.id?t.c+'10':'transparent'},className:"flex items-center gap-2 px-6 py-4 rounded-t-lg text-sm font-black tracking-widest transition-all border-b-4 hover:bg-white/5 uppercase shrink-0"},Icon(t.i),t.l)
+                // FIX: md:hover para evitar hover sticky en movil
+                h('button',{key:t.id,onClick:()=>SA(t.id),style:{borderColor:act===t.id?t.c:'transparent',color:act===t.id?t.c:'#525252',backgroundColor:act===t.id?t.c+'10':'transparent'},className:"flex items-center gap-2 px-6 py-4 rounded-t-lg text-sm font-black tracking-widest transition-all border-b-4 md:hover:bg-white/5 active:bg-white/10 uppercase shrink-0"},Icon(t.i),t.l)
             ))
         ),
         // MAIN
@@ -209,7 +204,7 @@ function App(){
             ),
             act==='t2' // MATRIX
             ? h('div',{className:"flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-2 grid-rows-2 gap-2 pb-20 md:pb-0"}, Object.keys(Q).map(k=>
-                h('div',{key:k,'data-quad':k, className:`bg-neutral-900/40 border rounded-xl p-3 flex flex-col relative overflow-hidden backdrop-blur-sm transition-colors ${dTask?'border-white/10 hover:bg-neutral-800/50':'border-neutral-800/60'}`},
+                h('div',{key:k,'data-quad':k, className:`bg-neutral-900/40 border rounded-xl p-3 flex flex-col relative overflow-hidden backdrop-blur-sm transition-colors ${dTask?'border-white/10 md:hover:bg-neutral-800/50':'border-neutral-800/60'}`},
                     h('div',{className:"flex justify-between items-center mb-3 pb-2 border-b border-white/5"},
                         h('div',{},h('h3',{className:"text-sm font-black tracking-widest",style:{color:Q[k].c}},Q[k].t),h('span',{className:"text-[9px] text-neutral-500 font-mono uppercase"},Q[k].s)),
                         h('span',{className:"bg-neutral-800 text-neutral-400 text-[10px] font-bold px-2 py-0.5 rounded-full"},mx.filter(e=>(e.quad||'q2')===k).length)
@@ -218,13 +213,13 @@ function App(){
                         h('div',{
                             key:e.id,
                             onClick:()=>{SF({...e});SSI(e.id);SM('e')},
-                            className:"bg-black/60 border border-neutral-800 p-2.5 rounded-lg group transition-all active:scale-95 flex items-start gap-2 relative"
+                            // FIX: md:hover y active para feedback
+                            className:"bg-black/60 border border-neutral-800 p-2.5 rounded-lg group transition-all active:scale-95 md:hover:border-white/30 flex items-start gap-2 relative"
                         },
                             h('div',{className:"mt-0.5 text-emerald-400"},Icon('CheckCircle',14)),
                             h('div',{className:"flex-1 min-w-0"},h('p',{className:"text-xs font-bold text-white truncate rich",dangerouslySetInnerHTML:{__html:e.title}})),
-                            // CUSTOM DRAG HANDLE
                             h('div',{
-                                className:"p-2 -m-2 cursor-grab active:cursor-grabbing text-neutral-600 hover:text-white touch-none",
+                                className:"p-2 -m-2 cursor-grab active:cursor-grabbing text-neutral-600 md:group-hover:text-white active:text-white touch-none",
                                 onTouchStart:(ev)=>{
                                     ev.stopPropagation(); ev.preventDefault();
                                     SDT({id:e.id, title:e.title, x:ev.touches[0].clientX, y:ev.touches[0].clientY, startQuad:k});
@@ -238,10 +233,11 @@ function App(){
                 h('div',{className:"grid grid-cols-7 bg-black border-b border-neutral-800"},['L','M','X','J','V','S','D'].map(d=>h('div',{key:d,className:"py-2 text-center text-[10px] md:text-xs font-black tracking-[0.2em] text-neutral-600"},d))),
                 h('div',{key:date.toISOString(),className:`grid grid-cols-7 flex-1 auto-rows-fr ${dir==='n'?'anim-n':'anim-p'}`}, days.map((d,i)=>{
                     const isT=d.dt===new Date().toISOString().split('T')[0], evs=d.dt?(lk[d.dt]||[]):[];
-                    return h('div',{key:i,onClick:()=>{if(d.dt){SF({title:'',date:d.dt,time:'09:00',type:'gen',notes:'',cat:'task',quad:'q2'});SM('c')}},className:`relative border-r border-b border-neutral-800/40 p-1 md:p-2 cursor-pointer group md:hover:bg-neutral-900 active:bg-neutral-900`,style:isT?{background:curTab.c+'1A',borderColor:curTab.c,boxShadow:`0 0 15px ${curTab.c}30`,zIndex:10,fontWeight:900}:null},
-                        d.d&&h('span',{className:`text-xs font-bold flex items-center justify-center w-6 h-6 rounded ${!isT?'text-neutral-600 group-hover:text-white':''}`,style:isT?{background:curTab.c,color:'black'}:null},d.d),
+                    // FIX: Eliminado hover genérico, usado md:hover para desktop y active para movil
+                    return h('div',{key:i,onClick:()=>{if(d.dt){SF({title:'',date:d.dt,time:'09:00',type:'gen',notes:'',cat:'task',quad:'q2'});SM('c')}},className:`relative border-r border-b border-neutral-800/40 p-1 md:p-2 cursor-pointer group active:bg-neutral-900 md:hover:bg-neutral-900 transition-colors`,style:isT?{background:curTab.c+'1A',borderColor:curTab.c,boxShadow:`0 0 15px ${curTab.c}30`,zIndex:10,fontWeight:900}:null},
+                        d.d&&h('span',{className:`text-xs font-bold flex items-center justify-center w-6 h-6 rounded ${!isT?'text-neutral-600 group-active:text-white md:group-hover:text-white':''}`,style:isT?{background:curTab.c,color:'black'}:null},d.d),
                         h('div',{className:"mt-1 flex flex-col gap-1 overflow-y-auto max-h-[80px] no-scrollbar"},evs.map(e=>
-                            h('div',{key:e.id,onClick:ev=>{ev.stopPropagation();SF({...e});SSI(e.id);SM('e')},className:"text-[9px] md:text-[10px] font-bold truncate px-1.5 py-0.5 rounded border-l-[3px] md:hover:brightness-125 active:brightness-125",style:{borderLeftColor:e.gCol||curTab.c,backgroundColor:(e.gCol||curTab.c)+'20',color:'#e2e8f0'}},
+                            h('div',{key:e.id,onClick:ev=>{ev.stopPropagation();SF({...e});SSI(e.id);SM('e')},className:"text-[9px] md:text-[10px] font-bold truncate px-1.5 py-0.5 rounded border-l-[3px] active:brightness-125 md:hover:brightness-125",style:{borderLeftColor:e.gCol||curTab.c,backgroundColor:(e.gCol||curTab.c)+'20',color:'#e2e8f0'}},
                                 e.cat==='class'&&Icon('GraduationCap',8,"inline mr-1"),e.cat==='fitness'&&Icon('Dumbbell',8,"inline mr-1"),e.time+' '+e.title
                             )
                         ))
@@ -256,7 +252,8 @@ function App(){
                 h('div',{key:dStr,className:"flex flex-col gap-2 min-w-[200px]"},
                     h('div',{className:"sticky top-0 z-10"},h('span',{className:"text-[10px] font-black tracking-widest text-neutral-500 uppercase bg-black/50 px-2 py-1 rounded"},fmtD(dStr))),
                     evs.map(e=>
-                        h('div',{key:e.id,onClick:()=>{SF({...e});SSI(e.id);SM('e')},className:"w-full bg-black/40 border-l-4 p-3 rounded md:hover:brightness-125 active:brightness-125 cursor-pointer backdrop-blur-sm transition-transform active:scale-95",style:{borderLeftColor:e.gCol||'white'}},
+                        // FIX: md:hover en drawer
+                        h('div',{key:e.id,onClick:()=>{SF({...e});SSI(e.id);SM('e')},className:"w-full bg-black/40 border-l-4 p-3 rounded active:brightness-125 md:hover:brightness-125 cursor-pointer backdrop-blur-sm transition-transform active:scale-95",style:{borderLeftColor:e.gCol||'white'}},
                             h('div',{className:"flex justify-between items-start mb-1"},h('span',{className:"text-xs font-bold text-white truncate"},e.title),h('span',{className:"text-[9px] text-neutral-400 font-mono"},e.time)),
                             (e.cat==='class'||e.title.toLowerCase().includes('clase'))&&h('div',{className:"text-[9px] text-blue-300 font-bold"},"CLASE"),
                             e.notes&&h('div',{className:"text-[9px] text-neutral-500 line-clamp-1 italic",dangerouslySetInnerHTML:{__html:e.notes}})
@@ -266,8 +263,9 @@ function App(){
             ):h('div',{className:"w-full text-center text-neutral-500 text-xs italic"},"No upcoming events"))
         ),
         // BIO WIDGET
-        h('div',{onClick:()=>{SB(BIO.length>1?Math.floor(Math.random()*BIO.length):0);SBS(true)},className:`fixed bottom-0 right-0 w-32 z-[60] flex items-center justify-center cursor-pointer md:hover:bg-black/50 active:bg-black/50 overflow-hidden rounded-tl-[30px] group shadow-[0_0_30px_#000c] backdrop-blur-md ${!drag?'tr-h':''}`,style:{height:dH,background:'#0006',borderLeft:`2px solid ${curTab.c}`,borderTop:`2px solid ${curTab.c}`}},
-            Icon('Dna',28,`group-hover:animate-spin transition-transform duration-700 text-[${curTab.c}]`)
+        // FIX: md:hover para evitar que se quede iluminado (recuadro fantasma)
+        h('div',{onClick:()=>{SB(BIO.length>1?Math.floor(Math.random()*BIO.length):0);SBS(true)},className:`fixed bottom-0 right-0 w-32 z-[60] flex items-center justify-center cursor-pointer active:bg-black/50 md:hover:bg-black/50 overflow-hidden rounded-tl-[30px] group shadow-[0_0_30px_#000c] backdrop-blur-md ${!drag?'tr-h':''}`,style:{height:dH,background:'#0006',borderLeft:`2px solid ${curTab.c}`,borderTop:`2px solid ${curTab.c}`}},
+            Icon('Dna',28,`group-active:animate-spin md:group-hover:animate-spin transition-transform duration-700 text-[${curTab.c}]`)
         ),
         // MODALS
         (sets||modal||bioShow)&&h('div',{className:"fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in"},
