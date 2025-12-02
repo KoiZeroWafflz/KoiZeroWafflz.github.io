@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V8.8:TouchFix</title>
+<title>CMD V8.8:CleanUI</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif']}}}}</script>
@@ -10,6 +10,8 @@
 <script src="https://apis.google.com/js/api.js" async defer></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
+/* FIX: Elimina Tap Highlight y Focus Outline nativos */
+* { -webkit-tap-highlight-color: transparent; outline: none; }
 body{background:#000;touch-action:none;overscroll-behavior:none;user-select:none;-webkit-user-select:none}.no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
 .glass{background:rgba(10,10,10,.85);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border-top:1px solid rgba(255,255,255,.1);box-shadow:0 -10px 50px #000}
 .tr-h{transition:height .4s cubic-bezier(.2,.8,.2,1)}
@@ -44,9 +46,7 @@ function App(){
     const [sets,SS]=useState(false),[cals,SC]=useState({}),[bioIx,SB]=useState(0),[bioShow,SBS]=useState(false);
     const [sync,SSy]=useState(false),[gCfg,SG]=useState({apiKey:'',clientId:''}),[gSign,SGS]=useState(false);
     const [dH,SH]=useState(40),[drag,SDr]=useState(false),[dir,SDir]=useState('n');
-    
-    // NEW: CUSTOM TOUCH DRAG STATE
-    const [dTask, SDT] = useState(null); // {id, title, x, y, startQuad}
+    const [dTask, SDT] = useState(null); 
 
     const fM=useRef(new Set()),tC=useRef(null),gI=useRef(false),gsI=useRef(false),tS=useRef(null),tE=useRef(null),dY=useRef(0),dH0=useRef(0);
     const curTab=tabs.find(t=>t.id===act)||tabs[0], thStyle={'--theme-color':curTab.c,'--theme-glow':curTab.c+'60'};
@@ -66,7 +66,6 @@ function App(){
         }
     },[date,gSign]);
 
-    // TOUCH DRAG LOGIC (GLOBAL)
     useEffect(() => {
         if (!dTask) return;
         const move = (e) => {
@@ -75,7 +74,6 @@ function App(){
         };
         const end = (e) => {
             const t = e.changedTouches ? e.changedTouches[0] : e;
-            // Identify drop target via coordinates
             const el = document.elementFromPoint(t.clientX, t.clientY);
             const quadDiv = el?.closest('[data-quad]');
             if (quadDiv) {
@@ -221,11 +219,10 @@ function App(){
                         },
                             h('div',{className:"mt-0.5 text-emerald-400"},Icon('CheckCircle',14)),
                             h('div',{className:"flex-1 min-w-0"},h('p',{className:"text-xs font-bold text-white truncate rich",dangerouslySetInnerHTML:{__html:e.title}})),
-                            // CUSTOM DRAG HANDLE
                             h('div',{
                                 className:"p-2 -m-2 cursor-grab active:cursor-grabbing text-neutral-600 hover:text-white touch-none",
                                 onTouchStart:(ev)=>{
-                                    ev.stopPropagation(); ev.preventDefault(); // Stop Scroll/Select
+                                    ev.stopPropagation(); ev.preventDefault();
                                     SDT({id:e.id, title:e.title, x:ev.touches[0].clientX, y:ev.touches[0].clientY, startQuad:k});
                                 }
                             }, Icon('GripHorizontal',14))
@@ -237,7 +234,8 @@ function App(){
                 h('div',{className:"grid grid-cols-7 bg-black border-b border-neutral-800"},['L','M','X','J','V','S','D'].map(d=>h('div',{key:d,className:"py-2 text-center text-[10px] md:text-xs font-black tracking-[0.2em] text-neutral-600"},d))),
                 h('div',{key:date.toISOString(),className:`grid grid-cols-7 flex-1 auto-rows-fr ${dir==='n'?'anim-n':'anim-p'}`}, days.map((d,i)=>{
                     const isT=d.dt===new Date().toISOString().split('T')[0], evs=d.dt?(lk[d.dt]||[]):[];
-                    return h('div',{key:i,onClick:()=>{if(d.dt){SF({title:'',date:d.dt,time:'09:00',type:'gen',notes:'',cat:'task',quad:'q2'});SM('c')}},className:`relative border-r border-b border-neutral-800/40 p-1 md:p-2 cursor-pointer group hover:bg-neutral-900`,style:isT?{background:curTab.c+'1A',borderColor:curTab.c,boxShadow:`0 0 15px ${curTab.c}30`,zIndex:10,fontWeight:900}:null},
+                    // FIX: className 'md:hover' para que no se quede pegado en móvil
+                    return h('div',{key:i,onClick:()=>{if(d.dt){SF({title:'',date:d.dt,time:'09:00',type:'gen',notes:'',cat:'task',quad:'q2'});SM('c')}},className:`relative border-r border-b border-neutral-800/40 p-1 md:p-2 cursor-pointer group md:hover:bg-neutral-900 active:bg-neutral-900 transition-colors`,style:isT?{background:curTab.c+'1A',borderColor:curTab.c,boxShadow:`0 0 15px ${curTab.c}30`,zIndex:10,fontWeight:900}:null},
                         d.d&&h('span',{className:`text-xs font-bold flex items-center justify-center w-6 h-6 rounded ${!isT?'text-neutral-600 group-hover:text-white':''}`,style:isT?{background:curTab.c,color:'black'}:null},d.d),
                         h('div',{className:"mt-1 flex flex-col gap-1 overflow-y-auto max-h-[80px] no-scrollbar"},evs.map(e=>
                             h('div',{key:e.id,onClick:ev=>{ev.stopPropagation();SF({...e});SSI(e.id);SM('e')},className:"text-[9px] md:text-[10px] font-bold truncate px-1.5 py-0.5 rounded border-l-[3px] hover:brightness-125",style:{borderLeftColor:e.gCol||curTab.c,backgroundColor:(e.gCol||curTab.c)+'20',color:'#e2e8f0'}},
@@ -255,7 +253,7 @@ function App(){
                 h('div',{key:dStr,className:"flex flex-col gap-2 min-w-[200px]"},
                     h('div',{className:"sticky top-0 z-10"},h('span',{className:"text-[10px] font-black tracking-widest text-neutral-500 uppercase bg-black/50 px-2 py-1 rounded"},fmtD(dStr))),
                     evs.map(e=>
-                        h('div',{key:e.id,onClick:()=>{SF({...e});SSI(e.id);SM('e')},className:"w-full bg-black/40 border-l-4 p-3 rounded hover:brightness-125 cursor-pointer backdrop-blur-sm transition-transform active:scale-95",style:{borderLeftColor:e.gCol||'white'}},
+                        h('div',{key:e.id,onClick:()=>{SF({...e});SSI(e.id);SM('e')},className:"w-full bg-black/40 border-l-4 p-3 rounded active:brightness-125 cursor-pointer backdrop-blur-sm transition-transform active:scale-95",style:{borderLeftColor:e.gCol||'white'}},
                             h('div',{className:"flex justify-between items-start mb-1"},h('span',{className:"text-xs font-bold text-white truncate"},e.title),h('span',{className:"text-[9px] text-neutral-400 font-mono"},e.time)),
                             (e.cat==='class'||e.title.toLowerCase().includes('clase'))&&h('div',{className:"text-[9px] text-blue-300 font-bold"},"CLASE"),
                             e.notes&&h('div',{className:"text-[9px] text-neutral-500 line-clamp-1 italic",dangerouslySetInnerHTML:{__html:e.notes}})
