@@ -207,7 +207,18 @@ function App(){
                         h('span',{className:"bg-neutral-800 text-neutral-400 text-[10px] font-bold px-2 py-0.5 rounded-full"},mx.filter(e=>(e.quad||'q2')===k).length)
                     ),
                     h('div',{className:"flex-1 overflow-y-auto space-y-2 no-scrollbar"}, mx.filter(e=>(e.quad||'q2')===k).map(e=>
-                        h('div',{key:e.id,draggable:true,onDragStart:ev=>{SDId(e.id);ev.dataTransfer.effectAllowed="move"},onClick:()=>{SF({...e});SSI(e.id);SM('e')},className:"bg-black/60 border border-neutral-800 hover:border-white/30 p-2.5 rounded-lg group transition-all active:scale-95"},
+                        h('div',{
+                            key:e.id,
+                            draggable:true,
+                            onDragStart:ev=>{
+                                SDId(e.id);
+                                ev.dataTransfer.effectAllowed="move";
+                                ev.dataTransfer.setData("text/plain", e.id); // FIX: Ayuda al navegador a entender el drag
+                            },
+                            onContextMenu:ev=>ev.preventDefault(), // FIX: Bloquea el menú de copiar/pegar
+                            onClick:()=>{SF({...e});SSI(e.id);SM('e')},
+                            className:"bg-black/60 border border-neutral-800 hover:border-white/30 p-2.5 rounded-lg group transition-all active:scale-95 cursor-grab active:cursor-grabbing select-none" // FIX: select-none bloquea selección de texto
+                        },
                             h('div',{className:"flex items-start gap-2"},h('div',{className:"mt-0.5 text-emerald-400"},Icon('CheckCircle',14)),h('div',{className:"flex-1 min-w-0"},h('p',{className:"text-xs font-bold text-white truncate rich",dangerouslySetInnerHTML:{__html:e.title}})),Icon('GripHorizontal',14,"text-neutral-700"))
                         )
                     ))
