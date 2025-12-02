@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V8.7:Drag and Drop</title>
+<title>CMD V8.7:SmartnDrag</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif']}}}}</script>
@@ -210,14 +210,11 @@ function App(){
                         h('div',{
                             key:e.id,
                             draggable:true,
-                            onDragStart:ev=>{
-                                SDId(e.id);
-                                ev.dataTransfer.effectAllowed="move";
-                                ev.dataTransfer.setData("text/plain", e.id); // FIX: Ayuda al navegador a entender el drag
-                            },
-                            onContextMenu:ev=>ev.preventDefault(), // FIX: Bloquea el menú de copiar/pegar
+                            onContextMenu:x=>x.preventDefault(), // FIX: Evita menú contextual (copiar/pegar)
+                            onDragStart:ev=>{SDId(e.id);ev.dataTransfer.effectAllowed="move"},
                             onClick:()=>{SF({...e});SSI(e.id);SM('e')},
-                            className:"bg-black/60 border border-neutral-800 hover:border-white/30 p-2.5 rounded-lg group transition-all active:scale-95 cursor-grab active:cursor-grabbing select-none" // FIX: select-none bloquea selección de texto
+                            // FIX: Añadido select-none, cursor-grab y touch-manipulation
+                            className:"select-none touch-manipulation cursor-grab active:cursor-grabbing bg-black/60 border border-neutral-800 hover:border-white/30 p-2.5 rounded-lg group transition-all active:scale-95"
                         },
                             h('div',{className:"flex items-start gap-2"},h('div',{className:"mt-0.5 text-emerald-400"},Icon('CheckCircle',14)),h('div',{className:"flex-1 min-w-0"},h('p',{className:"text-xs font-bold text-white truncate rich",dangerouslySetInnerHTML:{__html:e.title}})),Icon('GripHorizontal',14,"text-neutral-700"))
                         )
@@ -292,4 +289,3 @@ const root=createRoot(document.getElementById('root'));root.render(h(App));
 <script>if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js'));</script>
 </body>
 </html>
-
