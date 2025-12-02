@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V8.9:CleanGPU</title>
+<title>CMD V8.9.9:Calendar Logic</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif']}}}}</script>
@@ -16,15 +16,11 @@ body{background:#000;touch-action:none;overscroll-behavior:none;user-select:none
 @keyframes sl{0%{transform:translateY(-100%)}100%{transform:translateY(100%)}}
 .scan::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,transparent,#ffffff1a,transparent);animation:sl 2s linear infinite;pointer-events:none}
 .drag-over{background:#ffffff0d;border-color:var(--theme-color);box-shadow:inset 0 0 20px #ffffff0d}.rich b{color:inherit;font-weight:900}
-
-/* ANIMACIONES CRISP */
 @keyframes slideUp { from { opacity: 0; transform: translateY(25px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes slideDown { from { opacity: 0; transform: translateY(-25px); } to { opacity: 1; transform: translateY(0); } }
 .anim-n { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 .anim-p { animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 .fade-content { transition: opacity 0.2s ease-out; }
-
-/* FIX TABLETS */
 @media (hover: hover) {
     .safe-hover:hover { background-color: rgba(23, 23, 23, 1); } 
     .safe-bright:hover { filter: brightness(1.25); }
@@ -46,6 +42,12 @@ const BIO=[{id:1,name:"Cuervo Grande",sci:"Corvus corax",tx:"Aves/Corvidae",desc
 const TABS=[{id:'t1',l:'EVENTOS',i:'Calendar',c:'#3b82f6'},{id:'t2',l:'TAREAS',i:'CheckSquare',c:'#ef4444'},{id:'t3',l:'NOTAS',i:'BookOpen',c:'#eab308'},{id:'t4',l:'PROY',i:'Folder',c:'#22c55e'}];
 const Q={q1:{t:'HACER YA',s:'Urgente+Imp',c:'#ef4444'},q2:{t:'PLANIFICAR',s:'NoUrg+Imp',c:'#3b82f6'},q3:{t:'DELEGAR',s:'Urg+NoImp',c:'#eab308'},q4:{t:'ELIMINAR',s:'NiUrg+NiImp',c:'#64748b'}};
 
+// Helper para fecha local ISO (evita errores de zona horaria al filtrar)
+const locDate = (d) => {
+    const z = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - z).toISOString().split('T')[0];
+};
+
 function App(){
     const [tabs,ST]=useState(TABS),[act,SA]=useState('t1'),[date,SD]=useState(new Date()),[evs,SE]=useState([]);
     const [modal,SM]=useState(null),[selId,SSI]=useState(null),[form,SF]=useState({title:'',date:'',time:'',type:'gen',notes:'',cat:'task',quad:'q2'});
@@ -65,12 +67,21 @@ function App(){
         if(window.gapi)window.gapi.load('client',initGapi);
     },[]);
     useEffect(()=>{ls('ev_v8',evs);ls('tb_v8',tabs);ls('gc_v8',gCfg);ls('cm_v8',cals)},[evs,tabs,gCfg,cals]);
+    
+    // Auto-Sync al cambiar mes
     useEffect(()=>{
         if(gSign&&gCfg.apiKey){
             const k=`${date.getFullYear()}-${date.getMonth()}`,nk=`${date.getFullYear()}-${date.getMonth()+1}`;
             if(!fM.current.has(k)||!fM.current.has(nk)) fetchG(date);
         }
     },[date,gSign]);
+
+    // REAL-TIME FEEL: Sync al volver a la pestaña/app
+    useEffect(() => {
+        const onVis = () => { if (document.visibilityState === 'visible' && gSign) fetchG(date); };
+        document.addEventListener('visibilitychange', onVis);
+        return () => document.removeEventListener('visibilitychange', onVis);
+    }, [gSign, date]);
 
     useEffect(() => {
         if (!dTask) return;
@@ -102,35 +113,92 @@ function App(){
     const initGis=()=>{if(gCfg.clientId){tC.current=window.google.accounts.oauth2.initTokenClient({client_id:gCfg.clientId,scope:"https://www.googleapis.com/auth/calendar.readonly",callback:async(r)=>{if(!r.error){SGS(true);fM.current.clear();await fetchG(date)}}});gsI.current=true}};
     const auth=async()=>{if(!gCfg.apiKey||!gCfg.clientId)return alert("Faltan Credenciales");if(!gI.current)await initGapi();if(!gsI.current)initGis();setTimeout(()=>tC.current.requestAccessToken({prompt:'select_account'}),500)};
     
+    // FETCH REPARADO Y PRECISO
     const fetchG=async(td=new Date())=>{
         SSy(true);try{
             if(!window.gapi.client.calendar) await window.gapi.client.load('calendar','v3');
-            const y=td.getFullYear(),m=td.getMonth(),min=new Date(y,m-1,1).toISOString(),max=new Date(y,m+2,0).toISOString();
+            
+            const y=td.getFullYear(),m=td.getMonth();
+            // Rangos precisos de tiempo
+            const minDt = new Date(y,m-1,1);
+            const maxDt = new Date(y,m+2,0,23,59,59);
+            const minIso = minDt.toISOString();
+            const maxIso = maxDt.toISOString();
+            
+            // Strings fecha local para filtrado estricto (YYYY-MM-DD)
+            const minStr = locDate(minDt);
+            const maxStr = locDate(maxDt);
+
             fM.current.add(`${y}-${m}`);fM.current.add(`${y}-${m+1}`);
+            
             const cl=await window.gapi.client.calendar.calendarList.list(), rC=cl.result.items, uC={...cals};
             rC.forEach(c=>{if(!uC[c.id])uC[c.id]={id:c.id,summary:c.summary,color:c.backgroundColor,visible:true};else{uC[c.id].summary=c.summary;uC[c.id].color=c.backgroundColor}});
             SC(uC);
+
             const all=await Promise.all(rC.map(async c=>{
                 if(cals[c.id]&&!cals[c.id].visible)return[];
                 try{
-                    const r=await window.gapi.client.calendar.events.list({calendarId:c.id,timeMin:min,timeMax:max,singleEvents:true,maxResults:999,orderBy:'startTime'});
-                    return r.result.items.map(i=>{
+                    const r=await window.gapi.client.calendar.events.list({
+                        calendarId:c.id,
+                        timeMin:minIso,
+                        timeMax:maxIso,
+                        singleEvents:true,
+                        maxResults:999,
+                        orderBy:'startTime'
+                    });
+                    
+                    return r.result.items.filter(i => i.status !== 'cancelled').map(i=>{
                         const t=(i.summary||'').toLowerCase(), cn=(c.summary||'').toLowerCase();
                         let cat='task',q='q2'; 
                         const kw=['clase','aula','uni','curso','materia','taller','laboratorio','examen','catedra','teorico','practico','docente','school','college','salon','b1','a1','pabellon','fadu','uba'];
                         const fitKw=['fit','gym','entren','ejercicio','sport','correr','nadar'];
                         if(kw.some(k=>cn.includes(k)||t.includes(k))){ cat='class'; q=null; }
                         else if(fitKw.some(k=>cn.includes(k)||t.includes(k))){ cat='fitness'; q=null; }
-                        return {id:i.id,calId:c.id,title:i.summary||'(No Title)',date:i.start.dateTime?.split('T')[0]||i.start.date,time:i.start.dateTime?.split('T')[1].substring(0,5)||'',type:'google',notes:i.description||'',cat,quad:q,gCol:c.backgroundColor}
+                        
+                        // Parseo de fecha seguro
+                        let dRaw = i.start.dateTime || i.start.date;
+                        let dFinal = dRaw;
+                        if(dRaw.includes('T')) dFinal = dRaw.split('T')[0];
+
+                        return {
+                            id:i.id,
+                            calId:c.id,
+                            title:i.summary||'(No Title)',
+                            date:dFinal,
+                            time:i.start.dateTime?.split('T')[1].substring(0,5)||'',
+                            type:'google',
+                            notes:i.description||'',
+                            cat,quad:q,
+                            gCol:c.backgroundColor
+                        }
                     })
                 }catch(e){return[]}
             }));
-            const flat=all.flat(), map=new Map(flat.map(e=>[e.id,e]));
+
+            const flat=all.flat();
+
             SE(p=>{
-                const loc=p.filter(e=>e.type!=='google'), goog=p.filter(e=>e.type==='google' && (e.date<min.split('T')[0]||e.date>max.split('T')[0]));
-                const merged=new Map(); loc.forEach(e=>merged.set(e.id,e)); goog.forEach(e=>merged.set(e.id,e)); flat.forEach(e=>merged.set(e.id,e));
+                // 1. Mantener eventos locales
+                const loc=p.filter(e=>e.type!=='google');
+                
+                // 2. Mantener eventos Google QUE ESTÉN FUERA del rango consultado.
+                // Usamos comparación de strings segura localmente para evitar fantasmas por zona horaria.
+                // Todo lo que esté DENTRO del rango (minStr a maxStr) se elimina de 'p' 
+                // y se reemplaza exclusivamente por lo que trajo 'flat'.
+                const googleKept = p.filter(e => 
+                    e.type === 'google' && (e.date < minStr || e.date > maxStr)
+                );
+
+                const merged=new Map(); 
+                loc.forEach(e=>merged.set(e.id,e)); 
+                googleKept.forEach(e=>merged.set(e.id,e)); 
+                
+                // 3. Insertar la nueva verdad absoluta del rango
+                flat.forEach(e=>merged.set(e.id,e));
+                
                 return Array.from(merged.values())
             });
+
         }catch(e){console.error(e)}finally{SSy(false)};
     };
 
@@ -239,12 +307,10 @@ function App(){
                 h('div',{className:"grid grid-cols-7 bg-black border-b border-neutral-800"},['L','M','X','J','V','S','D'].map(d=>h('div',{key:d,className:"py-2 text-center text-[10px] md:text-xs font-black tracking-[0.2em] text-neutral-600"},d))),
                 h('div',{key:date.toISOString(),className:`grid grid-cols-7 flex-1 auto-rows-fr ${dir==='n'?'anim-n':'anim-p'}`, style:{willChange:'transform'}}, days.map((d,i)=>{ // FIX: will-change
                     const isT=d.dt===new Date().toISOString().split('T')[0], evs=d.dt?(lk[d.dt]||[]):[];
-                    
-                    // FIX: REMOVE Z-INDEX & USE INSET SHADOW
                     const activeStyle = isT ? {
                         background: curTab.c+'1A',
                         borderColor: curTab.c,
-                        boxShadow: `inset 0 0 15px ${curTab.c}20`, // Inset para evitar trails
+                        boxShadow: `inset 0 0 15px ${curTab.c}20`,
                         fontWeight: 900
                     } : null;
 
