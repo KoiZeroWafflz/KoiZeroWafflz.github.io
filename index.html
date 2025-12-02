@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V8.9.9:Calendar Logic</title>
+<title>CMD V8.9.9:AutoSync</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif']}}}}</script>
@@ -42,7 +42,6 @@ const BIO=[{id:1,name:"Cuervo Grande",sci:"Corvus corax",tx:"Aves/Corvidae",desc
 const TABS=[{id:'t1',l:'EVENTOS',i:'Calendar',c:'#3b82f6'},{id:'t2',l:'TAREAS',i:'CheckSquare',c:'#ef4444'},{id:'t3',l:'NOTAS',i:'BookOpen',c:'#eab308'},{id:'t4',l:'PROY',i:'Folder',c:'#22c55e'}];
 const Q={q1:{t:'HACER YA',s:'Urgente+Imp',c:'#ef4444'},q2:{t:'PLANIFICAR',s:'NoUrg+Imp',c:'#3b82f6'},q3:{t:'DELEGAR',s:'Urg+NoImp',c:'#eab308'},q4:{t:'ELIMINAR',s:'NiUrg+NiImp',c:'#64748b'}};
 
-// Helper para fecha local ISO (evita errores de zona horaria al filtrar)
 const locDate = (d) => {
     const z = d.getTimezoneOffset() * 60000;
     return new Date(d.getTime() - z).toISOString().split('T')[0];
@@ -68,7 +67,6 @@ function App(){
     },[]);
     useEffect(()=>{ls('ev_v8',evs);ls('tb_v8',tabs);ls('gc_v8',gCfg);ls('cm_v8',cals)},[evs,tabs,gCfg,cals]);
     
-    // Auto-Sync al cambiar mes
     useEffect(()=>{
         if(gSign&&gCfg.apiKey){
             const k=`${date.getFullYear()}-${date.getMonth()}`,nk=`${date.getFullYear()}-${date.getMonth()+1}`;
@@ -76,7 +74,6 @@ function App(){
         }
     },[date,gSign]);
 
-    // REAL-TIME FEEL: Sync al volver a la pestaña/app
     useEffect(() => {
         const onVis = () => { if (document.visibilityState === 'visible' && gSign) fetchG(date); };
         document.addEventListener('visibilitychange', onVis);
@@ -113,38 +110,47 @@ function App(){
     const initGis=()=>{if(gCfg.clientId){tC.current=window.google.accounts.oauth2.initTokenClient({client_id:gCfg.clientId,scope:"https://www.googleapis.com/auth/calendar.readonly",callback:async(r)=>{if(!r.error){SGS(true);fM.current.clear();await fetchG(date)}}});gsI.current=true}};
     const auth=async()=>{if(!gCfg.apiKey||!gCfg.clientId)return alert("Faltan Credenciales");if(!gI.current)await initGapi();if(!gsI.current)initGis();setTimeout(()=>tC.current.requestAccessToken({prompt:'select_account'}),500)};
     
-    // FETCH REPARADO Y PRECISO
     const fetchG=async(td=new Date())=>{
         SSy(true);try{
             if(!window.gapi.client.calendar) await window.gapi.client.load('calendar','v3');
             
             const y=td.getFullYear(),m=td.getMonth();
-            // Rangos precisos de tiempo
             const minDt = new Date(y,m-1,1);
             const maxDt = new Date(y,m+2,0,23,59,59);
             const minIso = minDt.toISOString();
             const maxIso = maxDt.toISOString();
-            
-            // Strings fecha local para filtrado estricto (YYYY-MM-DD)
             const minStr = locDate(minDt);
             const maxStr = locDate(maxDt);
 
             fM.current.add(`${y}-${m}`);fM.current.add(`${y}-${m+1}`);
             
-            const cl=await window.gapi.client.calendar.calendarList.list(), rC=cl.result.items, uC={...cals};
-            rC.forEach(c=>{if(!uC[c.id])uC[c.id]={id:c.id,summary:c.summary,color:c.backgroundColor,visible:true};else{uC[c.id].summary=c.summary;uC[c.id].color=c.backgroundColor}});
-            SC(uC);
+            // 1. OBTENER LISTA FRESCA DE CALENDARIOS
+            const cl=await window.gapi.client.calendar.calendarList.list();
+            const rC=cl.result.items;
+            
+            // 2. RECONSTRUIR EL MAPA DE CALENDARIOS (Añadir nuevos, limpiar borrados)
+            const nextCals = {};
+            rC.forEach(c => {
+                const existing = cals[c.id]; // ¿Ya lo teníamos?
+                nextCals[c.id] = {
+                    id: c.id,
+                    summary: c.summary,
+                    color: c.backgroundColor,
+                    // Si existía, mantén preferencia. Si es NUEVO, visible por defecto (true).
+                    visible: existing ? existing.visible : true
+                };
+            });
+            SC(nextCals); // Actualizamos estado y persistencia
 
             const all=await Promise.all(rC.map(async c=>{
-                if(cals[c.id]&&!cals[c.id].visible)return[];
+                // Usamos la preferencia histórica o true si es nuevo (para la lógica de fetch)
+                const isHidden = cals[c.id] && !cals[c.id].visible;
+                if(isHidden) return []; // Si el usuario lo ocultó explícitamente, saltar.
+
                 try{
                     const r=await window.gapi.client.calendar.events.list({
-                        calendarId:c.id,
-                        timeMin:minIso,
-                        timeMax:maxIso,
-                        singleEvents:true,
-                        maxResults:999,
-                        orderBy:'startTime'
+                        calendarId:c.id, timeMin:minIso, timeMax:maxIso,
+                        singleEvents:true, maxResults:999, orderBy:'startTime'
                     });
                     
                     return r.result.items.filter(i => i.status !== 'cancelled').map(i=>{
@@ -155,47 +161,26 @@ function App(){
                         if(kw.some(k=>cn.includes(k)||t.includes(k))){ cat='class'; q=null; }
                         else if(fitKw.some(k=>cn.includes(k)||t.includes(k))){ cat='fitness'; q=null; }
                         
-                        // Parseo de fecha seguro
                         let dRaw = i.start.dateTime || i.start.date;
-                        let dFinal = dRaw;
-                        if(dRaw.includes('T')) dFinal = dRaw.split('T')[0];
+                        let dFinal = dRaw; if(dRaw.includes('T')) dFinal = dRaw.split('T')[0];
 
                         return {
-                            id:i.id,
-                            calId:c.id,
-                            title:i.summary||'(No Title)',
-                            date:dFinal,
-                            time:i.start.dateTime?.split('T')[1].substring(0,5)||'',
-                            type:'google',
-                            notes:i.description||'',
-                            cat,quad:q,
-                            gCol:c.backgroundColor
+                            id:i.id, calId:c.id, title:i.summary||'(No Title)',
+                            date:dFinal, time:i.start.dateTime?.split('T')[1].substring(0,5)||'',
+                            type:'google', notes:i.description||'', cat, quad:q, gCol:c.backgroundColor
                         }
                     })
                 }catch(e){return[]}
             }));
 
             const flat=all.flat();
-
             SE(p=>{
-                // 1. Mantener eventos locales
                 const loc=p.filter(e=>e.type!=='google');
-                
-                // 2. Mantener eventos Google QUE ESTÉN FUERA del rango consultado.
-                // Usamos comparación de strings segura localmente para evitar fantasmas por zona horaria.
-                // Todo lo que esté DENTRO del rango (minStr a maxStr) se elimina de 'p' 
-                // y se reemplaza exclusivamente por lo que trajo 'flat'.
-                const googleKept = p.filter(e => 
-                    e.type === 'google' && (e.date < minStr || e.date > maxStr)
-                );
-
+                const googleKept = p.filter(e => e.type === 'google' && (e.date < minStr || e.date > maxStr));
                 const merged=new Map(); 
                 loc.forEach(e=>merged.set(e.id,e)); 
                 googleKept.forEach(e=>merged.set(e.id,e)); 
-                
-                // 3. Insertar la nueva verdad absoluta del rango
                 flat.forEach(e=>merged.set(e.id,e));
-                
                 return Array.from(merged.values())
             });
 
