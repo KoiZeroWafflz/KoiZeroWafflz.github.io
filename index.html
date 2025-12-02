@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Centro de Mando V8: Touch Edition</title>
+    <title>Centro de Mando V8:Account Fix</title>
     
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#000000">
@@ -231,8 +231,9 @@
                 if (!gisInited.current) initializeGisClient();
 
                 setTimeout(() => {
-                    if (tokenClient.current) tokenClient.current.requestAccessToken({ prompt: 'consent' });
-                    else { initializeGisClient(); if(tokenClient.current) tokenClient.current.requestAccessToken({ prompt: 'consent' }); }
+                    // AQUÍ ESTÁ EL CAMBIO CLAVE: prompt: 'select_account'
+                    if (tokenClient.current) tokenClient.current.requestAccessToken({ prompt: 'select_account' });
+                    else { initializeGisClient(); if(tokenClient.current) tokenClient.current.requestAccessToken({ prompt: 'select_account' }); }
                 }, 500);
             };
 
@@ -527,23 +528,30 @@
                                 const dayEvents = dayObj.date ? (eventLookup[dayObj.date] || []) : [];
                                 const isToday = dayObj.date === new Date().toISOString().split('T')[0];
                                 
-                                // ESTILO NUEVO PARA EL DÍA ACTUAL (ESTILO BIO)
+                                // ESTILO NUEVO PARA EL DÍA ACTUAL (MÁS DESTACADO)
                                 const todayStyle = isToday ? {
-                                    backgroundColor: 'rgba(20, 20, 20, 0.6)', 
+                                    backgroundColor: `${activeTab.color}33`, // Fondo del color del tema (semi-transparente)
                                     borderColor: activeTab.color,       
-                                    color: activeTab.color,             
-                                    boxShadow: `0 0 15px ${activeTab.color}30`, 
-                                    borderWidth: '1px'
+                                    color: '#ffffff', // Texto blanco para contraste
+                                    boxShadow: `0 0 20px ${activeTab.color}50`, // Resplandor fuerte
+                                    borderWidth: '2px', // Borde más grueso
+                                    fontWeight: '900',
+                                    transform: 'scale(1.02)', // Ligero pop
+                                    zIndex: 10
                                 } : {};
 
                                 return React.createElement('div', {
                                     key: index,
                                     onClick: () => { setEventFormData({ title: '', date: dayObj.date, time: '09:00', type: 'general', notes: '', category: 'task', quadrant: 'q2' }); setModalMode('create'); },
                                     className: `relative border-r border-b border-neutral-800/40 p-1 md:p-2 transition-colors cursor-pointer group hover:bg-neutral-900`,
+                                    style: isToday ? todayStyle : {} // Aplicar estilo aquí al contenedor entero si se desea
                                 }, [
                                     React.createElement('span', { 
                                         className: `text-xs font-bold flex items-center justify-center w-6 h-6 rounded ${!isToday ? 'text-neutral-600 group-hover:text-white' : ''}`,
-                                        style: isToday ? todayStyle : {} // Aplicar estilo aquí
+                                        // Si prefieres que solo el numerito brille, mueve todayStyle aquí.
+                                        // Pero para "fondo de un dia seleccionado se vea mas", lo dejo en el div padre arriba si posible, 
+                                        // o para mantener consistencia con diseño anterior, lo aplico al numerito pero más fuerte:
+                                        style: isToday ? { backgroundColor: activeTab.color, color: 'black', boxShadow: `0 0 10px ${activeTab.color}` } : {}
                                     }, dayObj.day),
                                     React.createElement('div', { className: "mt-1 flex flex-col gap-1 overflow-y-auto max-h-[80px] no-scrollbar" }, 
                                         dayEvents.map(event => {
