@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V8.9:CleanToday</title>
+<title>CMD V8.9:CleanGPU</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif']}}}}</script>
@@ -235,12 +235,20 @@ function App(){
                     ))
                 )
             )) // CALENDAR
-            : h('div',{onTouchStart:calTouch.s,onTouchMove:e=>tE.current=e.targetTouches[0].clientX,onTouchEnd:calTouch.e,className:"flex-1 bg-neutral-900/30 backdrop-blur-sm rounded-xl border border-neutral-800 overflow-hidden flex flex-col relative shadow-[0_0_100px_rgba(0,0,0,0.5)]"},
+            : h('div',{onTouchStart:calTouch.s,onTouchMove:e=>tE.current=e.targetTouches[0].clientX,onTouchEnd:calTouch.e,className:"flex-1 bg-neutral-900/30 backdrop-blur-sm rounded-xl border border-neutral-800 overflow-hidden flex flex-col relative shadow-[0_0_100px_rgba(0,0,0,0.5)]", style:{transform:'translate3d(0,0,0)'}}, // FIX: Hardware Acceleration
                 h('div',{className:"grid grid-cols-7 bg-black border-b border-neutral-800"},['L','M','X','J','V','S','D'].map(d=>h('div',{key:d,className:"py-2 text-center text-[10px] md:text-xs font-black tracking-[0.2em] text-neutral-600"},d))),
-                h('div',{key:date.toISOString(),className:`grid grid-cols-7 flex-1 auto-rows-fr ${dir==='n'?'anim-n':'anim-p'}`}, days.map((d,i)=>{
+                h('div',{key:date.toISOString(),className:`grid grid-cols-7 flex-1 auto-rows-fr ${dir==='n'?'anim-n':'anim-p'}`, style:{willChange:'transform'}}, days.map((d,i)=>{ // FIX: will-change
                     const isT=d.dt===new Date().toISOString().split('T')[0], evs=d.dt?(lk[d.dt]||[]):[];
-                    // FIX: Si es hoy (isT), NO aplicamos 'safe-hover' para evitar doble fondo o manchas
-                    return h('div',{key:d.dt || `pad-${i}`,onClick:()=>{if(d.dt){SF({title:'',date:d.dt,time:'09:00',type:'gen',notes:'',cat:'task',quad:'q2'});SM('c')}},className:`relative border-r border-b border-neutral-800/40 p-1 md:p-2 cursor-pointer group touch-feedback ${!isT?'safe-hover':''} transition-colors outline-none`,style:isT?{background:curTab.c+'1A',borderColor:curTab.c,boxShadow:`0 0 15px ${curTab.c}30`,zIndex:10,fontWeight:900}:null},
+                    
+                    // FIX: REMOVE Z-INDEX & USE INSET SHADOW
+                    const activeStyle = isT ? {
+                        background: curTab.c+'1A',
+                        borderColor: curTab.c,
+                        boxShadow: `inset 0 0 15px ${curTab.c}20`, // Inset para evitar trails
+                        fontWeight: 900
+                    } : null;
+
+                    return h('div',{key:d.dt || `pad-${i}`,onClick:()=>{if(d.dt){SF({title:'',date:d.dt,time:'09:00',type:'gen',notes:'',cat:'task',quad:'q2'});SM('c')}},className:`relative border-r border-b border-neutral-800/40 p-1 md:p-2 cursor-pointer group touch-feedback safe-hover transition-colors outline-none`,style:activeStyle},
                         d.d&&h('span',{className:`text-xs font-bold flex items-center justify-center w-6 h-6 rounded ${!isT?'text-neutral-600 group-active:text-white safe-hover':''}`,style:isT?{background:curTab.c,color:'black'}:null},d.d),
                         h('div',{className:"mt-1 flex flex-col gap-1 overflow-y-auto max-h-[80px] no-scrollbar"},evs.map(e=>
                             h('div',{key:e.id,onClick:ev=>{ev.stopPropagation();SF({...e});SSI(e.id);SM('e')},className:"text-[9px] md:text-[10px] font-bold truncate px-1.5 py-0.5 rounded border-l-[3px] active:brightness-125 safe-bright outline-none",style:{borderLeftColor:e.gCol||curTab.c,backgroundColor:(e.gCol||curTab.c)+'20',color:'#e2e8f0'}},
