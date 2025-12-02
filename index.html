@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V8.6:DeepClean</title>
+<title>CMD V8.6:SmartFilter</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif']}}}}</script>
@@ -17,7 +17,7 @@ body{background:#000;touch-action:none;overscroll-behavior:none}.no-scrollbar::-
 .scan::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,transparent,#ffffff1a,transparent);animation:sl 2s linear infinite;pointer-events:none}
 .drag-over{background:#ffffff0d;border-color:var(--theme-color);box-shadow:inset 0 0 20px #ffffff0d}.rich b{color:inherit;font-weight:900}
 
-/* TRANSICIONES LIMPIAS (SIN BLUR) */
+/* ANIMACIONES CRISP (SIN BLUR) */
 @keyframes slideUp { 
     from { opacity: 0; transform: translateY(25px); } 
     to { opacity: 1; transform: translateY(0); } 
@@ -43,20 +43,6 @@ const ICONS={Calendar:L.Calendar,CheckSquare:L.CheckSquare,Target:L.Target,Folde
 const BIO=[{id:1,name:"Cuervo Grande",sci:"Corvus corax",tx:"Aves/Corvidae",desc:"Inteligencia primate. Usa herramientas.",fact:"Reconocen rostros y guardan rencor.",img:"https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Corvus_corax_%28Common_Raven%29.jpg/800px-Corvus_corax_%28Common_Raven%29.jpg"},{id:2,name:"Araña Saltadora",sci:"Phidippus audax",tx:"Arachnida/Salticidae",desc:"Depredador visual, quelíceros verdes.",fact:"Salta 50x su longitud.",img:"https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Phidippus_audax_male.jpg/800px-Phidippus_audax_male.jpg"}];
 const TABS=[{id:'t1',l:'EVENTOS',i:'Calendar',c:'#3b82f6'},{id:'t2',l:'TAREAS',i:'CheckSquare',c:'#ef4444'},{id:'t3',l:'NOTAS',i:'BookOpen',c:'#eab308'},{id:'t4',l:'PROY',i:'Folder',c:'#22c55e'}];
 const Q={q1:{t:'HACER YA',s:'Urgente+Imp',c:'#ef4444'},q2:{t:'PLANIFICAR',s:'NoUrg+Imp',c:'#3b82f6'},q3:{t:'DELEGAR',s:'Urg+NoImp',c:'#eab308'},q4:{t:'ELIMINAR',s:'NiUrg+NiImp',c:'#64748b'}};
-
-// UTILIDAD DE LIMPIEZA DE TEXTO (Global)
-const norm = (str) => str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
-const isAcademic = (txt) => {
-    const clean = norm(txt);
-    // Lista masiva de términos académicos
-    const kw=['clase','aula','uni','curso','materia','taller','laboratorio','examen','parcial','final','recuperatorio','tp','entrega','catedra','teorico','practico','docente','profesor','profe','ayudante','jtp','comision','school','college','salon','b1','a1','pabellon','fadu','uba','unam','utn','quimica','biologia','matematica','fisica','historia','arte','diseño','analisis','algebra','anatomia','fisiologia','seminario','tesis','investigacion'];
-    return kw.some(k => clean.includes(k));
-};
-const isFitness = (txt) => {
-    const clean = norm(txt);
-    const kw=['fit','gym','gimnasio','entren','ejercicio','sport','correr','nadar','fútbol','basquet','yoga','pilates'];
-    return kw.some(k => clean.includes(k));
-};
 
 function App(){
     const [tabs,ST]=useState(TABS),[act,SA]=useState('t1'),[date,SD]=useState(new Date()),[evs,SE]=useState([]);
@@ -87,7 +73,7 @@ function App(){
     const initGis=()=>{if(gCfg.clientId){tC.current=window.google.accounts.oauth2.initTokenClient({client_id:gCfg.clientId,scope:"https://www.googleapis.com/auth/calendar.readonly",callback:async(r)=>{if(!r.error){SGS(true);fM.current.clear();await fetchG(date)}}});gsI.current=true}};
     const auth=async()=>{if(!gCfg.apiKey||!gCfg.clientId)return alert("Faltan Credenciales");if(!gI.current)await initGapi();if(!gsI.current)initGis();setTimeout(()=>tC.current.requestAccessToken({prompt:'select_account'}),500)};
     
-    // FETCH GOOGLE: DETECCION "DEEP CLEAN"
+    // FETCH GOOGLE: CON DETECCION DE CLASES
     const fetchG=async(td=new Date())=>{
         SSy(true);try{
             if(!window.gapi.client.calendar) await window.gapi.client.load('calendar','v3');
@@ -101,14 +87,12 @@ function App(){
                 try{
                     const r=await window.gapi.client.calendar.events.list({calendarId:c.id,timeMin:min,timeMax:max,singleEvents:true,maxResults:999,orderBy:'startTime'});
                     return r.result.items.map(i=>{
-                        const tText = i.summary || '';
-                        const cText = c.summary || '';
-                        let cat='task', q='q2'; 
-                        
-                        // Prioridad absoluta a detección académica
-                        if(isAcademic(tText) || isAcademic(cText)){ cat='class'; q=null; }
-                        else if(isFitness(tText) || isFitness(cText)){ cat='fitness'; q=null; }
-                        
+                        const t=(i.summary||'').toLowerCase(), cn=(c.summary||'').toLowerCase();
+                        let cat='task',q='q2'; 
+                        const kw=['clase','aula','uni','curso','materia','taller','laboratorio','examen','catedra','teorico','practico','docente','school','college','salon','b1','a1','pabellon','fadu','uba'];
+                        const fitKw=['fit','gym','entren','ejercicio','sport','correr','nadar'];
+                        if(kw.some(k=>cn.includes(k)||t.includes(k))){ cat='class'; q=null; }
+                        else if(fitKw.some(k=>cn.includes(k)||t.includes(k))){ cat='fitness'; q=null; }
                         return {id:i.id,calId:c.id,title:i.summary||'(No Title)',date:i.start.dateTime?.split('T')[0]||i.start.date,time:i.start.dateTime?.split('T')[1].substring(0,5)||'',type:'google',notes:i.description||'',cat,quad:q,gCol:c.backgroundColor}
                     })
                 }catch(e){return[]}
@@ -128,20 +112,28 @@ function App(){
         return d;
     },[date]);
 
-    // LOGICA DE DATOS: MATRIZ BLINDADA
+    // LOGICA INTELIGENTE: PROPAGACION DE IDENTIDAD DE CLASE
     const {lk,mx,upGrouped}=useMemo(()=>{
         const l={},m=[],u=[],now=new Date().toISOString().split('T')[0];
+        
+        // 1. APRENDIZAJE: Identificar títulos que SON clases
+        const classTitles = new Set();
+        evs.forEach(e => {
+            if(e.cat === 'class') classTitles.add(e.title.toLowerCase().trim());
+        });
+
         evs.forEach(e=>{
             if(e.type==='google'&&cals[e.calId]&&!cals[e.calId].visible)return;
+            
             // Calendario
             if(e.date){if(!l[e.date])l[e.date]=[];l[e.date].push(e)}
             
-            // Matriz (Tareas): DOBLE CHECK. Si isAcademic detecta algo, SE VA.
-            // Esto atrapa eventos que quizas no se categorizaron bien al principio.
-            const isAcad = isAcademic(e.title) || (e.cat === 'class');
-            const isFit = isFitness(e.title) || (e.cat === 'fitness');
+            // Matriz (Tareas): FILTRO INTELIGENTE
+            // Si el titulo coincide con algo que SABEMOS que es una clase, lo excluye
+            const tNorm = e.title.toLowerCase().trim();
+            const knownAsClass = classTitles.has(tNorm) || tNorm.includes('clase');
             
-            if(!isAcad && !isFit) m.push(e);
+            if(e.cat!=='class' && e.cat!=='fitness' && !knownAsClass) m.push(e);
             
             // Drawer (Upcoming)
             if(e.date>=now)u.push(e);
@@ -178,8 +170,6 @@ function App(){
     };
 
     const Icon=(n,s=18,c)=>h(ICONS[n]||L.Circle,{size:s,className:c});
-    
-    // FORMAT FECHA DRAWER
     const fmtD=(ds)=>{
         const d=new Date(ds+'T12:00:00');
         return d.toLocaleDateString('es',{weekday:'short',day:'numeric'}).toUpperCase();
@@ -231,24 +221,24 @@ function App(){
                         d.d&&h('span',{className:`text-xs font-bold flex items-center justify-center w-6 h-6 rounded ${!isT?'text-neutral-600 group-hover:text-white':''}`,style:isT?{background:curTab.c,color:'black'}:null},d.d),
                         h('div',{className:"mt-1 flex flex-col gap-1 overflow-y-auto max-h-[80px] no-scrollbar"},evs.map(e=>
                             h('div',{key:e.id,onClick:ev=>{ev.stopPropagation();SF({...e});SSI(e.id);SM('e')},className:"text-[9px] md:text-[10px] font-bold truncate px-1.5 py-0.5 rounded border-l-[3px] hover:brightness-125",style:{borderLeftColor:e.gCol||curTab.c,backgroundColor:(e.gCol||curTab.c)+'20',color:'#e2e8f0'}},
-                                (e.cat==='class'||isAcademic(e.title))&&Icon('GraduationCap',8,"inline mr-1"),(e.cat==='fitness'||isFitness(e.title))&&Icon('Dumbbell',8,"inline mr-1"),e.time+' '+e.title
+                                e.cat==='class'&&Icon('GraduationCap',8,"inline mr-1"),e.cat==='fitness'&&Icon('Dumbbell',8,"inline mr-1"),e.time+' '+e.title
                             )
                         ))
                     )
                 }))
             )
         ),
-        // DRAWER - UPGRADED: APILA POR DIA
+        // DRAWER - GROUPED
         h('div',{className:`fixed bottom-0 left-0 right-[60px] z-50 rounded-tr-2xl glass flex flex-col ${!drag?'tr-h':''}`,style:{height:dH}},
             h('div',{className:"w-full h-8 flex justify-center items-center cursor-grab touch-none shrink-0",onTouchStart:drwTouch.s,onTouchMove:drwTouch.m,onTouchEnd:drwTouch.e},h('div',{className:"w-16 h-1 bg-white/30 rounded-full"})),
-            // Contenedor de Grupos
             h('div',{className:`flex-1 overflow-x-auto p-4 flex gap-6 no-scrollbar fade-content ${dH<80?'opacity-0 pointer-events-none':'opacity-100'}`}, upGrouped.length?upGrouped.map(([dStr,evs])=>
                 h('div',{key:dStr,className:"flex flex-col gap-2 min-w-[200px]"},
                     h('div',{className:"sticky top-0 z-10"},h('span',{className:"text-[10px] font-black tracking-widest text-neutral-500 uppercase bg-black/50 px-2 py-1 rounded"},fmtD(dStr))),
                     evs.map(e=>
                         h('div',{key:e.id,onClick:()=>{SF({...e});SSI(e.id);SM('e')},className:"w-full bg-black/40 border-l-4 p-3 rounded hover:brightness-125 cursor-pointer backdrop-blur-sm transition-transform active:scale-95",style:{borderLeftColor:e.gCol||'white'}},
                             h('div',{className:"flex justify-between items-start mb-1"},h('span',{className:"text-xs font-bold text-white truncate"},e.title),h('span',{className:"text-[9px] text-neutral-400 font-mono"},e.time)),
-                            (e.cat==='class'||isAcademic(e.title))&&h('div',{className:"text-[9px] text-blue-300 font-bold"},"CLASE"),
+                            // AQUI SE MUESTRA SI SE DETECTO COMO CLASE
+                            (e.cat==='class'||e.title.toLowerCase().includes('clase'))&&h('div',{className:"text-[9px] text-blue-300 font-bold"},"CLASE"),
                             e.notes&&h('div',{className:"text-[9px] text-neutral-500 line-clamp-1 italic",dangerouslySetInnerHTML:{__html:e.notes}})
                         )
                     )
