@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Centro de Mando V7.7: Turbo</title>
+    <title>Centro de Mando V7.8: Nuclear Optimization</title>
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#000000">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -12,52 +12,54 @@
     <script src="https://apis.google.com/js/api.js" async defer></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
-        body{background:#000;touch-action:none;overscroll-behavior:none}.no-scrollbar::-webkit-scrollbar{display:none}
-        .glass{background:rgba(10,10,10,0.65);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid rgba(255,255,255,0.1);box-shadow:0 -10px 50px rgba(0,0,0,0.8)}
-        .scan::after{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(to bottom,transparent,rgba(255,255,255,0.1),transparent);animation:scan 2s linear infinite;pointer-events:none}
+        body{background:#000;touch-action:none;overscroll-behavior:none;user-select:none}
+        .glass{background:rgba(10,10,10,0.85);backdrop-filter:blur(15px);-webkit-backdrop-filter:blur(15px);border-top:1px solid rgba(255,255,255,0.1)}
+        .scan::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,transparent,rgba(255,255,255,0.05),transparent);animation:scan 3s linear infinite;pointer-events:none}
         @keyframes scan{0%{transform:translateY(-100%)}100%{transform:translateY(100%)}}
-        .rich-text b{color:inherit;font-weight:900}.rich-text i{font-style:italic;opacity:0.9}
+        /* Optimización de Renderizado */
+        * { will-change: auto; } 
+        .scroll-gpu { overflow-y: auto; -webkit-overflow-scrolling: touch; will-change: scroll-position; }
     </style>
 </head>
 <body>
     <div id="root"></div>
     <script type="module">
-        import React, { useState, useEffect, useRef, useMemo } from 'https://esm.sh/react@18.2.0';
+        import React, { useState, useEffect, useRef, useMemo, useCallback } from 'https://esm.sh/react@18.2.0';
         import { createRoot } from 'https://esm.sh/react-dom@18.2.0/client';
         import * as Lucide from 'https://esm.sh/lucide-react@0.292.0';
 
-        const h = React.createElement; // Alias para reducir código y mejorar lectura
+        const h = React.createElement;
         const ICON_MAP = Lucide; 
 
-        // CONFIGURACIÓN CONSTANTE
+        // --- DATABASE ESTÁTICA ---
         const BIO_DB = [
-            { id: 1, name: "Cuervo", sc: "Corvus corax", tax: "Aves > Corvidae", d: "Uso de herramientas.", f: "Reconocen rostros.", img: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Corvus_corax_%28Common_Raven%29.jpg/800px-Corvus_corax_%28Common_Raven%29.jpg" },
-            { id: 2, name: "Saltadora", sc: "Phidippus audax", tax: "Arachnida > Salticidae", d: "Depredador visual.", f: "Salta 50x su largo.", img: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Phidippus_audax_male.jpg/800px-Phidippus_audax_male.jpg" }
+            { id: 1, name: "Cuervo", sc: "Corvus corax", tax: "Aves > Corvidae", d: "Uso de herramientas.", img: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Corvus_corax_%28Common_Raven%29.jpg/800px-Corvus_corax_%28Common_Raven%29.jpg" },
+            { id: 2, name: "Saltadora", sc: "Phidippus audax", tax: "Arachnida > Salticidae", d: "Visión 360°.", img: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Phidippus_audax_male.jpg/800px-Phidippus_audax_male.jpg" }
         ];
-        const TABS = [{id:'t1',l:'EVENTOS',i:'Calendar',c:'#3b82f6'},{id:'t2',l:'TAREAS',i:'CheckSquare',c:'#ef4444'},{id:'t3',l:'NOTAS',i:'BookOpen',c:'#eab308'},{id:'t4',l:'PROY',i:'Folder',c:'#22c55e'}];
-        const QUAD = { q1:{t:'HACER YA',c:'#ef4444'}, q2:{t:'PLANIFICAR',c:'#3b82f6'}, q3:{t:'DELEGAR',c:'#eab308'}, q4:{t:'ELIMINAR',c:'#64748b'}};
+        const TABS = [{id:'t1',l:'CAL',i:'Calendar',c:'#3b82f6'},{id:'t2',l:'TASK',i:'CheckSquare',c:'#ef4444'},{id:'t3',l:'MEMO',i:'BookOpen',c:'#eab308'},{id:'t4',l:'PROJ',i:'Folder',c:'#22c55e'}];
+        const QUAD = { q1:{t:'URGENTE',c:'#ef4444'}, q2:{t:'PLAN',c:'#3b82f6'}, q3:{t:'DELEGAR',c:'#eab308'}, q4:{t:'BORRAR',c:'#64748b'}};
 
         function App() {
-            // ESTADO
+            // --- ESTADO ---
             const [tab, setTab] = useState('t1');
-            const [date, setDate] = useState(new Date());
-            const [evs, setEvs] = useState([]); // Eventos
-            const [cals, setCals] = useState({}); // Calendarios
+            const [date, setDate] = useState(new Date()); // Fecha seleccionada (mes)
+            const [evs, setEvs] = useState([]); // Array PRINCIPAL de eventos
+            const [cals, setCals] = useState({}); 
             const [bio, setBio] = useState(0);
-            const [mod, setMod] = useState(null); // Modal: create, edit, bio, settings
+            const [mod, setMod] = useState(null); 
             const [selEv, setSelEv] = useState(null);
             const [form, setForm] = useState({ title:'', date:'', time:'', type:'gen', cat:'task', q:'q2', notes:'' });
             
-            // UI & SYNC
-            const [sync, setSync] = useState(false);
+            // Sync Status
+            const [status, setStatus] = useState('IDLE'); // IDLE, AUTH, SYNC, ERROR
             const [gConf, setGConf] = useState({ key:'', id:'' });
-            const [gAuth, setGAuth] = useState(false);
-            const [dH, setDH] = useState(40); // Drawer Height
             
+            // Drawer
+            const [dH, setDH] = useState(50);
             const activeT = TABS.find(t=>t.id===tab)||TABS[0];
             const theme = { '--tc': activeT.c };
 
-            // INICIO
+            // --- INICIALIZACIÓN ---
             useEffect(() => {
                 const ls = localStorage;
                 try {
@@ -65,255 +67,317 @@
                     const sc = ls.getItem('v7_cals'); if(sc) setCals(JSON.parse(sc));
                     const sg = ls.getItem('v7_gconf'); if(sg) setGConf(JSON.parse(sg));
                 } catch(e){}
+                
                 if(window.gapi) window.gapi.load('client', async()=>{ 
                     if(gConf.key) await window.gapi.client.init({ apiKey: gConf.key, discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"] });
                 });
             }, []);
 
-            // PERSISTENCIA (Debounced para rendimiento)
-            useEffect(() => { const t = setTimeout(()=>localStorage.setItem('v7_evs', JSON.stringify(evs)), 1000); return ()=>clearTimeout(t); }, [evs]);
+            // --- PERSISTENCIA OPTIMIZADA (Solo guarda cada 2s) ---
+            useEffect(() => { const t = setTimeout(()=>localStorage.setItem('v7_evs', JSON.stringify(evs)), 2000); return ()=>clearTimeout(t); }, [evs]);
             useEffect(() => { localStorage.setItem('v7_cals', JSON.stringify(cals)); }, [cals]);
             useEffect(() => { localStorage.setItem('v7_gconf', JSON.stringify(gConf)); }, [gConf]);
 
-            // GOOGLE SYNC OPTIMIZADO
-            const doSync = async () => {
-                if(!gConf.id || !gConf.key) return alert("Configura API Key y Client ID");
-                setSync(true);
+            // --- GOOGLE SYNC NUCLEAR (Non-Blocking) ---
+            const handleSync = async () => {
+                if(!gConf.id || !gConf.key) return alert("Falta API Key / Client ID");
+                setStatus('AUTH');
+                
                 try {
                     const token = window.google?.accounts?.oauth2?.initTokenClient({
                         client_id: gConf.id, scope: "https://www.googleapis.com/auth/calendar.readonly",
                         callback: async (r) => {
                             if(r.error) throw r;
-                            setGAuth(true);
-                            await fetchG();
+                            setStatus('SYNC');
+                            await fetchSmartly(); // Llamada a la nueva función
                         }
                     });
                     if(token) token.requestAccessToken();
-                } catch(e) { console.error(e); alert("Error Auth"); setSync(false); }
+                } catch(e) { console.error(e); setStatus('ERROR'); setTimeout(()=>setStatus('IDLE'), 2000); }
             };
 
-            const fetchG = async () => {
+            const fetchSmartly = async () => {
                 const g = window.gapi.client.calendar;
                 const list = await g.calendarList.list();
-                const newCals = {...cals};
-                const tasks = list.result.items.map(async c => {
-                    newCals[c.id] = { ...newCals[c.id], s: c.summary, c: c.backgroundColor, v: newCals[c.id]?.v ?? true };
-                    if(newCals[c.id].v === false) return []; // Skip hidden
-                    
-                    const res = await g.events.list({ calendarId: c.id, timeMin: new Date(new Date().getFullYear(),0,1).toISOString(), maxResults: 2500, singleEvents: true });
-                    return res.result.items.map(i => {
-                        const t = (i.summary||'').toLowerCase(), d = (i.description||'').toLowerCase();
-                        let cat = 'task', q = 'q2';
-                        if(t.includes('gym')||t.includes('fit')||t.includes('rutina')) { cat = 'fit'; q = null; }
-                        else if(t.includes('clase')||t.includes('uni')||d.includes('prof')) { cat = 'class'; q = null; }
-                        
-                        const start = i.start.dateTime || i.start.date;
-                        return {
-                            id: i.id, cid: c.id, title: i.summary||'(Sin título)',
-                            date: start.substring(0,10), time: start.includes('T') ? start.substring(11,16) : '',
-                            type: 'g', notes: i.description||'', cat, q, gc: c.backgroundColor,
-                            _ts: new Date(start).getTime() // Pre-calc timestamp
-                        };
-                    });
-                });
+                const calendarItems = list.result.items;
                 
+                // Actualizar metadatos de calendarios
+                const newCals = {...cals};
+                calendarItems.forEach(c => {
+                    newCals[c.id] = { id: c.id, s: c.summary, c: c.backgroundColor, v: newCals[c.id]?.v ?? true };
+                });
                 setCals(newCals);
-                const results = await Promise.all(tasks);
-                const googleEvs = results.flat();
-                const localEvs = evs.filter(e => e.type !== 'g');
-                setEvs([...localEvs, ...googleEvs].sort((a,b) => (a._ts || 0) - (b._ts || 0)));
-                setSync(false);
+
+                let allNewEvents = [];
+                // RANGO DE FECHAS CRÍTICO: Solo cargar desde hace 7 días hasta +90 días.
+                // Esto reduce drásticamente la carga de eventos pasados innecesarios.
+                const timeMin = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+                const timeMax = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
+
+                // PROCESAMIENTO SECUENCIAL CON PAUSAS (Yielding)
+                for (const cal of calendarItems) {
+                    if (newCals[cal.id].v === false) continue; // Si está oculto, ni siquiera pedirlo
+                    
+                    try {
+                        const res = await g.events.list({
+                            calendarId: cal.id,
+                            timeMin: timeMin,
+                            timeMax: timeMax, // Límite superior para evitar bucles infinitos
+                            maxResults: 500,  // Límite por calendario (seguridad)
+                            singleEvents: true
+                        });
+
+                        const mapped = res.result.items.map(i => {
+                            const t = (i.summary||'').toLowerCase();
+                            // Categorización "on-the-fly"
+                            let cat = 'task', q = 'q2';
+                            if(t.includes('gym')||t.includes('fit')) { cat = 'fit'; q = null; }
+                            else if(t.includes('clase')||t.includes('uni')) { cat = 'class'; q = null; }
+                            
+                            const start = i.start.dateTime || i.start.date;
+                            return {
+                                id: i.id, cid: cal.id, title: i.summary||'(Sin título)',
+                                date: start.substring(0,10), 
+                                time: start.includes('T') ? start.substring(11,16) : '',
+                                type: 'g', notes: i.description||'', cat, q, gc: cal.backgroundColor,
+                                _ts: new Date(start).getTime() // Timestamp pre-calculado
+                            };
+                        });
+                        
+                        allNewEvents.push(...mapped);
+                        
+                        // MAGIA: Esperar 10ms para liberar el hilo principal y que la UI no se trabe
+                        await new Promise(r => setTimeout(r, 10)); 
+
+                    } catch(err) { console.warn("Error cal:", cal.summary); }
+                }
+
+                // Merge final
+                const localEvents = evs.filter(e => e.type !== 'g');
+                const merged = [...localEvents, ...allNewEvents].sort((a,b) => (a._ts||0) - (b._ts||0));
+                
+                setEvs(merged);
+                setStatus('IDLE');
             };
 
-            // PROCESAMIENTO DE DATOS (MEMOIZADO EXTREMO)
-            const { map, matrix, drawerList } = useMemo(() => {
-                const m = {}, mat = [], dList = [];
-                const isVis = (e) => !e.cid || (cals[e.cid]?.v !== false);
+            // --- CALCULOS MEMOIZADOS (OPTIMIZADOS) ---
+            const { calendarMap, matrixList, drawerList } = useMemo(() => {
+                const map = {};
+                const mat = [];
+                const drawer = [];
                 
-                // Filtrado único
-                const visible = evs.filter(isVis);
-                
-                // 1. Construir Mapa para Calendario (O(N))
-                visible.forEach(e => {
-                    if(!m[e.date]) m[e.date] = [];
-                    m[e.date].push(e);
+                // Fecha de corte para el Drawer (solo futuros)
+                const nowTs = Date.now() - 86400000; // Ayer
+                let drawerCount = 0;
+
+                // Solo iteramos UNA VEZ sobre la lista completa
+                for (let i = 0; i < evs.length; i++) {
+                    const e = evs[i];
                     
-                    // 2. Matriz (Solo tareas)
-                    if(e.cat !== 'class' && e.cat !== 'fit') mat.push(e);
-                });
+                    // 1. Filtro de visibilidad
+                    if (e.cid && cals[e.cid] && !cals[e.cid].v) continue;
 
-                // 3. Drawer: Agrupar por fecha, pero LIMITAR para evitar lag
-                // Solo mostramos eventos desde "ayer" en adelante, limitados a 150 items renderizados
-                const todayTs = new Date().setHours(0,0,0,0);
-                const future = visible.filter(e => (e._ts || 0) >= todayTs - 86400000); 
+                    // 2. Mapa Calendario
+                    if (!map[e.date]) map[e.date] = [];
+                    map[e.date].push(e);
+
+                    // 3. Matriz (Solo tareas)
+                    if (e.cat !== 'class' && e.cat !== 'fit' && (!e.q || e.q)) {
+                        mat.push(e);
+                    }
+
+                    // 4. Drawer (Agenda Futura - LÍMITE DURO DE 50)
+                    if (e._ts >= nowTs && drawerCount < 50) {
+                        drawer.push(e);
+                        drawerCount++;
+                    }
+                }
                 
-                // Agrupamos solo los primeros 100 eventos futuros para el drawer
-                const sliced = future.slice(0, 100); 
-                const dMap = {};
-                sliced.forEach(e => {
-                   if(!dMap[e.date]) dMap[e.date] = [];
-                   dMap[e.date].push(e);
+                // Agrupar Drawer por fechas
+                const groupedDrawer = {};
+                drawer.forEach(e => {
+                    if(!groupedDrawer[e.date]) groupedDrawer[e.date] = [];
+                    groupedDrawer[e.date].push(e);
                 });
-                const dSorted = Object.keys(dMap).sort().map(d => ({ date: d, items: dMap[d] }));
+                const finalDrawer = Object.keys(groupedDrawer).sort().map(d => ({ date: d, items: groupedDrawer[d] }));
 
-                return { map: m, matrix: mat, drawerList: dSorted };
-            }, [evs, cals]);
+                return { calendarMap: map, matrixList: mat, drawerList: finalDrawer };
+            }, [evs, cals]); // Solo recalcular si cambian eventos o visibilidad
 
-            // GENERADOR DE DÍAS CALENDARIO
-            const calDays = useMemo(() => {
-                const y = date.getFullYear(), m = date.getMonth();
-                const d = new Date(y, m, 1), days = [];
-                const pad = d.getDay() === 0 ? 6 : d.getDay() - 1;
+            // --- GENERADOR DE DIAS (Visual) ---
+            const daysGrid = useMemo(() => {
+                const year = date.getFullYear(), month = date.getMonth();
+                const first = new Date(year, month, 1);
+                const last = new Date(year, month + 1, 0);
+                const days = [];
+                const pad = first.getDay() === 0 ? 6 : first.getDay() - 1;
+                
                 for(let i=0; i<pad; i++) days.push(null);
-                const last = new Date(y, m+1, 0).getDate();
-                for(let i=1; i<=last; i++) days.push(new Date(y,m,i).toISOString().split('T')[0]);
+                for(let i=1; i<=last.getDate(); i++) {
+                    days.push(new Date(year, month, i).toISOString().split('T')[0]);
+                }
                 return days;
             }, [date]);
 
-            // RENDER HELPERS
-            const Icon = (n, s=16, c) => h(Lucide[n] || Lucide.Circle, { size: s, style: { color: c } });
-            const Badge = ({ t, c }) => h('span', { className: `px-1 rounded text-[9px] font-bold truncate border-l-2`, style:{ background: `${c}20`, borderColor: c, color: '#ddd' } }, t);
-
+            // --- HELPERS VISUALES ---
+            const Icon = (n, s=16, c='currentColor') => h(Lucide[n] || Lucide.Circle, { size: s, style: { color: c } });
+            
             // --- VISTAS ---
-            const renderCalendar = () => h('div', { className: "flex-1 bg-neutral-900/30 border border-white/10 rounded-xl overflow-hidden flex flex-col" }, [
-                h('div', { className: "grid grid-cols-7 bg-black/80 border-b border-white/10" }, ['L','M','X','J','V','S','D'].map(d => h('div', { key: d, className: "py-2 text-center text-[10px] text-neutral-500 font-black" }, d))),
-                h('div', { className: "grid grid-cols-7 flex-1 auto-rows-fr overflow-y-auto" }, calDays.map((d, i) => {
-                    if(!d) return h('div', { key: i, className: "border border-white/5 bg-neutral-950/50" });
-                    const dayEvs = map[d] || [];
+            const renderCalendar = () => h('div', { className: "flex-1 flex flex-col overflow-hidden bg-neutral-900/30 rounded-xl border border-white/10" }, [
+                h('div', { className: "grid grid-cols-7 bg-black/60 border-b border-white/10 shrink-0" }, ['L','M','X','J','V','S','D'].map(d => h('div', { key: d, className: "py-2 text-center text-[10px] text-neutral-500 font-bold" }, d))),
+                h('div', { className: "flex-1 grid grid-cols-7 auto-rows-fr scroll-gpu overflow-y-auto" }, daysGrid.map((d, i) => {
+                    if (!d) return h('div', { key: i, className: "bg-black/20 border-r border-b border-white/5" });
                     const isToday = d === new Date().toISOString().split('T')[0];
-                    return h('div', { key: i, onClick: () => { setForm({...form, date:d}); setMod('create'); }, className: `border border-white/5 p-1 hover:bg-white/5 cursor-pointer relative group ${isToday?'bg-white/5':''}` }, [
-                        h('span', { className: `text-[10px] font-bold block mb-1 ${isToday?'text-[var(--tc)]':'text-neutral-600'}` }, d.split('-')[2]),
-                        h('div', { className: "flex flex-col gap-0.5" }, dayEvs.map(e => 
-                            h('div', { key: e.id, onClick: (x)=>{x.stopPropagation(); setSelEv(e); setForm(e); setMod('edit')}, className: "cursor-pointer" }, 
-                                h(Badge, { t: e.time ? `${e.time} ${e.title}` : e.title, c: e.gc || activeT.c })
-                            )
-                        ))
+                    const dayEvents = calendarMap[d] || [];
+                    
+                    return h('div', { 
+                        key: d, 
+                        onClick: () => { setForm({...form, date: d}); setMod('create'); },
+                        className: `border-r border-b border-white/5 p-1 relative min-h-[60px] hover:bg-white/5 transition-colors ${isToday ? 'bg-white/5' : ''}` 
+                    }, [
+                        h('span', { className: `text-[10px] font-bold block mb-1 ${isToday ? 'text-[var(--tc)]' : 'text-neutral-600'}` }, d.split('-')[2]),
+                        h('div', { className: "flex flex-col gap-0.5" }, dayEvents.slice(0, 5).map(e => 
+                            h('div', { 
+                                key: e.id, 
+                                onClick: (x) => { x.stopPropagation(); setSelEv(e); setForm(e); setMod('edit'); },
+                                className: "truncate px-1 rounded text-[9px] font-medium border-l-[2px]",
+                                style: { backgroundColor: `${e.gc || activeT.c}20`, borderLeftColor: e.gc || activeT.c, color: '#ddd' }
+                            }, e.time ? `${e.time} ${e.title}` : e.title)
+                        )),
+                        dayEvents.length > 5 && h('div', { className: "text-[8px] text-neutral-500 text-center" }, `+${dayEvents.length - 5}`)
                     ]);
                 }))
             ]);
 
-            const renderMatrix = () => h('div', { className: "flex-1 grid grid-cols-1 md:grid-cols-2 grid-rows-2 gap-2 pb-20 md:pb-0" }, 
+            const renderMatrix = () => h('div', { className: "flex-1 grid grid-cols-1 md:grid-cols-2 grid-rows-2 gap-2 pb-20 md:pb-0 scroll-gpu overflow-y-auto" }, 
                 ['q1','q2','q3','q4'].map(k => {
-                    const q = QUAD[k], qItems = matrix.filter(e => (e.q||'q2') === k);
+                    const q = QUAD[k], items = matrixList.filter(e => (e.q||'q2') === k);
                     return h('div', { key: k, 
-                        onDragOver: e=>e.preventDefault(), 
-                        onDrop: e=>{ 
-                            e.preventDefault(); 
-                            const id = e.dataTransfer.getData('text');
-                            setEvs(prev => prev.map(ev => ev.id == id ? {...ev, q: k} : ev));
-                        },
-                        className: "bg-neutral-900/40 border border-white/5 rounded-xl p-2 flex flex-col" 
+                        onDragOver: e=>e.preventDefault(),
+                        onDrop: e=>{ e.preventDefault(); const id=e.dataTransfer.getData('id'); setEvs(prev=>prev.map(ev=>ev.id==id?{...ev,q:k}:ev)); },
+                        className: "bg-neutral-900/40 border border-white/5 rounded-xl p-2 flex flex-col overflow-hidden" 
                     }, [
-                        h('div', { className: "flex justify-between border-b border-white/5 pb-1 mb-2" }, [
+                        h('div', { className: "flex justify-between border-b border-white/5 pb-1 mb-2 shrink-0" }, [
                             h('span', { className: "text-xs font-black", style:{color:q.c} }, q.t),
-                            h('span', { className: "text-[10px] bg-white/10 px-1.5 rounded-full" }, qItems.length)
+                            h('span', { className: "text-[9px] bg-white/10 px-1.5 rounded" }, items.length)
                         ]),
-                        h('div', { className: "overflow-y-auto flex-1 space-y-1" }, qItems.map(e => 
+                        h('div', { className: "overflow-y-auto flex-1 space-y-1 pr-1 custom-scroll" }, items.map(e => 
                             h('div', { 
                                 key: e.id, draggable: true,
-                                onDragStart: ev => ev.dataTransfer.setData('text', e.id),
+                                onDragStart: ev => ev.dataTransfer.setData('id', e.id),
                                 onClick: () => { setSelEv(e); setForm(e); setMod('edit'); },
-                                className: "bg-black/50 border border-white/5 p-2 rounded hover:border-white/20 active:scale-95 transition-all" 
-                            }, [
-                                h('div', { className: "text-xs font-bold text-gray-200 truncate" }, e.title),
-                                e.time && h('div', { className: "text-[9px] text-gray-500 font-mono" }, e.time)
-                            ])
+                                className: "bg-black/60 border border-white/5 p-2 rounded hover:border-white/20 active:scale-95" 
+                            }, h('p', { className: "text-xs font-bold text-gray-300 truncate" }, e.title))
                         ))
                     ]);
                 })
             );
 
-            // COMPONENTES FLOTANTES (Drawer & Modals)
-            return h('div', { className: "h-screen w-screen bg-black text-slate-200 font-sans flex flex-col overflow-hidden", style: theme }, [
-                // Header
-                h('div', { className: "flex p-2 bg-neutral-900/80 border-b border-white/10 gap-2 shrink-0 overflow-x-auto" }, 
-                    TABS.map(t => h('button', { 
-                        key: t.id, onClick: ()=>setTab(t.id), 
-                        className: `flex items-center gap-2 px-4 py-2 rounded text-xs font-black border-b-2 transition-colors ${tab===t.id ? 'bg-white/5 border-[var(--tc)] text-[var(--tc)]' : 'border-transparent text-gray-500'}` 
-                    }, [ Icon(t.i, 14), t.l ]))
-                ),
-                // Toolbar
-                h('div', { className: "p-2 flex justify-between items-center shrink-0" }, [
-                    h('h1', { className: "text-2xl font-black tracking-tighter" }, date.toLocaleString('es-ES', { month: 'long' }).toUpperCase()),
+            // --- RENDER PRINCIPAL ---
+            return h('div', { className: "h-screen w-screen bg-black text-slate-200 font-sans flex flex-col overflow-hidden fixed inset-0", style: theme }, [
+                // 1. TOP BAR
+                h('header', { className: "shrink-0 flex items-center justify-between p-3 bg-neutral-900/90 border-b border-white/10" }, [
+                    h('div', { className: "flex flex-col" }, [
+                        h('h1', { className: "text-2xl font-black tracking-tighter leading-none" }, date.toLocaleString('es-ES', { month: 'long' }).toUpperCase()),
+                        h('span', { className: "text-[10px] text-[var(--tc)] font-bold tracking-widest" }, date.getFullYear())
+                    ]),
                     h('div', { className: "flex gap-2" }, [
-                        h('button', { onClick: ()=>doSync(), className: `p-2 rounded bg-neutral-900 border border-white/10 ${sync?'animate-spin text-[var(--tc)]':''}` }, Icon('RefreshCw')),
-                        h('button', { onClick: ()=>setMod('sets'), className: "p-2 rounded bg-neutral-900 border border-white/10" }, Icon('Settings')),
-                        h('button', { onClick: ()=>setDate(new Date(date.getFullYear(), date.getMonth()-1, 1)), className: "p-2" }, Icon('ChevronLeft')),
-                        h('button', { onClick: ()=>setDate(new Date(date.getFullYear(), date.getMonth()+1, 1)), className: "p-2" }, Icon('ChevronRight')),
+                        h('button', { onClick: handleSync, className: `p-2 rounded bg-white/5 border border-white/10 active:scale-95 ${status==='SYNC'?'animate-spin text-[var(--tc)]':''}` }, Icon('RefreshCw')),
+                        h('button', { onClick: ()=>setMod('sets'), className: "p-2 rounded bg-white/5 border border-white/10" }, Icon('Settings')),
+                        h('div', { className: "flex rounded bg-black/40 border border-white/10" }, [
+                            h('button', { onClick: ()=>setDate(new Date(date.getFullYear(), date.getMonth()-1)), className: "p-2 hover:bg-white/10" }, Icon('ChevronLeft')),
+                            h('button', { onClick: ()=>setDate(new Date(date.getFullYear(), date.getMonth()+1)), className: "p-2 hover:bg-white/10" }, Icon('ChevronRight'))
+                        ])
                     ])
                 ]),
-                // Main Content
-                h('main', { className: "flex-1 overflow-hidden p-2 flex flex-col relative z-10" }, tab === 't2' ? renderMatrix() : renderCalendar()),
 
-                // Drawer (Lista Inferior - Optimizada)
+                // 2. TABS
+                h('div', { className: "shrink-0 flex gap-1 p-2 overflow-x-auto no-scrollbar" }, TABS.map(t => 
+                    h('button', { key: t.id, onClick: ()=>setTab(t.id), className: `flex-1 py-2 rounded text-[10px] font-black tracking-widest flex justify-center items-center gap-2 border transition-all ${tab===t.id ? 'bg-[var(--tc)] text-black border-[var(--tc)]' : 'border-white/10 text-gray-500 bg-neutral-900/50'}` }, [Icon(t.i, 14), t.l])
+                )),
+
+                // 3. AREA PRINCIPAL
+                h('main', { className: "flex-1 overflow-hidden relative flex flex-col px-2 pb-2" }, tab === 't1' ? renderCalendar() : renderMatrix()),
+
+                // 4. DRAWER (Lista Inferior - OPTIMIZADO)
                 h('div', { 
-                    className: "fixed bottom-0 left-0 right-[60px] bg-black/80 glass rounded-tr-xl flex flex-col transition-all duration-300 z-50 border-t border-r border-white/10",
-                    style: { height: dH } 
+                    className: "fixed bottom-0 left-0 right-[60px] bg-black/90 glass rounded-tr-2xl z-40 border-t border-r border-white/10 transition-all duration-300 flex flex-col shadow-2xl",
+                    style: { height: `${dH}px` } 
                 }, [
                     h('div', { 
-                        className: "w-full h-6 flex justify-center items-center cursor-ns-resize bg-white/5",
-                        onTouchMove: e => setDH(Math.max(40, Math.min(window.innerHeight-100, window.innerHeight - e.touches[0].clientY)))
-                    }, h('div', { className: "w-10 h-1 bg-gray-500 rounded-full" })),
-                    h('div', { className: "flex-1 overflow-x-auto flex gap-4 p-4 items-start" }, drawerList.length > 0 ? drawerList.map(g => 
-                        h('div', { key: g.date, className: "min-w-[200px] w-[200px]" }, [
-                            h('div', { className: "text-[10px] font-black text-[var(--tc)] mb-2 uppercase border-b border-white/10" }, new Date(g.date).toLocaleDateString('es-ES',{weekday:'short',day:'numeric'})),
-                            h('div', { className: "flex flex-col gap-2" }, g.items.map(e => 
-                                h('div', { key: e.id, onClick: ()=>{setSelEv(e);setForm(e);setMod('edit')}, className: "bg-neutral-900/80 p-2 rounded border-l-2 cursor-pointer hover:bg-white/10", style:{borderLeftColor: e.gc||'#fff'} }, [
-                                    h('div', { className: "font-bold text-xs truncate" }, e.title),
-                                    h('div', { className: "text-[9px] text-gray-500" }, e.time)
+                        className: "h-6 w-full flex items-center justify-center shrink-0 cursor-ns-resize active:bg-white/5",
+                        onTouchMove: (e) => setDH(Math.max(50, Math.min(window.innerHeight * 0.8, window.innerHeight - e.touches[0].clientY)))
+                    }, h('div', { className: "w-12 h-1 bg-white/20 rounded-full" })),
+                    
+                    h('div', { className: "flex-1 overflow-x-auto flex gap-3 p-3 items-start content-start" }, 
+                        drawerList.length > 0 
+                        ? drawerList.map(g => h('div', { key: g.date, className: "min-w-[180px] w-[180px] shrink-0" }, [
+                            h('div', { className: "text-[9px] font-black text-[var(--tc)] uppercase border-b border-white/10 mb-2 pb-1" }, new Date(g.date).toLocaleDateString('es-ES',{weekday:'short',day:'numeric'})),
+                            h('div', { className: "flex flex-col gap-1.5" }, g.items.map(e => 
+                                h('div', { 
+                                    key: e.id, onClick: ()=>{setSelEv(e);setForm(e);setMod('edit')},
+                                    className: "bg-neutral-800/50 p-2 rounded border-l-[3px] hover:bg-white/10 transition-colors",
+                                    style: { borderLeftColor: e.gc || '#555' }
+                                }, [
+                                    h('div', { className: "text-[10px] font-bold text-white truncate leading-tight" }, e.title),
+                                    h('div', { className: "text-[8px] text-gray-500 font-mono mt-0.5" }, e.time || 'Todo el día')
                                 ])
                             ))
-                        ])
-                    ) : h('div', { className: "text-xs text-gray-600 p-4" }, "No hay eventos próximos (mostrando +100)"))
+                        ])) 
+                        : h('span', { className: "text-xs text-gray-600 italic p-2" }, "Nada pendiente esta semana")
+                    )
                 ]),
 
-                // Bio Widget
+                // 5. BIO WIDGET
                 h('div', { 
-                    onClick: () => { setBio((bio+1)%BIO_DB.length); setMod('bio'); },
-                    className: "fixed bottom-0 right-0 w-32 h-32 z-50 flex items-center justify-center cursor-pointer glass rounded-tl-3xl border-l border-t border-white/10 hover:bg-white/5",
+                    onClick: () => { setBio(prev => (prev+1)%BIO_DB.length); setMod('bio'); },
+                    className: "fixed bottom-0 right-0 w-24 h-24 z-50 flex items-center justify-center glass rounded-tl-full border-t border-l border-white/10 active:scale-95 transition-transform shadow-[0_0_30px_rgba(0,0,0,0.5)]",
                     style: { borderColor: activeT.c }
-                }, Icon('Dna', 32, activeT.c)),
+                }, Icon('Dna', 24, activeT.c)),
 
-                // MODALES (Simplificados)
-                mod && h('div', { className: "fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm" }, 
-                    h('div', { className: "w-full max-w-md bg-neutral-900 border border-white/10 rounded-xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]" }, [
-                        h('div', { className: "p-3 bg-black flex justify-between items-center" }, [
-                            h('span', { className: "font-bold text-sm" }, mod.toUpperCase()),
-                            h('button', { onClick: ()=>setMod(null) }, Icon('X'))
+                // 6. MODALES (Unificados)
+                mod && h('div', { className: "fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200" }, 
+                    h('div', { className: "w-full max-w-sm bg-neutral-900 border border-white/10 rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh]" }, [
+                        h('div', { className: "p-4 bg-black/50 border-b border-white/10 flex justify-between items-center" }, [
+                            h('span', { className: "font-black text-xs tracking-widest text-white" }, mod.toUpperCase()),
+                            h('button', { onClick: ()=>setMod(null) }, Icon('X', 18))
                         ]),
-                        h('div', { className: "p-4 overflow-y-auto space-y-3" }, 
+                        h('div', { className: "p-4 overflow-y-auto space-y-4" }, 
                             mod === 'bio' ? [
-                                h('img', { src: BIO_DB[bio].img, className: "w-full h-40 object-cover rounded mb-2" }),
-                                h('h2', { className: "text-xl font-black italic" }, BIO_DB[bio].name),
-                                h('p', { className: "text-xs text-gray-400" }, BIO_DB[bio].sc),
-                                h('p', { className: "text-sm mt-2" }, BIO_DB[bio].d)
+                                h('img', { src: BIO_DB[bio].img, className: "w-full h-48 object-cover rounded-lg border border-white/10" }),
+                                h('div', {}, [
+                                    h('h2', { className: "text-2xl font-black italic text-white" }, BIO_DB[bio].name),
+                                    h('p', { className: "text-xs text-[var(--tc)] font-mono mb-2" }, BIO_DB[bio].sc),
+                                    h('p', { className: "text-sm text-gray-300" }, BIO_DB[bio].d)
+                                ])
                             ] : mod === 'sets' ? [
-                                h('h3', { className: "text-xs font-bold text-gray-500" }, "GOOGLE API"),
-                                h('input', { className: "w-full bg-black border border-gray-700 p-2 rounded text-xs", placeholder: "Client ID", value: gConf.id, onChange: e=>setGConf({...gConf, id:e.target.value}) }),
-                                h('input', { className: "w-full bg-black border border-gray-700 p-2 rounded text-xs", placeholder: "API Key", value: gConf.key, onChange: e=>setGConf({...gConf, key:e.target.value}) }),
-                                h('h3', { className: "text-xs font-bold text-gray-500 mt-4" }, "CALENDARIOS"),
-                                Object.values(cals).map(c => h('div', { key: c.id, className: "flex justify-between text-xs py-1" }, [
-                                    h('span', { style:{color:c.c} }, c.s),
-                                    h('button', { onClick: ()=>setCals({...cals, [c.id]:{...c, v:!c.v}}) }, Icon(c.v?'Eye':'EyeOff', 14))
-                                ]))
-                            ] : [ // Formulario Crear/Editar
-                                h('input', { className: "w-full bg-black p-2 border border-gray-700 rounded", placeholder: "Título", value: form.title, onChange: e=>setForm({...form, title:e.target.value}) }),
-                                h('div', { className: "flex gap-2" }, [
-                                    h('input', { type:'date', className: "bg-black p-2 border border-gray-700 rounded flex-1", value: form.date, onChange: e=>setForm({...form, date:e.target.value}) }),
-                                    h('input', { type:'time', className: "bg-black p-2 border border-gray-700 rounded w-24", value: form.time, onChange: e=>setForm({...form, time:e.target.value}) })
+                                h('div', { className: "space-y-2" }, [
+                                    h('label', { className: "text-[10px] font-bold text-gray-500" }, "CLIENT ID"),
+                                    h('input', { className: "w-full bg-black border border-gray-700 p-2 rounded text-xs text-white", value: gConf.id, onChange: e=>setGConf({...gConf, id:e.target.value}) }),
+                                    h('label', { className: "text-[10px] font-bold text-gray-500" }, "API KEY"),
+                                    h('input', { className: "w-full bg-black border border-gray-700 p-2 rounded text-xs text-white", value: gConf.key, onChange: e=>setGConf({...gConf, key:e.target.value}) }),
                                 ]),
-                                h('div', { className: "flex gap-2" }, Object.keys(QUAD).map(q => h('button', { 
-                                    key: q, onClick: ()=>setForm({...form, q}), 
-                                    className: `flex-1 py-1 text-[10px] border rounded ${form.q===q?'bg-white text-black':'border-gray-700'}` 
-                                }, QUAD[q].t))),
-                                h('textarea', { className: "w-full bg-black p-2 border border-gray-700 rounded", rows:3, placeholder:"Notas", value: form.notes, onChange: e=>setForm({...form, notes:e.target.value}) }),
-                                h('div', { className: "flex gap-2 mt-2" }, [
-                                    mod==='edit' && h('button', { onClick: ()=>{setEvs(evs.filter(e=>e.id!==selEv.id)); setMod(null)}, className: "p-2 bg-red-900/50 rounded" }, Icon('Trash2', 16, 'red')),
-                                    h('button', { className: "flex-1 bg-[var(--tc)] text-black font-bold p-2 rounded", onClick: ()=>{
+                                h('div', { className: "pt-4 border-t border-white/10 space-y-2" }, Object.values(cals).map(c => 
+                                    h('div', { key: c.id, className: "flex justify-between items-center text-xs" }, [
+                                        h('span', { className: "truncate flex-1 pr-2", style:{color:c.c} }, c.s),
+                                        h('button', { onClick: ()=>setCals({...cals, [c.id]:{...c, v:!c.v}}) }, Icon(c.v?'Eye':'EyeOff', 14))
+                                    ])
+                                ))
+                            ] : [ // Form Create/Edit
+                                h('input', { autoFocus:true, className: "w-full bg-black border-b border-white/20 p-2 text-lg font-bold text-white outline-none", placeholder: "Título...", value: form.title, onChange: e=>setForm({...form, title:e.target.value}) }),
+                                h('div', { className: "grid grid-cols-2 gap-2" }, [
+                                    h('input', { type:'date', className: "bg-black/50 border border-white/10 rounded p-2 text-xs", value: form.date, onChange: e=>setForm({...form, date:e.target.value}) }),
+                                    h('input', { type:'time', className: "bg-black/50 border border-white/10 rounded p-2 text-xs", value: form.time, onChange: e=>setForm({...form, time:e.target.value}) })
+                                ]),
+                                h('div', { className: "flex gap-1" }, Object.keys(QUAD).map(q => h('button', { key: q, onClick: ()=>setForm({...form, q}), className: `flex-1 py-1.5 text-[9px] font-bold border rounded ${form.q===q?'bg-white text-black':'border-white/10 text-gray-500'}` }, QUAD[q].t))),
+                                h('textarea', { rows: 3, className: "w-full bg-black/50 border border-white/10 rounded p-2 text-xs resize-none", placeholder: "Notas...", value: form.notes, onChange: e=>setForm({...form, notes:e.target.value}) }),
+                                h('div', { className: "flex gap-2 pt-2" }, [
+                                    mod==='edit' && h('button', { onClick: ()=>{setEvs(evs.filter(e=>e.id!==selEv.id)); setMod(null)}, className: "p-3 bg-red-900/20 text-red-500 rounded border border-red-900/50" }, Icon('Trash2', 18)),
+                                    h('button', { className: "flex-1 bg-[var(--tc)] text-black font-black p-3 rounded hover:brightness-110", onClick: ()=>{
                                         const ne = { ...form, id: mod==='create'?Date.now():selEv.id, _ts: new Date(form.date+'T'+(form.time||'00:00')).getTime() };
-                                        setEvs(mod==='create'?[...evs, ne]:evs.map(e=>e.id===selEv.id?ne:e));
+                                        setEvs(prev => mod==='create'?[...prev, ne]:prev.map(e=>e.id===selEv.id?ne:e));
                                         setMod(null);
-                                    }}, "GUARDAR")
+                                    }}, "CONFIRMAR")
                                 ])
                             ]
                         )
