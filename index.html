@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V8.4:ZenFix</title>
+<title>CMD V8.5:ZenFlow</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif']}}}}</script>
@@ -11,19 +11,24 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
 body{background:#000;touch-action:none;overscroll-behavior:none}.no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
-.glass{background:rgba(10,10,10,.65);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid rgba(255,255,255,.1);box-shadow:0 -10px 50px #000c}
+.glass{background:rgba(10,10,10,.85);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border-top:1px solid rgba(255,255,255,.1);box-shadow:0 -10px 50px #000}
 .tr-h{transition:height .4s cubic-bezier(.2,.8,.2,1)}
 @keyframes sl{0%{transform:translateY(-100%)}100%{transform:translateY(100%)}}
 .scan::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,transparent,#ffffff1a,transparent);animation:sl 2s linear infinite;pointer-events:none}
 .drag-over{background:#ffffff0d;border-color:var(--theme-color);box-shadow:inset 0 0 20px #ffffff0d}.rich b{color:inherit;font-weight:900}
 
-/* NUEVAS ANIMACIONES RELAJANTES */
-@keyframes softEntry { 
-    from { opacity: 0; transform: scale(0.96) translateY(10px); filter: blur(8px); } 
-    to { opacity: 1; transform: scale(1) translateY(0); filter: blur(0px); } 
+/* TRANSICIONES LIMPIAS (SIN BLUR) */
+@keyframes slideUp { 
+    from { opacity: 0; transform: translateY(25px); } 
+    to { opacity: 1; transform: translateY(0); } 
 }
-.anim-n, .anim-p { animation: softEntry 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
-.fade-content { transition: opacity 0.3s ease-out; }
+@keyframes slideDown { 
+    from { opacity: 0; transform: translateY(-25px); } 
+    to { opacity: 1; transform: translateY(0); } 
+}
+.anim-n { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.anim-p { animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.fade-content { transition: opacity 0.2s ease-out; }
 </style>
 </head>
 <body><div id="root"></div>
@@ -68,7 +73,7 @@ function App(){
     const initGis=()=>{if(gCfg.clientId){tC.current=window.google.accounts.oauth2.initTokenClient({client_id:gCfg.clientId,scope:"https://www.googleapis.com/auth/calendar.readonly",callback:async(r)=>{if(!r.error){SGS(true);fM.current.clear();await fetchG(date)}}});gsI.current=true}};
     const auth=async()=>{if(!gCfg.apiKey||!gCfg.clientId)return alert("Faltan Credenciales");if(!gI.current)await initGapi();if(!gsI.current)initGis();setTimeout(()=>tC.current.requestAccessToken({prompt:'select_account'}),500)};
     
-    // FETCH GOOGLE OPTIMIZADO: MEJOR DETECCIÓN DE CLASES
+    // FETCH GOOGLE: FILTRO DE CLASES ULTRA-AGRESIVO
     const fetchG=async(td=new Date())=>{
         SSy(true);try{
             if(!window.gapi.client.calendar) await window.gapi.client.load('calendar','v3');
@@ -85,8 +90,8 @@ function App(){
                         const t=(i.summary||'').toLowerCase(), cn=(c.summary||'').toLowerCase();
                         let cat='task',q='q2'; 
                         
-                        // KEYWORDS EXTENDIDAS PARA EVITAR CLASES EN TAREAS
-                        const kw=['clase','aula','uni','curso','materia','taller','laboratorio','examen','entrega','teoria','práctica','semestre','docente','school','college'];
+                        // KEYWORDS EXTENDIDAS
+                        const kw=['clase','aula','uni','curso','materia','taller','laboratorio','examen','catedra','teorico','practico','docente','school','college','salon','b1','a1','pabellon','fadu','uba'];
                         const fitKw=['fit','gym','entren','ejercicio','sport','correr','nadar'];
 
                         if(kw.some(k=>cn.includes(k)||t.includes(k))){ cat='class'; q=null; }
@@ -111,18 +116,33 @@ function App(){
         return d;
     },[date]);
 
-    const {lk,mx,up}=useMemo(()=>{
+    // LOGICA DE DATOS: Agrupación para Drawer
+    const {lk,mx,upGrouped}=useMemo(()=>{
         const l={},m=[],u=[],now=new Date().toISOString().split('T')[0];
         evs.forEach(e=>{
             if(e.type==='google'&&cals[e.calId]&&!cals[e.calId].visible)return;
+            // Calendario
             if(e.date){if(!l[e.date])l[e.date]=[];l[e.date].push(e)}
-            // FILTRO ESTRICTO PARA LA MATRIZ DE TAREAS
-            if(e.cat!=='class'&&e.cat!=='fitness')m.push(e);
+            
+            // Matriz (Tareas): Exclusión TOTAL de Clases
+            if(e.cat!=='class' && e.cat!=='fitness' && !e.title.toLowerCase().includes('clase')) m.push(e);
+            
+            // Drawer (Upcoming)
             if(e.date>=now)u.push(e);
         });
-        u.sort((a,b)=>a.date.localeCompare(b.date)||(a.time||'').localeCompare(b.time||''));
+        
         Object.keys(l).forEach(k=>l[k].sort((a,b)=>(a.time||'').localeCompare(b.time||'')));
-        return {lk:l,mx:m,up:u.slice(0,60)};
+        u.sort((a,b)=>a.date.localeCompare(b.date)||(a.time||'').localeCompare(b.time||''));
+
+        // Agrupación por día para el Drawer
+        const gr={};
+        u.slice(0,60).forEach(e=>{
+            if(!gr[e.date])gr[e.date]=[];
+            gr[e.date].push(e);
+        });
+        const upG = Object.entries(gr).sort((a,b)=>a[0].localeCompare(b[0])); // [[date, [evs]], ...]
+
+        return {lk:l,mx:m,upGrouped:upG};
     },[evs,cals]);
 
     const calTouch={
@@ -141,8 +161,14 @@ function App(){
         SE(modal==='c'?[...evs,pl]:evs.map(e=>e.id===selId?pl:e)); SM(null);
     };
 
-    // UI RENDERS
     const Icon=(n,s=18,c)=>h(ICONS[n]||L.Circle,{size:s,className:c});
+    
+    // FORMAT FECHA DRAWER
+    const fmtD=(ds)=>{
+        const d=new Date(ds+'T12:00:00'); // Fix zona horaria simple
+        return d.toLocaleDateString('es',{weekday:'short',day:'numeric'}).toUpperCase();
+    }
+
     return h('div',{className:"h-screen w-screen bg-black text-slate-200 font-sans overflow-hidden flex flex-col relative",style:thStyle},
         h('div',{className:"absolute inset-0 pointer-events-none"},
             h('div',{className:"absolute inset-0 opacity-10",style:{backgroundImage:`radial-gradient(circle at 50% 0%,var(--theme-color),transparent 80%)`}}),
@@ -196,15 +222,20 @@ function App(){
                 }))
             )
         ),
-        // DRAWER
+        // DRAWER - UPGRADED: APILA POR DIA
         h('div',{className:`fixed bottom-0 left-0 right-[60px] z-50 rounded-tr-2xl glass flex flex-col ${!drag?'tr-h':''}`,style:{height:dH}},
-            // HANDLE: Centrado absoluto
             h('div',{className:"w-full h-8 flex justify-center items-center cursor-grab touch-none shrink-0",onTouchStart:drwTouch.s,onTouchMove:drwTouch.m,onTouchEnd:drwTouch.e},h('div',{className:"w-16 h-1 bg-white/30 rounded-full"})),
-            // CONTENIDO
-            h('div',{className:`flex-1 overflow-x-auto p-4 flex items-start gap-4 no-scrollbar fade-content ${dH<80?'opacity-0 pointer-events-none':'opacity-100'}`}, up.length?up.map(e=>
-                h('div',{key:e.id,onClick:()=>{SF({...e});SSI(e.id);SM('e')},className:"min-w-[220px] w-[220px] h-auto bg-black/40 border-l-4 p-3 rounded hover:brightness-125 cursor-pointer backdrop-blur-sm",style:{borderLeftColor:e.gCol||'white'}},
-                    h('div',{className:"flex justify-between items-start mb-1"},h('span',{className:"text-xs font-bold text-white truncate"},e.title),h('span',{className:"text-[9px] text-neutral-400 font-mono"},new Date(e.date).toLocaleDateString('es',{day:'numeric',month:'short'})+' '+e.time)),
-                    e.notes&&h('div',{className:"text-[9px] text-neutral-500 line-clamp-2 italic",dangerouslySetInnerHTML:{__html:e.notes}})
+            // Contenedor de Grupos
+            h('div',{className:`flex-1 overflow-x-auto p-4 flex gap-6 no-scrollbar fade-content ${dH<80?'opacity-0 pointer-events-none':'opacity-100'}`}, upGrouped.length?upGrouped.map(([dStr,evs])=>
+                h('div',{key:dStr,className:"flex flex-col gap-2 min-w-[200px]"},
+                    h('div',{className:"sticky top-0 z-10"},h('span',{className:"text-[10px] font-black tracking-widest text-neutral-500 uppercase bg-black/50 px-2 py-1 rounded"},fmtD(dStr))),
+                    evs.map(e=>
+                        h('div',{key:e.id,onClick:()=>{SF({...e});SSI(e.id);SM('e')},className:"w-full bg-black/40 border-l-4 p-3 rounded hover:brightness-125 cursor-pointer backdrop-blur-sm transition-transform active:scale-95",style:{borderLeftColor:e.gCol||'white'}},
+                            h('div',{className:"flex justify-between items-start mb-1"},h('span',{className:"text-xs font-bold text-white truncate"},e.title),h('span',{className:"text-[9px] text-neutral-400 font-mono"},e.time)),
+                            e.cat==='class'&&h('div',{className:"text-[9px] text-blue-300 font-bold"},"CLASE"),
+                            e.notes&&h('div',{className:"text-[9px] text-neutral-500 line-clamp-1 italic",dangerouslySetInnerHTML:{__html:e.notes}})
+                        )
+                    )
                 )
             ):h('div',{className:"w-full text-center text-neutral-500 text-xs italic"},"No upcoming events"))
         ),
