@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V8.9.9:NaturalFlow</title>
+<title>CMD V8.9.9:AutoSync</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif']}}}}</script>
@@ -27,9 +27,6 @@ body{background:#000;touch-action:none;overscroll-behavior:none;user-select:none
     .safe-border:hover { border-color: rgba(255, 255, 255, 0.3); }
 }
 .touch-feedback:active { background-color: rgba(23, 23, 23, 1); transform: scale(0.98); }
-/* ANIMACION DE ELIMINACION */
-.scale-out { animation: poof 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
-@keyframes poof { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(0.5); opacity: 0; height: 0; margin: 0; padding: 0; border: 0; } }
 </style>
 </head>
 <body><div id="root"></div>
@@ -45,7 +42,6 @@ const BIO=[{id:1,name:"Cuervo Grande",sci:"Corvus corax",tx:"Aves/Corvidae",desc
 const TABS=[{id:'t1',l:'EVENTOS',i:'Calendar',c:'#3b82f6'},{id:'t2',l:'TAREAS',i:'CheckSquare',c:'#ef4444'},{id:'t3',l:'NOTAS',i:'BookOpen',c:'#eab308'},{id:'t4',l:'PROY',i:'Folder',c:'#22c55e'}];
 const Q={q1:{t:'HACER YA',s:'Urgente+Imp',c:'#ef4444'},q2:{t:'PLANIFICAR',s:'NoUrg+Imp',c:'#3b82f6'},q3:{t:'DELEGAR',s:'Urg+NoImp',c:'#eab308'},q4:{t:'ELIMINAR',s:'NiUrg+NiImp',c:'#64748b'}};
 
-// HELPER DE FECHA LOCAL (CORRIGE EL DÍA 2 vs 3)
 const locDate = (d) => {
     const z = d.getTimezoneOffset() * 60000;
     return new Date(d.getTime() - z).toISOString().split('T')[0];
@@ -58,7 +54,6 @@ function App(){
     const [sync,SSy]=useState(false),[gCfg,SG]=useState({apiKey:'',clientId:''}),[gSign,SGS]=useState(false);
     const [dH,SH]=useState(40),[drag,SDr]=useState(false),[dir,SDir]=useState('n');
     const [dTask, SDT] = useState(null); 
-    const [animId, SAnim] = useState(null); // ID para animación de borrado
 
     const fM=useRef(new Set()),tC=useRef(null),gI=useRef(false),gsI=useRef(false),tS=useRef(null),tE=useRef(null),dY=useRef(0),dH0=useRef(0);
     const curTab=tabs.find(t=>t.id===act)||tabs[0], thStyle={'--theme-color':curTab.c,'--theme-glow':curTab.c+'60'};
@@ -66,8 +61,7 @@ function App(){
     const ls=(k,v)=>v?localStorage.setItem(k,JSON.stringify(v)):JSON.parse(localStorage.getItem(k));
     useEffect(()=>{
         const e=ls('ev_v8'),t=ls('tb_v8'),g=ls('gc_v8'),c=ls('cm_v8');
-        // FIX: ELIMINAR INIT, ARRAY VACÍO SI NO HAY DATOS
-        if(e)try{SE(e)}catch(x){}else SE([]); 
+        if(e)try{SE(e)}catch(x){}else SE([{id:1,title:'INIT_V8',date:new Date().toISOString().split('T')[0],time:'09:00',type:'work',cat:'task',quad:'q1'}]);
         if(t)ST(t);if(g)SG(g);if(c)SC(c);
         if(window.gapi)window.gapi.load('client',initGapi);
     },[]);
@@ -86,7 +80,6 @@ function App(){
         return () => document.removeEventListener('visibilitychange', onVis);
     }, [gSign, date]);
 
-    // LÓGICA DE ARRASTRE MEJORADA
     useEffect(() => {
         if (!dTask) return;
         const move = (e) => {
@@ -99,16 +92,7 @@ function App(){
             const quadDiv = el?.closest('[data-quad]');
             if (quadDiv) {
                 const newQ = quadDiv.getAttribute('data-quad');
-                // LÓGICA DE ELIMINACIÓN NATURAL
-                if (newQ === 'q4') {
-                    if(window.confirm(`¿Eliminar "${dTask.title}"?`)) {
-                        SAnim(dTask.id); // Iniciar animación
-                        setTimeout(() => {
-                            SE(prev => prev.filter(x => x.id !== dTask.id));
-                            SAnim(null);
-                        }, 350); // Esperar a CSS
-                    }
-                } else if (newQ && newQ !== dTask.startQuad) {
+                if (newQ && newQ !== dTask.startQuad) {
                     SE(prev => prev.map(x => x.id === dTask.id ? { ...x, quad: newQ } : x));
                 }
             }
@@ -129,28 +113,66 @@ function App(){
     const fetchG=async(td=new Date())=>{
         SSy(true);try{
             if(!window.gapi.client.calendar) await window.gapi.client.load('calendar','v3');
+            
             const y=td.getFullYear(),m=td.getMonth();
             const minDt = new Date(y,m-1,1);
             const maxDt = new Date(y,m+2,0,23,59,59);
+            const minIso = minDt.toISOString();
+            const maxIso = maxDt.toISOString();
             const minStr = locDate(minDt);
             const maxStr = locDate(maxDt);
 
             fM.current.add(`${y}-${m}`);fM.current.add(`${y}-${m+1}`);
-            const cl=await window.gapi.client.calendar.calendarList.list(), rC=cl.result.items, uC={...cals};
-            rC.forEach(c=>{if(!uC[c.id])uC[c.id]={id:c.id,summary:c.summary,color:c.backgroundColor,visible:true};else{uC[c.id].summary=c.summary;uC[c.id].color=c.backgroundColor}});
-            SC(uC);
+            
+            // 1. OBTENER LISTA FRESCA DE CALENDARIOS
+            const cl=await window.gapi.client.calendar.calendarList.list();
+            const rC=cl.result.items;
+            
+            // 2. RECONSTRUIR EL MAPA DE CALENDARIOS (Añadir nuevos, limpiar borrados)
+            const nextCals = {};
+            rC.forEach(c => {
+                const existing = cals[c.id]; // ¿Ya lo teníamos?
+                nextCals[c.id] = {
+                    id: c.id,
+                    summary: c.summary,
+                    color: c.backgroundColor,
+                    // Si existía, mantén preferencia. Si es NUEVO, visible por defecto (true).
+                    visible: existing ? existing.visible : true
+                };
+            });
+            SC(nextCals); // Actualizamos estado y persistencia
 
             const all=await Promise.all(rC.map(async c=>{
-                if(cals[c.id]&&!cals[c.id].visible)return[];
+                // Usamos la preferencia histórica o true si es nuevo (para la lógica de fetch)
+                const isHidden = cals[c.id] && !cals[c.id].visible;
+                if(isHidden) return []; // Si el usuario lo ocultó explícitamente, saltar.
+
                 try{
-                    const r=await window.gapi.client.calendar.events.list({calendarId:c.id,timeMin:minDt.toISOString(),timeMax:maxDt.toISOString(),singleEvents:true,maxResults:999,orderBy:'startTime'});
+                    const r=await window.gapi.client.calendar.events.list({
+                        calendarId:c.id, timeMin:minIso, timeMax:maxIso,
+                        singleEvents:true, maxResults:999, orderBy:'startTime'
+                    });
+                    
                     return r.result.items.filter(i => i.status !== 'cancelled').map(i=>{
+                        const t=(i.summary||'').toLowerCase(), cn=(c.summary||'').toLowerCase();
+                        let cat='task',q='q2'; 
+                        const kw=['clase','aula','uni','curso','materia','taller','laboratorio','examen','catedra','teorico','practico','docente','school','college','salon','b1','a1','pabellon','fadu','uba'];
+                        const fitKw=['fit','gym','entren','ejercicio','sport','correr','nadar'];
+                        if(kw.some(k=>cn.includes(k)||t.includes(k))){ cat='class'; q=null; }
+                        else if(fitKw.some(k=>cn.includes(k)||t.includes(k))){ cat='fitness'; q=null; }
+                        
                         let dRaw = i.start.dateTime || i.start.date;
-                        let dFinal = dRaw.includes('T') ? dRaw.split('T')[0] : dRaw;
-                        return {id:i.id,calId:c.id,title:i.summary||'(No Title)',date:dFinal,time:i.start.dateTime?.split('T')[1].substring(0,5)||'',type:'google',notes:i.description||'',cat:'task',quad:null,gCol:c.backgroundColor}
+                        let dFinal = dRaw; if(dRaw.includes('T')) dFinal = dRaw.split('T')[0];
+
+                        return {
+                            id:i.id, calId:c.id, title:i.summary||'(No Title)',
+                            date:dFinal, time:i.start.dateTime?.split('T')[1].substring(0,5)||'',
+                            type:'google', notes:i.description||'', cat, quad:q, gCol:c.backgroundColor
+                        }
                     })
                 }catch(e){return[]}
             }));
+
             const flat=all.flat();
             SE(p=>{
                 const loc=p.filter(e=>e.type!=='google');
@@ -161,28 +183,32 @@ function App(){
                 flat.forEach(e=>merged.set(e.id,e));
                 return Array.from(merged.values())
             });
+
         }catch(e){console.error(e)}finally{SSy(false)};
     };
 
     const days=useMemo(()=>{
         const y=date.getFullYear(),m=date.getMonth(),d=[],last=new Date(y,m+1,0).getDate(),pad=(new Date(y,m,1).getDay()||7)-1;
-        // Uso locDate para generar claves de fecha consistentes
-        for(let i=0;i<pad;i++)d.push({d:'',dt:null}); 
-        for(let i=1;i<=last;i++)d.push({d:i,dt:locDate(new Date(y,m,i))});
+        for(let i=0;i<pad;i++)d.push({d:'',dt:null}); for(let i=1;i<=last;i++)d.push({d:i,dt:new Date(y,m,i).toISOString().split('T')[0]});
         return d;
     },[date]);
 
     const {lk,mx,upGrouped}=useMemo(()=>{
-        const l={},m=[],u=[],now=locDate(new Date());
+        const l={},m=[],u=[],now=new Date().toISOString().split('T')[0];
+        const classTitles = new Set();
+        evs.forEach(e => { if(e.cat === 'class') classTitles.add(e.title.toLowerCase().trim()); });
         evs.forEach(e=>{
             if(e.type==='google'&&cals[e.calId]&&!cals[e.calId].visible)return;
             if(e.date){if(!l[e.date])l[e.date]=[];l[e.date].push(e)}
-            if(e.cat!=='class' && e.cat!=='fitness' && !e.title.toLowerCase().includes('clase')) m.push(e);
+            const tNorm = e.title.toLowerCase().trim();
+            const knownAsClass = classTitles.has(tNorm) || tNorm.includes('clase');
+            if(e.cat!=='class' && e.cat!=='fitness' && !knownAsClass) m.push(e);
             if(e.date>=now)u.push(e);
         });
         Object.keys(l).forEach(k=>l[k].sort((a,b)=>(a.time||'').localeCompare(b.time||'')));
         u.sort((a,b)=>a.date.localeCompare(b.date)||(a.time||'').localeCompare(b.time||''));
-        const gr={}; u.slice(0,60).forEach(e=>{ if(!gr[e.date])gr[e.date]=[]; gr[e.date].push(e); });
+        const gr={};
+        u.slice(0,60).forEach(e=>{ if(!gr[e.date])gr[e.date]=[]; gr[e.date].push(e); });
         return {lk:l,mx:m,upGrouped:Object.entries(gr).sort((a,b)=>a[0].localeCompare(b[0]))};
     },[evs,cals]);
 
@@ -203,7 +229,10 @@ function App(){
     };
 
     const Icon=(n,s=18,c)=>h(ICONS[n]||L.Circle,{size:s,className:c});
-    const fmtD=(ds)=>{const d=new Date(ds+'T12:00:00');return d.toLocaleDateString('es',{weekday:'short',day:'numeric'}).toUpperCase();}
+    const fmtD=(ds)=>{
+        const d=new Date(ds+'T12:00:00');
+        return d.toLocaleDateString('es',{weekday:'short',day:'numeric'}).toUpperCase();
+    }
 
     return h('div',{className:"h-screen w-screen bg-black text-slate-200 font-sans overflow-hidden flex flex-col relative",style:thStyle},
         h('div',{className:"absolute inset-0 pointer-events-none"},
@@ -235,7 +264,7 @@ function App(){
             ),
             act==='t2' // MATRIX
             ? h('div',{className:"flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-2 grid-rows-2 gap-2 pb-20 md:pb-0"}, Object.keys(Q).map(k=>
-                h('div',{key:k,'data-quad':k, className:`bg-neutral-900/40 border rounded-xl p-3 flex flex-col relative overflow-hidden backdrop-blur-sm transition-all duration-300 ${dTask?'border-white/10 safe-hover':''} ${dTask && k==='q4' ? 'shadow-[0_0_30px_rgba(239,68,68,0.3)] border-red-500/50 bg-red-900/10' : 'border-neutral-800/60'}`},
+                h('div',{key:k,'data-quad':k, className:`bg-neutral-900/40 border rounded-xl p-3 flex flex-col relative overflow-hidden backdrop-blur-sm transition-colors ${dTask?'border-white/10 safe-hover':'border-neutral-800/60'}`},
                     h('div',{className:"flex justify-between items-center mb-3 pb-2 border-b border-white/5"},
                         h('div',{},h('h3',{className:"text-sm font-black tracking-widest",style:{color:Q[k].c}},Q[k].t),h('span',{className:"text-[9px] text-neutral-500 font-mono uppercase"},Q[k].s)),
                         h('span',{className:"bg-neutral-800 text-neutral-400 text-[10px] font-bold px-2 py-0.5 rounded-full"},mx.filter(e=>(e.quad||'q2')===k).length)
@@ -244,7 +273,7 @@ function App(){
                         h('div',{
                             key:e.id,
                             onClick:()=>{SF({...e});SSI(e.id);SM('e')},
-                            className:`bg-black/60 border border-neutral-800 p-2.5 rounded-lg group transition-all active:scale-95 safe-border flex items-start gap-2 relative outline-none ${animId===e.id?'scale-out':''}`
+                            className:"bg-black/60 border border-neutral-800 p-2.5 rounded-lg group transition-all active:scale-95 safe-border flex items-start gap-2 relative outline-none"
                         },
                             h('div',{className:"mt-0.5 text-emerald-400"},Icon('CheckCircle',14)),
                             h('div',{className:"flex-1 min-w-0"},h('p',{className:"text-xs font-bold text-white truncate rich",dangerouslySetInnerHTML:{__html:e.title}})),
@@ -262,9 +291,7 @@ function App(){
             : h('div',{onTouchStart:calTouch.s,onTouchMove:e=>tE.current=e.targetTouches[0].clientX,onTouchEnd:calTouch.e,className:"flex-1 bg-neutral-900/30 backdrop-blur-sm rounded-xl border border-neutral-800 overflow-hidden flex flex-col relative shadow-[0_0_100px_rgba(0,0,0,0.5)]", style:{transform:'translate3d(0,0,0)'}}, // FIX: Hardware Acceleration
                 h('div',{className:"grid grid-cols-7 bg-black border-b border-neutral-800"},['L','M','X','J','V','S','D'].map(d=>h('div',{key:d,className:"py-2 text-center text-[10px] md:text-xs font-black tracking-[0.2em] text-neutral-600"},d))),
                 h('div',{key:date.toISOString(),className:`grid grid-cols-7 flex-1 auto-rows-fr ${dir==='n'?'anim-n':'anim-p'}`, style:{willChange:'transform'}}, days.map((d,i)=>{ // FIX: will-change
-                    // FIX: COMPARACIÓN SEGURA CON FECHA LOCAL
-                    const isT=d.dt===locDate(new Date()); 
-                    const evs=d.dt?(lk[d.dt]||[]):[];
+                    const isT=d.dt===new Date().toISOString().split('T')[0], evs=d.dt?(lk[d.dt]||[]):[];
                     const activeStyle = isT ? {
                         background: curTab.c+'1A',
                         borderColor: curTab.c,
