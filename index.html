@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V8.9.9:AutoSync</title>
+<title>CMD V8.9.9:Vortex</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif']}}}}</script>
@@ -21,6 +21,15 @@ body{background:#000;touch-action:none;overscroll-behavior:none;user-select:none
 .anim-n { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 .anim-p { animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 .fade-content { transition: opacity 0.2s ease-out; }
+
+/* ANIMACION SATISFACTORIA DE ELIMINACION */
+@keyframes vortex {
+    0% { transform: scale(1) rotate(0deg); opacity: 1; filter: grayscale(0); }
+    30% { transform: scale(1.1) rotate(-5deg); color: #ef4444; border-color: #ef4444; }
+    100% { transform: scale(0) rotate(720deg); opacity: 0; filter: blur(10px); }
+}
+.del-anim { animation: vortex 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards; pointer-events: none; z-index: 50; }
+
 @media (hover: hover) {
     .safe-hover:hover { background-color: rgba(23, 23, 23, 1); } 
     .safe-bright:hover { filter: brightness(1.25); }
@@ -42,10 +51,7 @@ const BIO=[{id:1,name:"Cuervo Grande",sci:"Corvus corax",tx:"Aves/Corvidae",desc
 const TABS=[{id:'t1',l:'EVENTOS',i:'Calendar',c:'#3b82f6'},{id:'t2',l:'TAREAS',i:'CheckSquare',c:'#ef4444'},{id:'t3',l:'NOTAS',i:'BookOpen',c:'#eab308'},{id:'t4',l:'PROY',i:'Folder',c:'#22c55e'}];
 const Q={q1:{t:'HACER YA',s:'Urgente+Imp',c:'#ef4444'},q2:{t:'PLANIFICAR',s:'NoUrg+Imp',c:'#3b82f6'},q3:{t:'DELEGAR',s:'Urg+NoImp',c:'#eab308'},q4:{t:'ELIMINAR',s:'NiUrg+NiImp',c:'#64748b'}};
 
-const locDate = (d) => {
-    const z = d.getTimezoneOffset() * 60000;
-    return new Date(d.getTime() - z).toISOString().split('T')[0];
-};
+const locDate = (d) => { const z = d.getTimezoneOffset() * 60000; return new Date(d.getTime() - z).toISOString().split('T')[0]; };
 
 function App(){
     const [tabs,ST]=useState(TABS),[act,SA]=useState('t1'),[date,SD]=useState(new Date()),[evs,SE]=useState([]);
@@ -54,17 +60,21 @@ function App(){
     const [sync,SSy]=useState(false),[gCfg,SG]=useState({apiKey:'',clientId:''}),[gSign,SGS]=useState(false);
     const [dH,SH]=useState(40),[drag,SDr]=useState(false),[dir,SDir]=useState('n');
     const [dTask, SDT] = useState(null); 
+    const [delId, SDel] = useState(null); // Estado para animación de borrado
 
     const fM=useRef(new Set()),tC=useRef(null),gI=useRef(false),gsI=useRef(false),tS=useRef(null),tE=useRef(null),dY=useRef(0),dH0=useRef(0);
     const curTab=tabs.find(t=>t.id===act)||tabs[0], thStyle={'--theme-color':curTab.c,'--theme-glow':curTab.c+'60'};
 
     const ls=(k,v)=>v?localStorage.setItem(k,JSON.stringify(v)):JSON.parse(localStorage.getItem(k));
+    
     useEffect(()=>{
         const e=ls('ev_v8'),t=ls('tb_v8'),g=ls('gc_v8'),c=ls('cm_v8');
-        if(e)try{SE(e)}catch(x){}else SE([{id:1,title:'INIT_V8',date:new Date().toISOString().split('T')[0],time:'09:00',type:'work',cat:'task',quad:'q1'}]);
+        // FIX: Ya no crea INIT_V8, inicia con array vacío si no hay datos
+        if(e)try{SE(e)}catch(x){}else SE([]); 
         if(t)ST(t);if(g)SG(g);if(c)SC(c);
         if(window.gapi)window.gapi.load('client',initGapi);
     },[]);
+
     useEffect(()=>{ls('ev_v8',evs);ls('tb_v8',tabs);ls('gc_v8',gCfg);ls('cm_v8',cals)},[evs,tabs,gCfg,cals]);
     
     useEffect(()=>{
@@ -92,7 +102,22 @@ function App(){
             const quadDiv = el?.closest('[data-quad]');
             if (quadDiv) {
                 const newQ = quadDiv.getAttribute('data-quad');
-                if (newQ && newQ !== dTask.startQuad) {
+                
+                // LOGICA DE ELIMINACION CON ANIMACION
+                if (newQ === 'q4') {
+                    // 1. Confirmación
+                    if(window.confirm(`¿Estás seguro de eliminar "${dTask.title}"?`)){
+                        // 2. Disparar Animación (Vortex)
+                        SDel(dTask.id);
+                        setTimeout(() => {
+                            // 3. Borrado Real tras la animación
+                            SE(prev => prev.filter(x => x.id !== dTask.id));
+                            SDel(null);
+                        }, 600); // 600ms match animation duration
+                    }
+                } 
+                // LOGICA DE MOVER NORMAL
+                else if (newQ && newQ !== dTask.startQuad) {
                     SE(prev => prev.map(x => x.id === dTask.id ? { ...x, quad: newQ } : x));
                 }
             }
@@ -113,7 +138,6 @@ function App(){
     const fetchG=async(td=new Date())=>{
         SSy(true);try{
             if(!window.gapi.client.calendar) await window.gapi.client.load('calendar','v3');
-            
             const y=td.getFullYear(),m=td.getMonth();
             const minDt = new Date(y,m-1,1);
             const maxDt = new Date(y,m+2,0,23,59,59);
@@ -121,38 +145,14 @@ function App(){
             const maxIso = maxDt.toISOString();
             const minStr = locDate(minDt);
             const maxStr = locDate(maxDt);
-
             fM.current.add(`${y}-${m}`);fM.current.add(`${y}-${m+1}`);
-            
-            // 1. OBTENER LISTA FRESCA DE CALENDARIOS
-            const cl=await window.gapi.client.calendar.calendarList.list();
-            const rC=cl.result.items;
-            
-            // 2. RECONSTRUIR EL MAPA DE CALENDARIOS (Añadir nuevos, limpiar borrados)
-            const nextCals = {};
-            rC.forEach(c => {
-                const existing = cals[c.id]; // ¿Ya lo teníamos?
-                nextCals[c.id] = {
-                    id: c.id,
-                    summary: c.summary,
-                    color: c.backgroundColor,
-                    // Si existía, mantén preferencia. Si es NUEVO, visible por defecto (true).
-                    visible: existing ? existing.visible : true
-                };
-            });
-            SC(nextCals); // Actualizamos estado y persistencia
-
+            const cl=await window.gapi.client.calendar.calendarList.list(), rC=cl.result.items, uC={...cals};
+            rC.forEach(c=>{if(!uC[c.id])uC[c.id]={id:c.id,summary:c.summary,color:c.backgroundColor,visible:true};else{uC[c.id].summary=c.summary;uC[c.id].color=c.backgroundColor}});
+            SC(uC);
             const all=await Promise.all(rC.map(async c=>{
-                // Usamos la preferencia histórica o true si es nuevo (para la lógica de fetch)
-                const isHidden = cals[c.id] && !cals[c.id].visible;
-                if(isHidden) return []; // Si el usuario lo ocultó explícitamente, saltar.
-
+                if(cals[c.id]&&!cals[c.id].visible)return[];
                 try{
-                    const r=await window.gapi.client.calendar.events.list({
-                        calendarId:c.id, timeMin:minIso, timeMax:maxIso,
-                        singleEvents:true, maxResults:999, orderBy:'startTime'
-                    });
-                    
+                    const r=await window.gapi.client.calendar.events.list({calendarId:c.id,timeMin:minIso,timeMax:maxIso,singleEvents:true,maxResults:999,orderBy:'startTime'});
                     return r.result.items.filter(i => i.status !== 'cancelled').map(i=>{
                         const t=(i.summary||'').toLowerCase(), cn=(c.summary||'').toLowerCase();
                         let cat='task',q='q2'; 
@@ -160,19 +160,13 @@ function App(){
                         const fitKw=['fit','gym','entren','ejercicio','sport','correr','nadar'];
                         if(kw.some(k=>cn.includes(k)||t.includes(k))){ cat='class'; q=null; }
                         else if(fitKw.some(k=>cn.includes(k)||t.includes(k))){ cat='fitness'; q=null; }
-                        
                         let dRaw = i.start.dateTime || i.start.date;
-                        let dFinal = dRaw; if(dRaw.includes('T')) dFinal = dRaw.split('T')[0];
-
-                        return {
-                            id:i.id, calId:c.id, title:i.summary||'(No Title)',
-                            date:dFinal, time:i.start.dateTime?.split('T')[1].substring(0,5)||'',
-                            type:'google', notes:i.description||'', cat, quad:q, gCol:c.backgroundColor
-                        }
+                        let dFinal = dRaw;
+                        if(dRaw.includes('T')) dFinal = dRaw.split('T')[0];
+                        return {id:i.id,calId:c.id,title:i.summary||'(No Title)',date:dFinal,time:i.start.dateTime?.split('T')[1].substring(0,5)||'',type:'google',notes:i.description||'',cat,quad:q,gCol:c.backgroundColor}
                     })
                 }catch(e){return[]}
             }));
-
             const flat=all.flat();
             SE(p=>{
                 const loc=p.filter(e=>e.type!=='google');
@@ -183,7 +177,6 @@ function App(){
                 flat.forEach(e=>merged.set(e.id,e));
                 return Array.from(merged.values())
             });
-
         }catch(e){console.error(e)}finally{SSy(false)};
     };
 
@@ -273,7 +266,8 @@ function App(){
                         h('div',{
                             key:e.id,
                             onClick:()=>{SF({...e});SSI(e.id);SM('e')},
-                            className:"bg-black/60 border border-neutral-800 p-2.5 rounded-lg group transition-all active:scale-95 safe-border flex items-start gap-2 relative outline-none"
+                            // FIX: Añadida clase 'del-anim' si el ID coincide
+                            className:`bg-black/60 border border-neutral-800 p-2.5 rounded-lg group transition-all active:scale-95 safe-border flex items-start gap-2 relative outline-none ${delId===e.id?'del-anim':''}`
                         },
                             h('div',{className:"mt-0.5 text-emerald-400"},Icon('CheckCircle',14)),
                             h('div',{className:"flex-1 min-w-0"},h('p',{className:"text-xs font-bold text-white truncate rich",dangerouslySetInnerHTML:{__html:e.title}})),
@@ -288,9 +282,9 @@ function App(){
                     ))
                 )
             )) // CALENDAR
-            : h('div',{onTouchStart:calTouch.s,onTouchMove:e=>tE.current=e.targetTouches[0].clientX,onTouchEnd:calTouch.e,className:"flex-1 bg-neutral-900/30 backdrop-blur-sm rounded-xl border border-neutral-800 overflow-hidden flex flex-col relative shadow-[0_0_100px_rgba(0,0,0,0.5)]", style:{transform:'translate3d(0,0,0)'}}, // FIX: Hardware Acceleration
+            : h('div',{onTouchStart:calTouch.s,onTouchMove:e=>tE.current=e.targetTouches[0].clientX,onTouchEnd:calTouch.e,className:"flex-1 bg-neutral-900/30 backdrop-blur-sm rounded-xl border border-neutral-800 overflow-hidden flex flex-col relative shadow-[0_0_100px_rgba(0,0,0,0.5)]", style:{transform:'translate3d(0,0,0)'}}, 
                 h('div',{className:"grid grid-cols-7 bg-black border-b border-neutral-800"},['L','M','X','J','V','S','D'].map(d=>h('div',{key:d,className:"py-2 text-center text-[10px] md:text-xs font-black tracking-[0.2em] text-neutral-600"},d))),
-                h('div',{key:date.toISOString(),className:`grid grid-cols-7 flex-1 auto-rows-fr ${dir==='n'?'anim-n':'anim-p'}`, style:{willChange:'transform'}}, days.map((d,i)=>{ // FIX: will-change
+                h('div',{key:date.toISOString(),className:`grid grid-cols-7 flex-1 auto-rows-fr ${dir==='n'?'anim-n':'anim-p'}`, style:{willChange:'transform'}}, days.map((d,i)=>{ 
                     const isT=d.dt===new Date().toISOString().split('T')[0], evs=d.dt?(lk[d.dt]||[]):[];
                     const activeStyle = isT ? {
                         background: curTab.c+'1A',
