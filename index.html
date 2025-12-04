@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V8.9.9:AutoSync</title>
+<title>CMD V8.9.9:Try Fix</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif']}}}}</script>
@@ -27,6 +27,7 @@ body{background:#000;touch-action:none;overscroll-behavior:none;user-select:none
     .safe-border:hover { border-color: rgba(255, 255, 255, 0.3); }
 }
 .touch-feedback:active { background-color: rgba(23, 23, 23, 1); transform: scale(0.98); }
+.danger-zone { border-color: #ef4444 !important; background-color: rgba(239, 68, 68, 0.1) !important; }
 </style>
 </head>
 <body><div id="root"></div>
@@ -36,11 +37,11 @@ import{createRoot}from'https://esm.sh/react-dom@18.2.0/client';
 import*as L from'https://esm.sh/lucide-react@0.292.0';
 
 const h=React.createElement, F=React.Fragment;
-const ICONS={Calendar:L.Calendar,CheckSquare:L.CheckSquare,Target:L.Target,Folder:L.Folder,BookOpen:L.BookOpen,Menu:L.Menu,Settings:L.Settings,Clock:L.Clock,Dna:L.Dna,Microscope:L.Microscope,Activity:L.Activity,Leaf:L.Leaf,Zap:L.Zap,Globe:L.Globe,Database:L.Database,Cpu:L.Cpu,Layout:L.Layout,PenTool:L.PenTool,Hash:L.Hash,Briefcase:L.Briefcase,Terminal:L.Terminal,GraduationCap:L.GraduationCap,Dumbbell:L.Dumbbell,Edit3:L.Edit3,Plus:L.Plus,X:L.X,RefreshCw:L.RefreshCw,Trash2:L.Trash2,GripHorizontal:L.GripHorizontal,CheckCircle:L.CheckCircle,Eye:L.Eye,EyeOff:L.EyeOff};
+const ICONS={Calendar:L.Calendar,CheckSquare:L.CheckSquare,Target:L.Target,Folder:L.Folder,BookOpen:L.BookOpen,Menu:L.Menu,Settings:L.Settings,Clock:L.Clock,Dna:L.Dna,Microscope:L.Microscope,Activity:L.Activity,Leaf:L.Leaf,Zap:L.Zap,Globe:L.Globe,Database:L.Database,Cpu:L.Cpu,Layout:L.Layout,PenTool:L.PenTool,Hash:L.Hash,Briefcase:L.Briefcase,Terminal:L.Terminal,GraduationCap:L.GraduationCap,Dumbbell:L.Dumbbell,Edit3:L.Edit3,Plus:L.Plus,X:L.X,RefreshCw:L.RefreshCw,Trash2:L.Trash2,GripHorizontal:L.GripHorizontal,CheckCircle:L.CheckCircle,Eye:L.Eye,EyeOff:L.EyeOff,Bell:L.Bell,BellRing:L.BellRing,AlertTriangle:L.AlertTriangle};
 
 const BIO=[{id:1,name:"Cuervo Grande",sci:"Corvus corax",tx:"Aves/Corvidae",desc:"Inteligencia primate. Usa herramientas.",fact:"Reconocen rostros y guardan rencor.",img:"https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Corvus_corax_%28Common_Raven%29.jpg/800px-Corvus_corax_%28Common_Raven%29.jpg"},{id:2,name:"Araña Saltadora",sci:"Phidippus audax",tx:"Arachnida/Salticidae",desc:"Depredador visual, quelíceros verdes.",fact:"Salta 50x su longitud.",img:"https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Phidippus_audax_male.jpg/800px-Phidippus_audax_male.jpg"}];
 const TABS=[{id:'t1',l:'EVENTOS',i:'Calendar',c:'#3b82f6'},{id:'t2',l:'TAREAS',i:'CheckSquare',c:'#ef4444'},{id:'t3',l:'NOTAS',i:'BookOpen',c:'#eab308'},{id:'t4',l:'PROY',i:'Folder',c:'#22c55e'}];
-const Q={q1:{t:'HACER YA',s:'Urgente+Imp',c:'#ef4444'},q2:{t:'PLANIFICAR',s:'NoUrg+Imp',c:'#3b82f6'},q3:{t:'DELEGAR',s:'Urg+NoImp',c:'#eab308'},q4:{t:'ELIMINAR',s:'NiUrg+NiImp',c:'#64748b'}};
+const Q={q1:{t:'HACER YA',s:'Urgente+Imp',c:'#ef4444'},q2:{t:'PLANIFICAR',s:'NoUrg+Imp',c:'#3b82f6'},q3:{t:'DELEGAR',s:'Urg+NoImp',c:'#eab308'},q4:{t:'ELIMINAR',s:'Arrastra para borrar',c:'#64748b'}};
 
 const locDate = (d) => {
     const z = d.getTimezoneOffset() * 60000;
@@ -49,22 +50,52 @@ const locDate = (d) => {
 
 function App(){
     const [tabs,ST]=useState(TABS),[act,SA]=useState('t1'),[date,SD]=useState(new Date()),[evs,SE]=useState([]);
-    const [modal,SM]=useState(null),[selId,SSI]=useState(null),[form,SF]=useState({title:'',date:'',time:'',type:'gen',notes:'',cat:'task',quad:'q2'});
+    const [modal,SM]=useState(null),[selId,SSI]=useState(null),[form,SF]=useState({title:'',date:'',time:'',type:'gen',notes:'',cat:'task',quad:'q2',notify:0,notified:false});
     const [sets,SS]=useState(false),[cals,SC]=useState({}),[bioIx,SB]=useState(0),[bioShow,SBS]=useState(false);
     const [sync,SSy]=useState(false),[gCfg,SG]=useState({apiKey:'',clientId:''}),[gSign,SGS]=useState(false);
     const [dH,SH]=useState(40),[drag,SDr]=useState(false),[dir,SDir]=useState('n');
-    const [dTask, SDT] = useState(null); 
+    const [dTask, SDT] = useState(null);
+    const [confirmDel, SCon] = useState(null);
+    const [notifPerm, SNP] = useState(Notification.permission);
 
     const fM=useRef(new Set()),tC=useRef(null),gI=useRef(false),gsI=useRef(false),tS=useRef(null),tE=useRef(null),dY=useRef(0),dH0=useRef(0);
     const curTab=tabs.find(t=>t.id===act)||tabs[0], thStyle={'--theme-color':curTab.c,'--theme-glow':curTab.c+'60'};
 
     const ls=(k,v)=>v?localStorage.setItem(k,JSON.stringify(v)):JSON.parse(localStorage.getItem(k));
+    
+    // --- INIT & NOTIFICATIONS ---
     useEffect(()=>{
         const e=ls('ev_v8'),t=ls('tb_v8'),g=ls('gc_v8'),c=ls('cm_v8');
-        if(e)try{SE(e)}catch(x){}else SE([{id:1,title:'INIT_V8',date:new Date().toISOString().split('T')[0],time:'09:00',type:'work',cat:'task',quad:'q1'}]);
+        // MOD: Init vacío si no hay datos
+        if(e)try{SE(e)}catch(x){}else SE([]);
         if(t)ST(t);if(g)SG(g);if(c)SC(c);
         if(window.gapi)window.gapi.load('client',initGapi);
+
+        // Notif Checker
+        const int = setInterval(() => {
+            if (Notification.permission !== 'granted') return;
+            const now = new Date();
+            SE(prevEvs => {
+                let changed = false;
+                const nextEvs = prevEvs.map(ev => {
+                    if (ev.notify && !ev.notified && ev.date && ev.time) {
+                        const evDate = new Date(`${ev.date}T${ev.time}`);
+                        const diffMins = (evDate - now) / 60000;
+                        // Trigger if within 1 min of target time (notify value in mins)
+                        if (diffMins <= ev.notify && diffMins > -5) {
+                            new Notification(ev.title, { body: `Recordatorio: ${ev.time}`, icon: './icon.png' });
+                            changed = true;
+                            return { ...ev, notified: true };
+                        }
+                    }
+                    return ev;
+                });
+                return changed ? nextEvs : prevEvs;
+            });
+        }, 30000);
+        return () => clearInterval(int);
     },[]);
+
     useEffect(()=>{ls('ev_v8',evs);ls('tb_v8',tabs);ls('gc_v8',gCfg);ls('cm_v8',cals)},[evs,tabs,gCfg,cals]);
     
     useEffect(()=>{
@@ -74,12 +105,12 @@ function App(){
         }
     },[date,gSign]);
 
-    useEffect(() => {
-        const onVis = () => { if (document.visibilityState === 'visible' && gSign) fetchG(date); };
-        document.addEventListener('visibilitychange', onVis);
-        return () => document.removeEventListener('visibilitychange', onVis);
-    }, [gSign, date]);
+    const reqNotif = async () => {
+        const p = await Notification.requestPermission();
+        SNP(p);
+    };
 
+    // --- DRAG LOGIC UPDATED ---
     useEffect(() => {
         if (!dTask) return;
         const move = (e) => {
@@ -92,7 +123,10 @@ function App(){
             const quadDiv = el?.closest('[data-quad]');
             if (quadDiv) {
                 const newQ = quadDiv.getAttribute('data-quad');
-                if (newQ && newQ !== dTask.startQuad) {
+                // MOD: Logic for Q4 (Delete)
+                if (newQ === 'q4') {
+                    SCon({ id: dTask.id, title: dTask.title });
+                } else if (newQ && newQ !== dTask.startQuad) {
                     SE(prev => prev.map(x => x.id === dTask.id ? { ...x, quad: newQ } : x));
                 }
             }
@@ -106,6 +140,13 @@ function App(){
         };
     }, [dTask]);
 
+    const confirmDelete = () => {
+        if(confirmDel) {
+            SE(prev => prev.filter(e => e.id !== confirmDel.id));
+            SCon(null);
+        }
+    }
+
     const initGapi=async()=>{if(gCfg.apiKey){await window.gapi.client.init({apiKey:gCfg.apiKey,discoveryDocs:["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"]});gI.current=true}};
     const initGis=()=>{if(gCfg.clientId){tC.current=window.google.accounts.oauth2.initTokenClient({client_id:gCfg.clientId,scope:"https://www.googleapis.com/auth/calendar.readonly",callback:async(r)=>{if(!r.error){SGS(true);fM.current.clear();await fetchG(date)}}});gsI.current=true}};
     const auth=async()=>{if(!gCfg.apiKey||!gCfg.clientId)return alert("Faltan Credenciales");if(!gI.current)await initGapi();if(!gsI.current)initGis();setTimeout(()=>tC.current.requestAccessToken({prompt:'select_account'}),500)};
@@ -113,46 +154,21 @@ function App(){
     const fetchG=async(td=new Date())=>{
         SSy(true);try{
             if(!window.gapi.client.calendar) await window.gapi.client.load('calendar','v3');
-            
             const y=td.getFullYear(),m=td.getMonth();
-            const minDt = new Date(y,m-1,1);
-            const maxDt = new Date(y,m+2,0,23,59,59);
-            const minIso = minDt.toISOString();
-            const maxIso = maxDt.toISOString();
-            const minStr = locDate(minDt);
-            const maxStr = locDate(maxDt);
-
+            const minDt = new Date(y,m-1,1); const maxDt = new Date(y,m+2,0,23,59,59);
+            const minIso = minDt.toISOString(); const maxIso = maxDt.toISOString();
+            const minStr = locDate(minDt); const maxStr = locDate(maxDt);
             fM.current.add(`${y}-${m}`);fM.current.add(`${y}-${m+1}`);
-            
-            // 1. OBTENER LISTA FRESCA DE CALENDARIOS
             const cl=await window.gapi.client.calendar.calendarList.list();
             const rC=cl.result.items;
-            
-            // 2. RECONSTRUIR EL MAPA DE CALENDARIOS (Añadir nuevos, limpiar borrados)
             const nextCals = {};
-            rC.forEach(c => {
-                const existing = cals[c.id]; // ¿Ya lo teníamos?
-                nextCals[c.id] = {
-                    id: c.id,
-                    summary: c.summary,
-                    color: c.backgroundColor,
-                    // Si existía, mantén preferencia. Si es NUEVO, visible por defecto (true).
-                    visible: existing ? existing.visible : true
-                };
-            });
-            SC(nextCals); // Actualizamos estado y persistencia
-
+            rC.forEach(c => { const existing = cals[c.id]; nextCals[c.id] = { id: c.id, summary: c.summary, color: c.backgroundColor, visible: existing ? existing.visible : true }; });
+            SC(nextCals);
             const all=await Promise.all(rC.map(async c=>{
-                // Usamos la preferencia histórica o true si es nuevo (para la lógica de fetch)
                 const isHidden = cals[c.id] && !cals[c.id].visible;
-                if(isHidden) return []; // Si el usuario lo ocultó explícitamente, saltar.
-
+                if(isHidden) return [];
                 try{
-                    const r=await window.gapi.client.calendar.events.list({
-                        calendarId:c.id, timeMin:minIso, timeMax:maxIso,
-                        singleEvents:true, maxResults:999, orderBy:'startTime'
-                    });
-                    
+                    const r=await window.gapi.client.calendar.events.list({calendarId:c.id, timeMin:minIso, timeMax:maxIso, singleEvents:true, maxResults:999, orderBy:'startTime'});
                     return r.result.items.filter(i => i.status !== 'cancelled').map(i=>{
                         const t=(i.summary||'').toLowerCase(), cn=(c.summary||'').toLowerCase();
                         let cat='task',q='q2'; 
@@ -160,30 +176,20 @@ function App(){
                         const fitKw=['fit','gym','entren','ejercicio','sport','correr','nadar'];
                         if(kw.some(k=>cn.includes(k)||t.includes(k))){ cat='class'; q=null; }
                         else if(fitKw.some(k=>cn.includes(k)||t.includes(k))){ cat='fitness'; q=null; }
-                        
                         let dRaw = i.start.dateTime || i.start.date;
                         let dFinal = dRaw; if(dRaw.includes('T')) dFinal = dRaw.split('T')[0];
-
-                        return {
-                            id:i.id, calId:c.id, title:i.summary||'(No Title)',
-                            date:dFinal, time:i.start.dateTime?.split('T')[1].substring(0,5)||'',
-                            type:'google', notes:i.description||'', cat, quad:q, gCol:c.backgroundColor
-                        }
+                        return { id:i.id, calId:c.id, title:i.summary||'(No Title)', date:dFinal, time:i.start.dateTime?.split('T')[1].substring(0,5)||'', type:'google', notes:i.description||'', cat, quad:q, gCol:c.backgroundColor }
                     })
                 }catch(e){return[]}
             }));
-
             const flat=all.flat();
             SE(p=>{
                 const loc=p.filter(e=>e.type!=='google');
                 const googleKept = p.filter(e => e.type === 'google' && (e.date < minStr || e.date > maxStr));
                 const merged=new Map(); 
-                loc.forEach(e=>merged.set(e.id,e)); 
-                googleKept.forEach(e=>merged.set(e.id,e)); 
-                flat.forEach(e=>merged.set(e.id,e));
+                loc.forEach(e=>merged.set(e.id,e)); googleKept.forEach(e=>merged.set(e.id,e)); flat.forEach(e=>merged.set(e.id,e));
                 return Array.from(merged.values())
             });
-
         }catch(e){console.error(e)}finally{SSy(false)};
     };
 
@@ -243,6 +249,20 @@ function App(){
         dTask && h('div',{className:"fixed z-[100] bg-neutral-800/90 p-3 rounded-lg border border-white/50 pointer-events-none shadow-2xl w-48 backdrop-blur-md", style:{left:dTask.x, top:dTask.y, transform:'translate(-50%, -50%)'}},
             h('div',{className:"flex items-center gap-2 text-white font-bold text-xs"}, Icon('CheckSquare',14), dTask.title)
         ),
+        // DELETE CONFIRMATION MODAL
+        confirmDel && h('div',{className:"fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in"},
+            h('div',{className:"bg-neutral-900 border border-red-500/50 rounded-2xl p-6 max-w-xs w-full shadow-[0_0_50px_rgba(239,68,68,0.2)] transform transition-all scale-100"},
+                h('div',{className:"flex flex-col items-center gap-4 text-center"},
+                    h('div',{className:"p-4 bg-red-500/10 rounded-full text-red-500 mb-2"}, Icon('Trash2',32)),
+                    h('h3',{className:"text-lg font-black text-white"},"¿Eliminar Tarea?"),
+                    h('p',{className:"text-sm text-neutral-400 font-medium"},confirmDel.title),
+                    h('div',{className:"flex gap-2 w-full mt-2"},
+                        h('button',{onClick:()=>SCon(null), className:"flex-1 py-3 rounded-xl bg-neutral-800 text-white font-bold active:scale-95 transition-transform"},"Cancelar"),
+                        h('button',{onClick:confirmDelete, className:"flex-1 py-3 rounded-xl bg-red-600 text-white font-bold shadow-lg shadow-red-900/50 active:scale-95 transition-transform"},"ELIMINAR")
+                    )
+                )
+            )
+        ),
         // HEADER
         h('header',{className:"z-20 flex flex-col pt-2 bg-black/90 border-b border-white/10 shrink-0"},
             h('div',{className:"flex overflow-x-auto no-scrollbar px-4 gap-2"}, tabs.map(t=>
@@ -264,7 +284,7 @@ function App(){
             ),
             act==='t2' // MATRIX
             ? h('div',{className:"flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-2 grid-rows-2 gap-2 pb-20 md:pb-0"}, Object.keys(Q).map(k=>
-                h('div',{key:k,'data-quad':k, className:`bg-neutral-900/40 border rounded-xl p-3 flex flex-col relative overflow-hidden backdrop-blur-sm transition-colors ${dTask?'border-white/10 safe-hover':'border-neutral-800/60'}`},
+                h('div',{key:k,'data-quad':k, className:`bg-neutral-900/40 border rounded-xl p-3 flex flex-col relative overflow-hidden backdrop-blur-sm transition-colors ${dTask?'border-white/10 safe-hover':''} ${k==='q4'?'border-neutral-800/60':''}`},
                     h('div',{className:"flex justify-between items-center mb-3 pb-2 border-b border-white/5"},
                         h('div',{},h('h3',{className:"text-sm font-black tracking-widest",style:{color:Q[k].c}},Q[k].t),h('span',{className:"text-[9px] text-neutral-500 font-mono uppercase"},Q[k].s)),
                         h('span',{className:"bg-neutral-800 text-neutral-400 text-[10px] font-bold px-2 py-0.5 rounded-full"},mx.filter(e=>(e.quad||'q2')===k).length)
@@ -288,9 +308,9 @@ function App(){
                     ))
                 )
             )) // CALENDAR
-            : h('div',{onTouchStart:calTouch.s,onTouchMove:e=>tE.current=e.targetTouches[0].clientX,onTouchEnd:calTouch.e,className:"flex-1 bg-neutral-900/30 backdrop-blur-sm rounded-xl border border-neutral-800 overflow-hidden flex flex-col relative shadow-[0_0_100px_rgba(0,0,0,0.5)]", style:{transform:'translate3d(0,0,0)'}}, // FIX: Hardware Acceleration
+            : h('div',{onTouchStart:calTouch.s,onTouchMove:e=>tE.current=e.targetTouches[0].clientX,onTouchEnd:calTouch.e,className:"flex-1 bg-neutral-900/30 backdrop-blur-sm rounded-xl border border-neutral-800 overflow-hidden flex flex-col relative shadow-[0_0_100px_rgba(0,0,0,0.5)]", style:{transform:'translate3d(0,0,0)'}}, 
                 h('div',{className:"grid grid-cols-7 bg-black border-b border-neutral-800"},['L','M','X','J','V','S','D'].map(d=>h('div',{key:d,className:"py-2 text-center text-[10px] md:text-xs font-black tracking-[0.2em] text-neutral-600"},d))),
-                h('div',{key:date.toISOString(),className:`grid grid-cols-7 flex-1 auto-rows-fr ${dir==='n'?'anim-n':'anim-p'}`, style:{willChange:'transform'}}, days.map((d,i)=>{ // FIX: will-change
+                h('div',{key:date.toISOString(),className:`grid grid-cols-7 flex-1 auto-rows-fr ${dir==='n'?'anim-n':'anim-p'}`, style:{willChange:'transform'}}, days.map((d,i)=>{ 
                     const isT=d.dt===new Date().toISOString().split('T')[0], evs=d.dt?(lk[d.dt]||[]):[];
                     const activeStyle = isT ? {
                         background: curTab.c+'1A',
@@ -299,7 +319,7 @@ function App(){
                         fontWeight: 900
                     } : null;
 
-                    return h('div',{key:d.dt || `pad-${i}`,onClick:()=>{if(d.dt){SF({title:'',date:d.dt,time:'09:00',type:'gen',notes:'',cat:'task',quad:'q2'});SM('c')}},className:`relative border-r border-b border-neutral-800/40 p-1 md:p-2 cursor-pointer group touch-feedback safe-hover transition-colors outline-none`,style:activeStyle},
+                    return h('div',{key:d.dt || `pad-${i}`,onClick:()=>{if(d.dt){SF({title:'',date:d.dt,time:'09:00',type:'gen',notes:'',cat:'task',quad:'q2',notify:0});SM('c')}},className:`relative border-r border-b border-neutral-800/40 p-1 md:p-2 cursor-pointer group touch-feedback safe-hover transition-colors outline-none`,style:activeStyle},
                         d.d&&h('span',{className:`text-xs font-bold flex items-center justify-center w-6 h-6 rounded ${!isT?'text-neutral-600 group-active:text-white safe-hover':''}`,style:isT?{background:curTab.c,color:'black'}:null},d.d),
                         h('div',{className:"mt-1 flex flex-col gap-1 overflow-y-auto max-h-[80px] no-scrollbar"},evs.map(e=>
                             h('div',{key:e.id,onClick:ev=>{ev.stopPropagation();SF({...e});SSI(e.id);SM('e')},className:"text-[9px] md:text-[10px] font-bold truncate px-1.5 py-0.5 rounded border-l-[3px] active:brightness-125 safe-bright outline-none",style:{borderLeftColor:e.gCol||curTab.c,backgroundColor:(e.gCol||curTab.c)+'20',color:'#e2e8f0'}},
@@ -310,7 +330,7 @@ function App(){
                 }))
             )
         ),
-        // DRAWER - GROUPED
+        // DRAWER
         h('div',{className:`fixed bottom-0 left-0 right-[60px] z-50 rounded-tr-2xl glass flex flex-col ${!drag?'tr-h':''}`,style:{height:dH}},
             h('div',{className:"w-full h-8 flex justify-center items-center cursor-grab touch-none shrink-0",onTouchStart:drwTouch.s,onTouchMove:drwTouch.m,onTouchEnd:drwTouch.e},h('div',{className:"w-16 h-1 bg-white/30 rounded-full"})),
             h('div',{className:`flex-1 overflow-x-auto p-4 flex gap-6 no-scrollbar fade-content ${dH<80?'opacity-0 pointer-events-none':'opacity-100'}`}, upGrouped.length?upGrouped.map(([dStr,evs])=>
@@ -326,15 +346,21 @@ function App(){
                 )
             ):h('div',{className:"w-full text-center text-neutral-500 text-xs italic"},"No upcoming events"))
         ),
-        // BIO WIDGET
+        // BIO
         h('div',{onClick:()=>{SB(BIO.length>1?Math.floor(Math.random()*BIO.length):0);SBS(true)},className:`fixed bottom-0 right-0 w-32 z-[60] flex items-center justify-center cursor-pointer active:bg-black/50 safe-hover overflow-hidden rounded-tl-[30px] group shadow-[0_0_30px_#000c] backdrop-blur-md ${!drag?'tr-h':''}`,style:{height:dH,background:'#0006',borderLeft:`2px solid ${curTab.c}`,borderTop:`2px solid ${curTab.c}`}},
             Icon('Dna',28,`group-active:animate-spin safe-hover transition-transform duration-700 text-[${curTab.c}]`)
         ),
-        // MODALS
+        // SETTINGS & EDIT MODALS
         (sets||modal||bioShow)&&h('div',{className:"fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in"},
             sets?h('div',{className:"w-full max-w-2xl h-[80vh] bg-neutral-900 border border-neutral-700 rounded-2xl overflow-hidden shadow-2xl flex flex-col"},
                 h('div',{className:"p-4 bg-black flex justify-between border-b border-neutral-800"},h('h3',{className:"font-bold text-white"},"CONFIG"),h('button',{onClick:()=>SS(false)},Icon('X'))),
                 h('div',{className:"p-6 space-y-6 overflow-y-auto"},
+                    h('div',{},h('h4',{className:"text-xs font-bold text-neutral-500 uppercase border-b border-neutral-800 pb-2"},"Sistema"),
+                        h('button',{onClick:reqNotif, disabled:notifPerm==='granted', className:`mt-3 w-full p-3 rounded border flex items-center justify-between ${notifPerm==='granted'?'border-green-800 text-green-500 bg-green-900/10':'border-neutral-700 text-neutral-300'}`}, 
+                            h('div',{className:"flex items-center gap-2"},Icon(notifPerm==='granted'?'BellRing':'Bell'),h('span',{className:"text-xs font-bold"},notifPerm==='granted'?'Notificaciones Activas':'Activar Notificaciones')),
+                            notifPerm==='granted'&&Icon('CheckCircle',16)
+                        )
+                    ),
                     h('div',{},h('h4',{className:"text-xs font-bold text-neutral-500 uppercase border-b border-neutral-800 pb-2"},"Calendarios"),Object.values(cals).map(c=>h('div',{key:c.id,className:"flex justify-between p-3 border-b border-neutral-800"},h('span',{style:{color:c.color}},c.summary),h('button',{onClick:()=>SC(p=>({...p,[c.id]:{...p[c.id],visible:!p[c.id].visible}}))},Icon(c.visible?'Eye':'EyeOff'))))),
                     h('div',{},h('h4',{className:"text-xs font-bold text-neutral-500 uppercase border-b border-neutral-800 pb-2"},"Estilo"),tabs.map(t=>h('div',{key:t.id,className:"flex items-center gap-4 mt-2"},h('input',{type:'color',value:t.c,onChange:e=>ST(tabs.map(tb=>tb.id===t.id?{...tb,c:e.target.value}:tb)),className:"w-8 h-8 bg-transparent"}),h('input',{value:t.l,onChange:e=>ST(tabs.map(tb=>tb.id===t.id?{...tb,l:e.target.value}:tb)),className:"bg-transparent text-white font-bold"})))),
                     h('div',{},h('h4',{className:"text-xs font-bold text-neutral-500 uppercase border-b border-neutral-800 pb-2"},"Google API"),h('input',{placeholder:"Client ID",value:gCfg.clientId,onChange:e=>SG({...gCfg,clientId:e.target.value}),className:"w-full bg-black border-b border-neutral-700 text-xs p-2 text-white outline-none mt-2"}),h('input',{placeholder:"API Key",value:gCfg.apiKey,onChange:e=>SG({...gCfg,apiKey:e.target.value}),className:"w-full bg-black border-b border-neutral-700 text-xs p-2 text-white outline-none mt-2"}))
@@ -350,6 +376,17 @@ function App(){
                     h('input',{autoFocus:true,placeholder:"Título...",className:"w-full bg-black border border-neutral-700 rounded p-3 text-white font-bold outline-none",value:form.title,onChange:e=>SF({...form,title:e.target.value})}),
                     !['class','fitness'].includes(form.cat)&&h('div',{className:"grid grid-cols-2 gap-2"},Object.values(Q).map(q=>h('button',{key:q.t,onClick:()=>SF({...form,quad:Object.keys(Q).find(k=>Q[k]===q)}),className:`p-2 rounded border text-[10px] font-bold uppercase ${form.quad===Object.keys(Q).find(k=>Q[k]===q)?'bg-white/10 text-white':'text-neutral-600 border-neutral-800'}`},q.t))),
                     h('div',{className:"grid grid-cols-2 gap-3"},h('input',{type:'date',className:"bg-black border border-neutral-700 rounded p-2 text-white",value:form.date,onChange:e=>SF({...form,date:e.target.value})}),h('input',{type:'time',className:"bg-black border border-neutral-700 rounded p-2 text-white",value:form.time,onChange:e=>SF({...form,time:e.target.value})})),
+                    // NOTIFICACION INPUT
+                    h('div',{className:"flex items-center gap-2 bg-black border border-neutral-700 rounded p-2"},
+                        Icon('Bell',16,"text-neutral-500"),
+                        h('select',{className:"bg-transparent text-white text-xs w-full outline-none",value:form.notify,onChange:e=>SF({...form,notify:Number(e.target.value),notified:false})},
+                            h('option',{value:0},"Sin aviso"),
+                            h('option',{value:0.1},"A la hora exacta"),
+                            h('option',{value:10},"10 min antes"),
+                            h('option',{value:60},"1 hora antes"),
+                            h('option',{value:1440},"1 día antes")
+                        )
+                    ),
                     h('textarea',{rows:3,className:"w-full bg-black border border-neutral-700 rounded p-3 text-sm text-neutral-300 outline-none",placeholder:"Notas...",value:form.notes,onChange:e=>SF({...form,notes:e.target.value})}),
                     h('div',{className:"flex gap-3"},modal==='e'&&h('button',{onClick:()=>{SE(evs.filter(e=>e.id!==selId));SM(null)},className:"p-3 rounded bg-red-900/20 text-red-500 border border-red-900"},Icon('Trash2')),h('button',{onClick:saveEv,className:"flex-1 py-3 rounded bg-[var(--theme-color)] text-black font-black"},"CONFIRMAR"))
                 )
