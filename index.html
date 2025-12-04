@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V9:Enhanced</title>
+<title>CMD V9.1:TimeZoneFix</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif']},animation:{'pulse-fast':'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite'}} }}</script>
@@ -43,9 +43,11 @@ const BIO=[{id:1,name:"Cuervo Grande",sci:"Corvus corax",tx:"Aves/Corvidae",desc
 const TABS=[{id:'t1',l:'EVENTOS',i:'Calendar',c:'#3b82f6'},{id:'t2',l:'TAREAS',i:'CheckSquare',c:'#ef4444'},{id:'t3',l:'NOTAS',i:'BookOpen',c:'#eab308'},{id:'t4',l:'PROY',i:'Folder',c:'#22c55e'}];
 const Q={q1:{t:'HACER YA',s:'Urgente+Imp',c:'#ef4444'},q2:{t:'PLANIFICAR',s:'NoUrg+Imp',c:'#3b82f6'},q3:{t:'DELEGAR',s:'Urg+NoImp',c:'#eab308'},q4:{t:'ELIMINAR',s:'NiUrg+NiImp',c:'#64748b'}};
 
+// FIX: Función local-aware para obtener string YYYY-MM-DD correcta según zona horaria del usuario
 const locDate = (d) => {
     const z = d.getTimezoneOffset() * 60000;
-    return new Date(d.getTime() - z).toISOString().split('T')[0];
+    const localTime = new Date(d.getTime() - z);
+    return localTime.toISOString().split('T')[0];
 };
 
 function App(){
@@ -55,8 +57,8 @@ function App(){
     const [sync,SSy]=useState(false),[gCfg,SG]=useState({apiKey:'',clientId:''}),[gSign,SGS]=useState(false);
     const [dH,SH]=useState(40),[drag,SDr]=useState(false),[dir,SDir]=useState('n');
     const [dTask, SDT] = useState(null); 
-    const [dragOverQ, SDQ] = useState(null); // Nuevo estado para feedback visual
-    const [confirmDel, SConfirm] = useState(null); // Nuevo estado para modal de confirmación
+    const [dragOverQ, SDQ] = useState(null); 
+    const [confirmDel, SConfirm] = useState(null);
 
     const fM=useRef(new Set()),tC=useRef(null),gI=useRef(false),gsI=useRef(false),tS=useRef(null),tE=useRef(null),dY=useRef(0),dH0=useRef(0);
     const curTab=tabs.find(t=>t.id===act)||tabs[0], thStyle={'--theme-color':curTab.c,'--theme-glow':curTab.c+'60'};
@@ -72,22 +74,18 @@ function App(){
                 evs.forEach(e => {
                     if(!e.notify || !e.date || !e.time || e.notified) return;
                     const evD = new Date(`${e.date}T${e.time}`);
-                    const diff = (evD - now) / 60000; // diff in minutes
-                    // Check if within 1 minute window of the requested notification time
+                    const diff = (evD - now) / 60000; 
                     if (diff <= e.notify && diff > (e.notify - 1.5)) {
                         new Notification(`Recordatorio: ${e.title}`, { body: `${e.time} - ${e.notes||''}` });
-                        // Mark as notified in a non-destructive way (in memory or update state if needed to persist)
-                        // For this simple version, we rely on the minute window logic.
                     }
                 });
             }
-        }, 60000); // Check every minute
+        }, 60000); 
         return () => clearInterval(tick);
     }, [evs]);
 
     useEffect(()=>{
         const e=ls('ev_v8'),t=ls('tb_v8'),g=ls('gc_v8'),c=ls('cm_v8');
-        // CAMBIO: Se eliminó el INIT_V8 por defecto. Se inicia vacio.
         if(e)try{SE(e)}catch(x){}else SE([]); 
         if(t)ST(t);if(g)SG(g);if(c)SC(c);
         if(window.gapi)window.gapi.load('client',initGapi);
@@ -113,8 +111,6 @@ function App(){
         const move = (e) => {
             const t = e.touches ? e.touches[0] : e;
             SDT(prev => ({ ...prev, x: t.clientX, y: t.clientY }));
-            
-            // Detectar cuadrante hover para efectos visuales
             const el = document.elementFromPoint(t.clientX, t.clientY);
             const quadDiv = el?.closest('[data-quad]');
             if(quadDiv) SDQ(quadDiv.getAttribute('data-quad'));
@@ -124,11 +120,9 @@ function App(){
             const t = e.changedTouches ? e.changedTouches[0] : e;
             const el = document.elementFromPoint(t.clientX, t.clientY);
             const quadDiv = el?.closest('[data-quad]');
-            
             if (quadDiv) {
                 const newQ = quadDiv.getAttribute('data-quad');
                 if (newQ) {
-                    // CAMBIO: Logica de confirmación para eliminar
                     if (newQ === 'q4') {
                         SConfirm({id: dTask.id, title: dTask.title});
                     } else if (newQ !== dTask.startQuad) {
@@ -136,15 +130,11 @@ function App(){
                     }
                 }
             }
-            SDT(null);
-            SDQ(null);
+            SDT(null); SDQ(null);
         };
         window.addEventListener('touchmove', move, { passive: false });
         window.addEventListener('touchend', end);
-        return () => {
-            window.removeEventListener('touchmove', move);
-            window.removeEventListener('touchend', end);
-        };
+        return () => { window.removeEventListener('touchmove', move); window.removeEventListener('touchend', end); };
     }, [dTask]);
 
     const initGapi=async()=>{if(gCfg.apiKey){await window.gapi.client.init({apiKey:gCfg.apiKey,discoveryDocs:["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"]});gI.current=true}};
@@ -154,15 +144,11 @@ function App(){
     const fetchG=async(td=new Date())=>{
         SSy(true);try{
             if(!window.gapi.client.calendar) await window.gapi.client.load('calendar','v3');
-            
             const y=td.getFullYear(),m=td.getMonth();
             const minDt = new Date(y,m-1,1);
             const maxDt = new Date(y,m+2,0,23,59,59);
             const minIso = minDt.toISOString();
             const maxIso = maxDt.toISOString();
-            const minStr = locDate(minDt);
-            const maxStr = locDate(maxDt);
-
             fM.current.add(`${y}-${m}`);fM.current.add(`${y}-${m+1}`);
             
             const cl=await window.gapi.client.calendar.calendarList.list();
@@ -177,13 +163,8 @@ function App(){
             const all=await Promise.all(rC.map(async c=>{
                 const isHidden = cals[c.id] && !cals[c.id].visible;
                 if(isHidden) return []; 
-
                 try{
-                    const r=await window.gapi.client.calendar.events.list({
-                        calendarId:c.id, timeMin:minIso, timeMax:maxIso,
-                        singleEvents:true, maxResults:999, orderBy:'startTime'
-                    });
-                    
+                    const r=await window.gapi.client.calendar.events.list({calendarId:c.id, timeMin:minIso, timeMax:maxIso, singleEvents:true, maxResults:999, orderBy:'startTime'});
                     return r.result.items.filter(i => i.status !== 'cancelled').map(i=>{
                         const t=(i.summary||'').toLowerCase(), cn=(c.summary||'').toLowerCase();
                         let cat='task',q='q2'; 
@@ -191,41 +172,38 @@ function App(){
                         const fitKw=['fit','gym','entren','ejercicio','sport','correr','nadar'];
                         if(kw.some(k=>cn.includes(k)||t.includes(k))){ cat='class'; q=null; }
                         else if(fitKw.some(k=>cn.includes(k)||t.includes(k))){ cat='fitness'; q=null; }
-                        
                         let dRaw = i.start.dateTime || i.start.date;
                         let dFinal = dRaw; if(dRaw.includes('T')) dFinal = dRaw.split('T')[0];
-
-                        return {
-                            id:i.id, calId:c.id, title:i.summary||'(No Title)',
-                            date:dFinal, time:i.start.dateTime?.split('T')[1].substring(0,5)||'',
-                            type:'google', notes:i.description||'', cat, quad:q, gCol:c.backgroundColor
-                        }
+                        return { id:i.id, calId:c.id, title:i.summary||'(No Title)', date:dFinal, time:i.start.dateTime?.split('T')[1].substring(0,5)||'', type:'google', notes:i.description||'', cat, quad:q, gCol:c.backgroundColor }
                     })
                 }catch(e){return[]}
             }));
-
             const flat=all.flat();
             SE(p=>{
                 const loc=p.filter(e=>e.type!=='google');
-                const googleKept = p.filter(e => e.type === 'google' && (e.date < minStr || e.date > maxStr));
+                const googleKept = p.filter(e => e.type === 'google' && (e.date < locDate(minDt) || e.date > locDate(maxDt)));
                 const merged=new Map(); 
                 loc.forEach(e=>merged.set(e.id,e)); 
                 googleKept.forEach(e=>merged.set(e.id,e)); 
                 flat.forEach(e=>merged.set(e.id,e));
                 return Array.from(merged.values())
             });
-
         }catch(e){console.error(e)}finally{SSy(false)};
     };
 
     const days=useMemo(()=>{
         const y=date.getFullYear(),m=date.getMonth(),d=[],last=new Date(y,m+1,0).getDate(),pad=(new Date(y,m,1).getDay()||7)-1;
-        for(let i=0;i<pad;i++)d.push({d:'',dt:null}); for(let i=1;i<=last;i++)d.push({d:i,dt:new Date(y,m,i).toISOString().split('T')[0]});
+        for(let i=0;i<pad;i++)d.push({d:'',dt:null}); 
+        for(let i=1;i<=last;i++){
+            // FIX: Usar locDate para construir el string del calendario
+            const localDt = locDate(new Date(y,m,i));
+            d.push({d:i,dt:localDt});
+        }
         return d;
     },[date]);
 
     const {lk,mx,upGrouped}=useMemo(()=>{
-        const l={},m=[],u=[],now=new Date().toISOString().split('T')[0];
+        const l={},m=[],u=[],now=locDate(new Date()); // FIX: Comparar con 'hoy' local
         const classTitles = new Set();
         evs.forEach(e => { if(e.cat === 'class') classTitles.add(e.title.toLowerCase().trim()); });
         evs.forEach(e=>{
@@ -259,16 +237,11 @@ function App(){
         SE(modal==='c'?[...evs,pl]:evs.map(e=>e.id===selId?pl:e)); SM(null);
     };
 
-    const confirmDelete = () => {
-        SE(evs.filter(e => e.id !== confirmDel.id));
-        SConfirm(null);
-    };
-
+    const confirmDelete = () => { SE(evs.filter(e => e.id !== confirmDel.id)); SConfirm(null); };
     const Icon=(n,s=18,c)=>h(ICONS[n]||L.Circle,{size:s,className:c});
-    const fmtD=(ds)=>{
-        const d=new Date(ds+'T12:00:00');
-        return d.toLocaleDateString('es',{weekday:'short',day:'numeric'}).toUpperCase();
-    }
+    const fmtD=(ds)=>{ const d=new Date(ds+'T12:00:00'); return d.toLocaleDateString('es',{weekday:'short',day:'numeric'}).toUpperCase(); }
+
+    const isCustomNotif = ![0,10,60,1440].includes(form.notify);
 
     return h('div',{className:"h-screen w-screen bg-black text-slate-200 font-sans overflow-hidden flex flex-col relative",style:thStyle},
         h('div',{className:"absolute inset-0 pointer-events-none"},
@@ -300,11 +273,9 @@ function App(){
             ),
             act==='t2' // MATRIX
             ? h('div',{className:"flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-2 grid-rows-2 gap-2 pb-20 md:pb-0"}, Object.keys(Q).map(k=>{
-                // Animacion "Satisfactoria" de drag & drop para eliminar
                 const isDragOver = dragOverQ === k;
                 const isDel = k === 'q4';
                 const dynClass = isDragOver && isDel ? 'danger-zone scale-[1.02] border-red-500 shadow-red-500/20 shadow-2xl' : isDragOver ? 'bg-white/5 scale-[1.02] border-[var(--theme-color)]' : 'bg-neutral-900/40 border-neutral-800/60';
-                
                 return h('div',{key:k,'data-quad':k, className:`${dynClass} border rounded-xl p-3 flex flex-col relative overflow-hidden backdrop-blur-sm transition-all duration-300 ${dTask?'safe-hover':''}`},
                     h('div',{className:"flex justify-between items-center mb-3 pb-2 border-b border-white/5"},
                         h('div',{},h('h3',{className:`text-sm font-black tracking-widest ${isDragOver && isDel ? 'text-red-400 animate-pulse':''}`,style:{color:isDragOver&&isDel?undefined:Q[k].c}},Q[k].t),h('span',{className:"text-[9px] text-neutral-500 font-mono uppercase"},Q[k].s)),
@@ -312,8 +283,7 @@ function App(){
                     ),
                     h('div',{className:"flex-1 overflow-y-auto space-y-2 no-scrollbar"}, mx.filter(e=>(e.quad||'q2')===k).map(e=>
                         h('div',{
-                            key:e.id,
-                            onClick:()=>{SF({...e});SSI(e.id);SM('e')},
+                            key:e.id, onClick:()=>{SF({...e});SSI(e.id);SM('e')},
                             className:"bg-black/60 border border-neutral-800 p-2.5 rounded-lg group transition-all active:scale-95 safe-border flex items-start gap-2 relative outline-none"
                         },
                             h('div',{className:"mt-0.5 text-emerald-400"},Icon('CheckCircle',14)),
@@ -329,17 +299,13 @@ function App(){
                     ))
                 )
             })) // CALENDAR
-            : h('div',{onTouchStart:calTouch.s,onTouchMove:e=>tE.current=e.targetTouches[0].clientX,onTouchEnd:calTouch.e,className:"flex-1 bg-neutral-900/30 backdrop-blur-sm rounded-xl border border-neutral-800 overflow-hidden flex flex-col relative shadow-[0_0_100px_rgba(0,0,0,0.5)]", style:{transform:'translate3d(0,0,0)'}}, // FIX: Hardware Acceleration
+            : h('div',{onTouchStart:calTouch.s,onTouchMove:e=>tE.current=e.targetTouches[0].clientX,onTouchEnd:calTouch.e,className:"flex-1 bg-neutral-900/30 backdrop-blur-sm rounded-xl border border-neutral-800 overflow-hidden flex flex-col relative shadow-[0_0_100px_rgba(0,0,0,0.5)]", style:{transform:'translate3d(0,0,0)'}}, 
                 h('div',{className:"grid grid-cols-7 bg-black border-b border-neutral-800"},['L','M','X','J','V','S','D'].map(d=>h('div',{key:d,className:"py-2 text-center text-[10px] md:text-xs font-black tracking-[0.2em] text-neutral-600"},d))),
                 h('div',{key:date.toISOString(),className:`grid grid-cols-7 flex-1 auto-rows-fr ${dir==='n'?'anim-n':'anim-p'}`, style:{willChange:'transform'}}, days.map((d,i)=>{ 
-                    const isT=d.dt===new Date().toISOString().split('T')[0], evs=d.dt?(lk[d.dt]||[]):[];
-                    const activeStyle = isT ? {
-                        background: curTab.c+'1A',
-                        borderColor: curTab.c,
-                        boxShadow: `inset 0 0 15px ${curTab.c}20`,
-                        fontWeight: 900
-                    } : null;
-
+                    // FIX: Comparación correcta para resaltar "HOY"
+                    const isT=d.dt===locDate(new Date()); 
+                    const evs=d.dt?(lk[d.dt]||[]):[];
+                    const activeStyle = isT ? { background: curTab.c+'1A', borderColor: curTab.c, boxShadow: `inset 0 0 15px ${curTab.c}20`, fontWeight: 900 } : null;
                     return h('div',{key:d.dt || `pad-${i}`,onClick:()=>{if(d.dt){SF({title:'',date:d.dt,time:'09:00',type:'gen',notes:'',cat:'task',quad:'q2',notify:0});SM('c')}},className:`relative border-r border-b border-neutral-800/40 p-1 md:p-2 cursor-pointer group touch-feedback safe-hover transition-colors outline-none`,style:activeStyle},
                         d.d&&h('span',{className:`text-xs font-bold flex items-center justify-center w-6 h-6 rounded ${!isT?'text-neutral-600 group-active:text-white safe-hover':''}`,style:isT?{background:curTab.c,color:'black'}:null},d.d),
                         h('div',{className:"mt-1 flex flex-col gap-1 overflow-y-auto max-h-[80px] no-scrollbar"},evs.map(e=>
@@ -401,8 +367,25 @@ function App(){
                     h('input',{autoFocus:true,placeholder:"Título...",className:"w-full bg-black border border-neutral-700 rounded p-3 text-white font-bold outline-none",value:form.title,onChange:e=>SF({...form,title:e.target.value})}),
                     !['class','fitness'].includes(form.cat)&&h('div',{className:"grid grid-cols-2 gap-2"},Object.values(Q).map(q=>h('button',{key:q.t,onClick:()=>SF({...form,quad:Object.keys(Q).find(k=>Q[k]===q)}),className:`p-2 rounded border text-[10px] font-bold uppercase ${form.quad===Object.keys(Q).find(k=>Q[k]===q)?'bg-white/10 text-white':'text-neutral-600 border-neutral-800'}`},q.t))),
                     h('div',{className:"grid grid-cols-2 gap-3"},h('input',{type:'date',className:"bg-black border border-neutral-700 rounded p-2 text-white",value:form.date,onChange:e=>SF({...form,date:e.target.value})}),h('input',{type:'time',className:"bg-black border border-neutral-700 rounded p-2 text-white",value:form.time,onChange:e=>SF({...form,time:e.target.value})})),
-                    // NOTIFICATION SELECTOR
-                    h('div',{className:"flex items-center gap-2 bg-black border border-neutral-700 rounded p-2"},Icon('Bell',14,'text-neutral-500'),h('select',{value:form.notify||0,onChange:e=>SF({...form,notify:parseInt(e.target.value)}),className:"bg-transparent text-xs text-white outline-none w-full"},h('option',{value:0},"Sin notificacion"),h('option',{value:10},"10 min antes"),h('option',{value:60},"1 hora antes"),h('option',{value:1440},"1 día antes"))),
+                    // NOTIFICATION LOGIC ENHANCED
+                    h('div',{className:"flex items-center gap-2 bg-black border border-neutral-700 rounded p-2"},
+                        Icon('Bell',14,'text-neutral-500'),
+                        !isCustomNotif ? h('select',{value:form.notify||0,onChange:e=>{
+                            const val = e.target.value;
+                            if(val === 'custom') SF({...form, notify: 2880}); // Default 2 days if custom clicked
+                            else SF({...form,notify:parseInt(val)});
+                        },className:"bg-transparent text-xs text-white outline-none w-full"},
+                            h('option',{value:0},"Sin notificación"),
+                            h('option',{value:10},"10 min antes"),
+                            h('option',{value:60},"1 hora antes"),
+                            h('option',{value:1440},"1 día antes"),
+                            h('option',{value:'custom'},"Personalizado (Días)")
+                        ) : h('div',{className:"flex flex-1 items-center gap-2"},
+                            h('input',{type:'number', min:1, value: Math.floor(form.notify/1440), onChange:e=>SF({...form, notify: Math.max(1, parseInt(e.target.value || 0)) * 1440}), className:"bg-transparent text-white text-xs w-10 border-b border-white/20 text-center outline-none"}),
+                            h('span',{className:"text-xs text-neutral-400 flex-1"},"días antes"),
+                            h('button',{onClick:()=>SF({...form, notify:0}), className:"text-neutral-500 hover:text-white p-1"}, Icon('X', 12))
+                        )
+                    ),
                     h('textarea',{rows:3,className:"w-full bg-black border border-neutral-700 rounded p-3 text-sm text-neutral-300 outline-none",placeholder:"Notas...",value:form.notes,onChange:e=>SF({...form,notes:e.target.value})}),
                     h('div',{className:"flex gap-3"},modal==='e'&&h('button',{onClick:()=>{SConfirm({id:selId, title:form.title});SM(null);},className:"p-3 rounded bg-red-900/20 text-red-500 border border-red-900"},Icon('Trash2')),h('button',{onClick:saveEv,className:"flex-1 py-3 rounded bg-[var(--theme-color)] text-black font-black"},"CONFIRMAR"))
                 )
