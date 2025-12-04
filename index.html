@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V9.1:TimeZoneFix</title>
+<title>CMD V9.2:ZenAnim</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif']},animation:{'pulse-fast':'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite'}} }}</script>
@@ -18,6 +18,9 @@ body{background:#000;touch-action:none;overscroll-behavior:none;user-select:none
 .drag-over{background:#ffffff0d;border-color:var(--theme-color);box-shadow:inset 0 0 20px #ffffff0d}.rich b{color:inherit;font-weight:900}
 @keyframes slideUp { from { opacity: 0; transform: translateY(25px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes slideDown { from { opacity: 0; transform: translateY(-25px); } to { opacity: 1; transform: translateY(0); } }
+/* NUEVA ANIMACION DE SALIDA TRANQUILA */
+@keyframes dissolve { 0% { opacity: 1; transform: scale(1); filter: blur(0); } 100% { opacity: 0; transform: scale(0.95); filter: blur(4px); } }
+.anim-exit { animation: dissolve 0.5s ease-out forwards; pointer-events: none; }
 .anim-n { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 .anim-p { animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 .fade-content { transition: opacity 0.2s ease-out; }
@@ -43,7 +46,6 @@ const BIO=[{id:1,name:"Cuervo Grande",sci:"Corvus corax",tx:"Aves/Corvidae",desc
 const TABS=[{id:'t1',l:'EVENTOS',i:'Calendar',c:'#3b82f6'},{id:'t2',l:'TAREAS',i:'CheckSquare',c:'#ef4444'},{id:'t3',l:'NOTAS',i:'BookOpen',c:'#eab308'},{id:'t4',l:'PROY',i:'Folder',c:'#22c55e'}];
 const Q={q1:{t:'HACER YA',s:'Urgente+Imp',c:'#ef4444'},q2:{t:'PLANIFICAR',s:'NoUrg+Imp',c:'#3b82f6'},q3:{t:'DELEGAR',s:'Urg+NoImp',c:'#eab308'},q4:{t:'ELIMINAR',s:'NiUrg+NiImp',c:'#64748b'}};
 
-// FIX: Función local-aware para obtener string YYYY-MM-DD correcta según zona horaria del usuario
 const locDate = (d) => {
     const z = d.getTimezoneOffset() * 60000;
     const localTime = new Date(d.getTime() - z);
@@ -59,13 +61,13 @@ function App(){
     const [dTask, SDT] = useState(null); 
     const [dragOverQ, SDQ] = useState(null); 
     const [confirmDel, SConfirm] = useState(null);
+    const [exitingIds, setExitingIds] = useState(new Set()); // Estado para animación de salida
 
     const fM=useRef(new Set()),tC=useRef(null),gI=useRef(false),gsI=useRef(false),tS=useRef(null),tE=useRef(null),dY=useRef(0),dH0=useRef(0);
     const curTab=tabs.find(t=>t.id===act)||tabs[0], thStyle={'--theme-color':curTab.c,'--theme-glow':curTab.c+'60'};
 
     const ls=(k,v)=>v?localStorage.setItem(k,JSON.stringify(v)):JSON.parse(localStorage.getItem(k));
     
-    // NOTIFICATION LOGIC
     const reqNotif = async () => { if('Notification' in window) await Notification.requestPermission(); };
     useEffect(()=>{
         const tick = setInterval(() => {
@@ -195,7 +197,6 @@ function App(){
         const y=date.getFullYear(),m=date.getMonth(),d=[],last=new Date(y,m+1,0).getDate(),pad=(new Date(y,m,1).getDay()||7)-1;
         for(let i=0;i<pad;i++)d.push({d:'',dt:null}); 
         for(let i=1;i<=last;i++){
-            // FIX: Usar locDate para construir el string del calendario
             const localDt = locDate(new Date(y,m,i));
             d.push({d:i,dt:localDt});
         }
@@ -203,7 +204,7 @@ function App(){
     },[date]);
 
     const {lk,mx,upGrouped}=useMemo(()=>{
-        const l={},m=[],u=[],now=locDate(new Date()); // FIX: Comparar con 'hoy' local
+        const l={},m=[],u=[],now=locDate(new Date()); 
         const classTitles = new Set();
         evs.forEach(e => { if(e.cat === 'class') classTitles.add(e.title.toLowerCase().trim()); });
         evs.forEach(e=>{
@@ -237,7 +238,17 @@ function App(){
         SE(modal==='c'?[...evs,pl]:evs.map(e=>e.id===selId?pl:e)); SM(null);
     };
 
-    const confirmDelete = () => { SE(evs.filter(e => e.id !== confirmDel.id)); SConfirm(null); };
+    // LOGICA BORRADO ZEN
+    const confirmDelete = () => { 
+        const idToDelete = confirmDel.id;
+        SConfirm(null); // Cerrar modal
+        setExitingIds(prev => new Set(prev).add(idToDelete)); // Activar animacion
+        setTimeout(() => {
+            SE(prev => prev.filter(e => e.id !== idToDelete)); // Borrar datos
+            setExitingIds(prev => { const n = new Set(prev); n.delete(idToDelete); return n; }); // Limpiar estado
+        }, 500); // Tiempo que dura la animacion
+    };
+    
     const Icon=(n,s=18,c)=>h(ICONS[n]||L.Circle,{size:s,className:c});
     const fmtD=(ds)=>{ const d=new Date(ds+'T12:00:00'); return d.toLocaleDateString('es',{weekday:'short',day:'numeric'}).toUpperCase(); }
 
@@ -248,9 +259,13 @@ function App(){
             h('div',{className:"absolute inset-0 opacity-10",style:{backgroundImage:`radial-gradient(circle at 50% 0%,var(--theme-color),transparent 80%)`}}),
             h('div',{className:"absolute inset-0 opacity-20",style:{backgroundImage:`linear-gradient(#222 1px,transparent 1px),linear-gradient(90deg,#222 1px,transparent 1px)`,backgroundSize:'40px 40px'}})
         ),
-        // GHOST DRAG
-        dTask && h('div',{className:"fixed z-[100] bg-neutral-800/90 p-3 rounded-lg border border-white/50 pointer-events-none shadow-2xl w-48 backdrop-blur-md", style:{left:dTask.x, top:dTask.y, transform:'translate(-50%, -50%)'}},
-            h('div',{className:"flex items-center gap-2 text-white font-bold text-xs"}, Icon('CheckSquare',14), dTask.title)
+        // GHOST DRAG - AHORA IDENTICO AL ORIGINAL
+        dTask && h('div',{className:"fixed z-[100] w-52 pointer-events-none", style:{left:dTask.x, top:dTask.y, transform:'translate(-50%, -50%)'}},
+            h('div',{className:"bg-black/90 border border-neutral-700 p-2.5 rounded-lg flex items-start gap-2 shadow-2xl safe-border backdrop-blur-md scale-105"},
+                h('div',{className:"mt-0.5 text-emerald-400"},Icon('CheckCircle',14)),
+                h('div',{className:"flex-1 min-w-0"},h('p',{className:"text-xs font-bold text-white truncate"},dTask.title)),
+                Icon('GripHorizontal',14,'text-neutral-500')
+            )
         ),
         // HEADER
         h('header',{className:"z-20 flex flex-col pt-2 bg-black/90 border-b border-white/10 shrink-0"},
@@ -284,7 +299,7 @@ function App(){
                     h('div',{className:"flex-1 overflow-y-auto space-y-2 no-scrollbar"}, mx.filter(e=>(e.quad||'q2')===k).map(e=>
                         h('div',{
                             key:e.id, onClick:()=>{SF({...e});SSI(e.id);SM('e')},
-                            className:"bg-black/60 border border-neutral-800 p-2.5 rounded-lg group transition-all active:scale-95 safe-border flex items-start gap-2 relative outline-none"
+                            className:`bg-black/60 border border-neutral-800 p-2.5 rounded-lg group transition-all active:scale-95 safe-border flex items-start gap-2 relative outline-none ${exitingIds.has(e.id) ? 'anim-exit' : ''}`
                         },
                             h('div',{className:"mt-0.5 text-emerald-400"},Icon('CheckCircle',14)),
                             h('div',{className:"flex-1 min-w-0"},h('p',{className:"text-xs font-bold text-white truncate rich",dangerouslySetInnerHTML:{__html:e.title}})),
@@ -292,7 +307,8 @@ function App(){
                                 className:"p-2 -m-2 cursor-grab active:cursor-grabbing text-neutral-600 active:text-white touch-none safe-hover",
                                 onTouchStart:(ev)=>{
                                     ev.stopPropagation(); ev.preventDefault();
-                                    SDT({id:e.id, title:e.title, x:ev.touches[0].clientX, y:ev.touches[0].clientY, startQuad:k});
+                                    // Pasa todas las props del evento al estado dTask para replicar diseño
+                                    SDT({...e, x:ev.touches[0].clientX, y:ev.touches[0].clientY, startQuad:k});
                                 }
                             }, Icon('GripHorizontal',14))
                         )
@@ -302,7 +318,6 @@ function App(){
             : h('div',{onTouchStart:calTouch.s,onTouchMove:e=>tE.current=e.targetTouches[0].clientX,onTouchEnd:calTouch.e,className:"flex-1 bg-neutral-900/30 backdrop-blur-sm rounded-xl border border-neutral-800 overflow-hidden flex flex-col relative shadow-[0_0_100px_rgba(0,0,0,0.5)]", style:{transform:'translate3d(0,0,0)'}}, 
                 h('div',{className:"grid grid-cols-7 bg-black border-b border-neutral-800"},['L','M','X','J','V','S','D'].map(d=>h('div',{key:d,className:"py-2 text-center text-[10px] md:text-xs font-black tracking-[0.2em] text-neutral-600"},d))),
                 h('div',{key:date.toISOString(),className:`grid grid-cols-7 flex-1 auto-rows-fr ${dir==='n'?'anim-n':'anim-p'}`, style:{willChange:'transform'}}, days.map((d,i)=>{ 
-                    // FIX: Comparación correcta para resaltar "HOY"
                     const isT=d.dt===locDate(new Date()); 
                     const evs=d.dt?(lk[d.dt]||[]):[];
                     const activeStyle = isT ? { background: curTab.c+'1A', borderColor: curTab.c, boxShadow: `inset 0 0 15px ${curTab.c}20`, fontWeight: 900 } : null;
