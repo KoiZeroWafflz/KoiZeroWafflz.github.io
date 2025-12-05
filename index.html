@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V9.2:ZenAnim</title>
+<title>CMD V9.3:BioZen</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif']},animation:{'pulse-fast':'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite'}} }}</script>
@@ -42,7 +42,46 @@ import*as L from'https://esm.sh/lucide-react@0.292.0';
 const h=React.createElement, F=React.Fragment;
 const ICONS={Calendar:L.Calendar,CheckSquare:L.CheckSquare,Target:L.Target,Folder:L.Folder,BookOpen:L.BookOpen,Menu:L.Menu,Settings:L.Settings,Clock:L.Clock,Dna:L.Dna,Microscope:L.Microscope,Activity:L.Activity,Leaf:L.Leaf,Zap:L.Zap,Globe:L.Globe,Database:L.Database,Cpu:L.Cpu,Layout:L.Layout,PenTool:L.PenTool,Hash:L.Hash,Briefcase:L.Briefcase,Terminal:L.Terminal,GraduationCap:L.GraduationCap,Dumbbell:L.Dumbbell,Edit3:L.Edit3,Plus:L.Plus,X:L.X,RefreshCw:L.RefreshCw,Trash2:L.Trash2,GripHorizontal:L.GripHorizontal,CheckCircle:L.CheckCircle,Eye:L.Eye,EyeOff:L.EyeOff,Bell:L.Bell,AlertTriangle:L.AlertTriangle};
 
-const BIO=[{id:1,name:"Cuervo Grande",sci:"Corvus corax",tx:"Aves/Corvidae",desc:"Inteligencia primate. Usa herramientas.",fact:"Reconocen rostros y guardan rencor.",img:"https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Corvus_corax_%28Common_Raven%29.jpg/800px-Corvus_corax_%28Common_Raven%29.jpg"},{id:2,name:"Araña Saltadora",sci:"Phidippus audax",tx:"Arachnida/Salticidae",desc:"Depredador visual, quelíceros verdes.",fact:"Salta 50x su longitud.",img:"https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Phidippus_audax_male.jpg/800px-Phidippus_audax_male.jpg"}];
+// --- NUEVA DATA BIO ESTRUCTURADA ---
+const BIO = [
+    {
+        id: 1,
+        common: "Cuervo Grande",
+        sci: "Corvus corax",
+        tax: { k: "Animalia", p: "Chordata", c: "Aves", o: "Passeriformes", f: "Corvidae", g: "Corvus" },
+        desc: "El paseriforme más pesado. Posee una inteligencia comparable a la de los grandes simios. Capaz de usar herramientas y planificar a futuro.",
+        fact: "Pueden imitar la voz humana y resuelven rompecabezas de varios pasos. Se ha demostrado que guardan rencor a individuos específicos.",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Corvus_corax_%28Common_Raven%29.jpg/800px-Corvus_corax_%28Common_Raven%29.jpg"
+    },
+    {
+        id: 2,
+        common: "Araña Saltadora Audaz",
+        sci: "Phidippus audax",
+        tax: { k: "Animalia", p: "Arthropoda", c: "Arachnida", o: "Araneae", f: "Salticidae", g: "Phidippus" },
+        desc: "Cazadora visual activa. Sus quelíceros iridiscentes son distintivos. No teje telarañas para cazar, sino que acecha y salta sobre sus presas.",
+        fact: "Tienen una visión estereoscópica excelente y 'planifican' sus rutas de salto antes de moverse.",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Phidippus_audax_male.jpg/800px-Phidippus_audax_male.jpg"
+    },
+    {
+        id: 3,
+        common: "Ajolote",
+        sci: "Ambystoma mexicanum",
+        tax: { k: "Animalia", p: "Chordata", c: "Amphibia", o: "Caudata", f: "Ambystomatidae", g: "Ambystoma" },
+        desc: "Salamandra endémica de México que conserva sus rasgos larvales (neotenia) toda su vida, incluyendo sus branquias externas.",
+        fact: "Capacidad regenerativa extrema: pueden regenerar extremidades completas, corazón, médula espinal y partes del cerebro.",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f9/Axolotl_organism.jpg/800px-Axolotl_organism.jpg"
+    },
+    {
+        id: 4,
+        common: "Mantis Orquídea",
+        sci: "Hymenopus coronatus",
+        tax: { k: "Animalia", p: "Arthropoda", c: "Insecta", o: "Mantodea", f: "Hymenopodidae", g: "Hymenopus" },
+        desc: "Depredador del sudeste asiático que utiliza mimetismo agresivo, pareciéndose a una flor de orquídea para atraer polinizadores y devorarlos.",
+        fact: "Dimorfismo sexual extremo: los machos son menos de la mitad del tamaño de las hembras.",
+        img: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/07/Hymenopus_coronatus_Pink_Orchid_Mantis_female_side_view_at_Gembira_Loka_Zoo_Yogyakarta.jpg/800px-Hymenopus_coronatus_Pink_Orchid_Mantis_female_side_view_at_Gembira_Loka_Zoo_Yogyakarta.jpg"
+    }
+];
+
 const TABS=[{id:'t1',l:'EVENTOS',i:'Calendar',c:'#3b82f6'},{id:'t2',l:'TAREAS',i:'CheckSquare',c:'#ef4444'},{id:'t3',l:'NOTAS',i:'BookOpen',c:'#eab308'},{id:'t4',l:'PROY',i:'Folder',c:'#22c55e'}];
 const Q={q1:{t:'HACER YA',s:'Urgente+Imp',c:'#ef4444'},q2:{t:'PLANIFICAR',s:'NoUrg+Imp',c:'#3b82f6'},q3:{t:'DELEGAR',s:'Urg+NoImp',c:'#eab308'},q4:{t:'ELIMINAR',s:'NiUrg+NiImp',c:'#64748b'}};
 
@@ -218,7 +257,7 @@ function App(){
         Object.keys(l).forEach(k=>l[k].sort((a,b)=>(a.time||'').localeCompare(b.time||'')));
         u.sort((a,b)=>a.date.localeCompare(b.date)||(a.time||'').localeCompare(b.time||''));
         const gr={};
-        u.slice(0,60).forEach(e=>{ if(!gr[e.date])gr[e.date]=[]; gr[e.date].push(e); });
+        u.slice(60).forEach(e=>{ if(!gr[e.date])gr[e.date]=[]; gr[e.date].push(e); });
         return {lk:l,mx:m,upGrouped:Object.entries(gr).sort((a,b)=>a[0].localeCompare(b[0]))};
     },[evs,cals]);
 
@@ -259,7 +298,7 @@ function App(){
             h('div',{className:"absolute inset-0 opacity-10",style:{backgroundImage:`radial-gradient(circle at 50% 0%,var(--theme-color),transparent 80%)`}}),
             h('div',{className:"absolute inset-0 opacity-20",style:{backgroundImage:`linear-gradient(#222 1px,transparent 1px),linear-gradient(90deg,#222 1px,transparent 1px)`,backgroundSize:'40px 40px'}})
         ),
-        // GHOST DRAG - AHORA IDENTICO AL ORIGINAL
+        // GHOST DRAG
         dTask && h('div',{className:"fixed z-[100] w-52 pointer-events-none", style:{left:dTask.x, top:dTask.y, transform:'translate(-50%, -50%)'}},
             h('div',{className:"bg-black/90 border border-neutral-700 p-2.5 rounded-lg flex items-start gap-2 shadow-2xl safe-border backdrop-blur-md scale-105"},
                 h('div',{className:"mt-0.5 text-emerald-400"},Icon('CheckCircle',14)),
@@ -307,7 +346,6 @@ function App(){
                                 className:"p-2 -m-2 cursor-grab active:cursor-grabbing text-neutral-600 active:text-white touch-none safe-hover",
                                 onTouchStart:(ev)=>{
                                     ev.stopPropagation(); ev.preventDefault();
-                                    // Pasa todas las props del evento al estado dTask para replicar diseño
                                     SDT({...e, x:ev.touches[0].clientX, y:ev.touches[0].clientY, startQuad:k});
                                 }
                             }, Icon('GripHorizontal',14))
@@ -348,7 +386,7 @@ function App(){
                 )
             ):h('div',{className:"w-full text-center text-neutral-500 text-xs italic"},"No upcoming events"))
         ),
-        // BIO WIDGET
+        // BIO WIDGET (BOTON)
         h('div',{onClick:()=>{SB(BIO.length>1?Math.floor(Math.random()*BIO.length):0);SBS(true)},className:`fixed bottom-0 right-0 w-32 z-[60] flex items-center justify-center cursor-pointer active:bg-black/50 safe-hover overflow-hidden rounded-tl-[30px] group shadow-[0_0_30px_#000c] backdrop-blur-md ${!drag?'tr-h':''}`,style:{height:dH,background:'#0006',borderLeft:`2px solid ${curTab.c}`,borderTop:`2px solid ${curTab.c}`}},
             Icon('Dna',28,`group-active:animate-spin safe-hover transition-transform duration-700 text-[${curTab.c}]`)
         ),
@@ -371,10 +409,69 @@ function App(){
                     h('div',{},h('h4',{className:"text-xs font-bold text-neutral-500 uppercase border-b border-neutral-800 pb-2"},"Estilo"),tabs.map(t=>h('div',{key:t.id,className:"flex items-center gap-4 mt-2"},h('input',{type:'color',value:t.c,onChange:e=>ST(tabs.map(tb=>tb.id===t.id?{...tb,c:e.target.value}:tb)),className:"w-8 h-8 bg-transparent"}),h('input',{value:t.l,onChange:e=>ST(tabs.map(tb=>tb.id===t.id?{...tb,l:e.target.value}:tb)),className:"bg-transparent text-white font-bold"})))),
                     h('div',{},h('h4',{className:"text-xs font-bold text-neutral-500 uppercase border-b border-neutral-800 pb-2"},"Google API"),h('input',{placeholder:"Client ID",value:gCfg.clientId,onChange:e=>SG({...gCfg,clientId:e.target.value}),className:"w-full bg-black border-b border-neutral-700 text-xs p-2 text-white outline-none mt-2"}),h('input',{placeholder:"API Key",value:gCfg.apiKey,onChange:e=>SG({...gCfg,apiKey:e.target.value}),className:"w-full bg-black border-b border-neutral-700 text-xs p-2 text-white outline-none mt-2"}))
                 )
-            ):bioShow?h('div',{className:"w-full max-w-3xl rounded-lg overflow-hidden flex flex-col md:flex-row relative shadow-2xl bg-neutral-900 border",style:{borderColor:curTab.c}},
-                h('button',{onClick:()=>SBS(false),className:"absolute top-4 right-4 z-50 text-white"},Icon('X')),
-                h('div',{className:"w-full md:w-1/2 h-64 md:h-auto relative scan overflow-hidden bg-black"},h('img',{src:BIO[bioIx].img,className:"w-full h-full object-cover opacity-80"}),h('div',{className:"absolute bottom-0 left-0 p-4 bg-gradient-to-t from-black w-full"},h('h2',{className:"text-2xl font-black italic text-white"},BIO[bioIx].name))),
-                h('div',{className:"w-full md:w-1/2 p-6 flex flex-col justify-center space-y-4"},h('p',{className:"text-lg italic text-white"},BIO[bioIx].sci),h('p',{className:"text-sm text-neutral-300"},BIO[bioIx].desc),h('div',{className:"p-3 rounded border",style:{borderColor:curTab.c,background:curTab.c+'15'}},h('p',{className:"text-xs text-white"},BIO[bioIx].fact)))
+            // --- NUEVO MODAL BIO MEJORADO ---
+            ):bioShow?h('div',{className:"w-full max-w-5xl h-[85vh] md:h-[600px] bg-neutral-900 border rounded-xl overflow-hidden flex flex-col md:flex-row relative shadow-[0_0_50px_rgba(0,0,0,0.8)] animate-in zoom-in-95 duration-300", style:{borderColor:curTab.c}},
+                // BOTÓN CERRAR
+                h('button',{onClick:()=>SBS(false),className:"absolute top-4 right-4 z-50 p-2 bg-black/50 rounded-full text-white hover:bg-red-500/20 safe-hover backdrop-blur"},Icon('X', 20)),
+                
+                // COLUMNA IMAGEN (IZQUIERDA)
+                h('div',{className:"w-full md:w-5/12 h-1/3 md:h-full relative bg-black group overflow-hidden border-b md:border-b-0 md:border-r border-neutral-800"},
+                    h('img',{src:BIO[bioIx].img,className:"w-full h-full object-cover opacity-80 transition-transform duration-[10s] ease-linear transform scale-100 group-hover:scale-110"}),
+                    // Efecto Scanline
+                    h('div',{className:"absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.5)_50%)] bg-[length:100%_4px] pointer-events-none opacity-40"}),
+                    h('div',{className:"absolute inset-0 bg-gradient-to-t from-neutral-900 via-transparent to-transparent opacity-90"}),
+                    h('div',{className:"absolute bottom-4 left-4 right-4"},
+                        h('h2',{className:"text-3xl md:text-4xl font-black italic text-white tracking-tighter leading-none mb-1 drop-shadow-lg"},BIO[bioIx].common.toUpperCase()),
+                        h('p',{className:"text-sm font-mono text-[var(--theme-color)] opacity-80 bg-black/60 inline-block px-2 py-0.5 rounded"}, BIO[bioIx].sci)
+                    )
+                ),
+
+                // COLUMNA DATOS (DERECHA)
+                h('div',{className:"w-full md:w-7/12 flex flex-col bg-neutral-900/95 backdrop-blur-3xl relative"},
+                    // Header de navegación
+                    h('div',{className:"flex items-center justify-between p-4 border-b border-white/5 bg-white/5"},
+                        h('button',{onClick:()=>SB(prev => prev === 0 ? BIO.length - 1 : prev - 1), className:"p-2 text-neutral-400 hover:text-white safe-hover flex items-center gap-2 text-xs font-bold uppercase"}, Icon('CheckCircle',14,"rotate-180"), "Prev"),
+                        h('div',{className:"flex items-center gap-2"},
+                            Icon('Dna', 16, `text-[${curTab.c}] animate-pulse`),
+                            h('span',{className:"text-[10px] font-mono tracking-[0.2em] text-neutral-500"}, `REGISTRO ${bioIx + 1}/${BIO.length}`)
+                        ),
+                        h('button',{onClick:()=>SB(prev => prev === BIO.length - 1 ? 0 : prev + 1), className:"p-2 text-neutral-400 hover:text-white safe-hover flex items-center gap-2 text-xs font-bold uppercase"}, "Next", Icon('CheckCircle',14))
+                    ),
+
+                    // Contenido Scrollable
+                    h('div',{className:"flex-1 overflow-y-auto p-6 md:p-8 space-y-6 no-scrollbar"},
+                        
+                        // Sección Taxonomía (Grid)
+                        h('div',{className:"space-y-3"},
+                            h('h4',{className:"text-[10px] font-black text-neutral-500 uppercase tracking-widest flex items-center gap-2"}, Icon('Activity',12), "Clasificación Taxonómica"),
+                            h('div',{className:"grid grid-cols-2 md:grid-cols-3 gap-2"},
+                                Object.entries(BIO[bioIx].tax).map(([k,v])=>
+                                    h('div',{key:k, className:"bg-black/40 border border-white/5 p-2 rounded flex flex-col"},
+                                        h('span',{className:"text-[9px] text-neutral-600 font-black uppercase mb-0.5"}, 
+                                            k==='k'?'Reino':k==='p'?'Filo':k==='c'?'Clase':k==='o'?'Orden':k==='f'?'Familia':k==='g'?'Género':k
+                                        ),
+                                        h('span',{className:"text-xs text-neutral-300 font-mono truncate"}, v)
+                                    )
+                                )
+                            )
+                        ),
+
+                        // Descripción
+                        h('div',{className:"space-y-2"},
+                            h('h4',{className:"text-[10px] font-black text-neutral-500 uppercase tracking-widest flex items-center gap-2"}, Icon('BookOpen',12), "Descripción"),
+                            h('p',{className:"text-sm leading-relaxed text-neutral-300 border-l-2 pl-3", style:{borderColor:curTab.c}}, BIO[bioIx].desc)
+                        ),
+
+                        // Dato Curioso (Estilo Alerta)
+                        h('div',{className:"mt-4 p-4 rounded-lg bg-white/5 border border-white/10 flex gap-3 items-start"},
+                            Icon('Zap', 18, "text-yellow-500 shrink-0 mt-0.5"),
+                            h('div',{}, 
+                                h('span',{className:"block text-[10px] font-black text-yellow-500/80 uppercase mb-1"}, "Dato Curioso"),
+                                h('p',{className:"text-xs text-neutral-200 italic"}, BIO[bioIx].fact)
+                            )
+                        )
+                    )
+                )
             ):h('div',{className:"w-full max-w-md bg-neutral-900 border border-neutral-700 rounded-2xl overflow-hidden shadow-2xl flex flex-col"},
                 h('div',{className:"p-4 bg-black flex justify-between border-b border-neutral-800"},h('span',{className:"font-bold text-white"},modal==='e'?'EDITAR':'NUEVO'),h('button',{onClick:()=>SM(null)},Icon('X'))),
                 h('div',{className:"p-5 space-y-4"},
