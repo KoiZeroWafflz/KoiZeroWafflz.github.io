@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V9.6: BioZen Stable</title>
+<title>CMD V9.7: BioZen Ultimate</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif'],mono:['JetBrains Mono','Courier New','monospace']},animation:{'pulse-fast':'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite','scan':'scan 2s linear infinite'}} }}</script>
@@ -12,14 +12,11 @@
 <style>
 body{background:#050505;touch-action:none;overscroll-behavior:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent; color: #e2e8f0;}
 .no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
-/* CAPAS Y CRISTAL */
 .glass { background: rgba(10, 10, 12, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid rgba(255, 255, 255, 0.1); }
-/* EFECTOS HUD */
 .hud-grid { background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 20px 20px; }
 @keyframes scan { 0% {top: 0%} 50% {top: 100%} 100% {top: 0%} }
 .scan-line { position: absolute; left:0; right:0; height: 2px; background: var(--theme-color); box-shadow: 0 0 15px var(--theme-color); opacity: 0.8; animation: scan 3s ease-in-out infinite; }
 .safe-hover:hover { filter: brightness(1.2); }
-/* EMPUJAR MODALES AL FRENTE A LA FUERZA */
 #modal-root { position: fixed; inset: 0; z-index: 9999; pointer-events: auto; }
 </style>
 </head>
@@ -30,16 +27,21 @@ import{createRoot}from'https://esm.sh/react-dom@18.2.0/client';
 import*as L from'https://esm.sh/lucide-react@0.292.0';
 
 const h=React.createElement, F=React.Fragment;
-const ICONS={Calendar:L.Calendar,CheckSquare:L.CheckSquare,BookOpen:L.BookOpen,Folder:L.Folder,Settings:L.Settings,Dna:L.Dna,Activity:L.Activity,Zap:L.Zap,GraduationCap:L.GraduationCap,Dumbbell:L.Dumbbell,X:L.X,RefreshCw:L.RefreshCw,Trash2:L.Trash2,GripHorizontal:L.GripHorizontal,CheckCircle:L.CheckCircle,Eye:L.Eye,EyeOff:L.EyeOff,Bell:L.Bell,Search:L.Search,Wifi:L.Wifi,WifiOff:L.WifiOff,Globe:L.Globe};
+const ICONS={Calendar:L.Calendar,CheckSquare:L.CheckSquare,BookOpen:L.BookOpen,Folder:L.Folder,Settings:L.Settings,Dna:L.Dna,Activity:L.Activity,Zap:L.Zap,GraduationCap:L.GraduationCap,Dumbbell:L.Dumbbell,X:L.X,RefreshCw:L.RefreshCw,Trash2:L.Trash2,GripHorizontal:L.GripHorizontal,CheckCircle:L.CheckCircle,Eye:L.Eye,EyeOff:L.EyeOff,Bell:L.Bell,Search:L.Search,Wifi:L.Wifi,WifiOff:L.WifiOff,Globe:L.Globe,Database:L.Database,Key:L.Key};
 
-// --- LISTA DE ESPECIES PARA AUTOMATIZACIÓN ---
-const SPECIES_LIST = [
-    "Corvus corax", "Ambystoma mexicanum", "Phidippus audax", "Hymenopus coronatus", 
-    "Panthera onca", "Harpia harpyja", "Danaus plexippus", "Orcinus orca", 
-    "Aptenodytes forsteri", "Octopus vulgaris", "Vampyroteuthis infernalis",
-    "Physalia physalis", "Anomalocaris", "Tardigrada", "Glaucus atlanticus",
-    "Komodo dragon", "Platypus", "Axolotl", "Mantis shrimp"
-];
+// --- BASE DE DATOS TAXONÓMICA HÍBRIDA ---
+// Mapea la búsqueda de Wikipedia con datos técnicos precisos para la rejilla.
+const TAXONOMY_DB = {
+    "Corvus corax": { k: "Animalia", p: "Chordata", c: "Aves", o: "Passeriformes", f: "Corvidae", g: "Corvus" },
+    "Ambystoma mexicanum": { k: "Animalia", p: "Chordata", c: "Amphibia", o: "Caudata", f: "Ambystomatidae", g: "Ambystoma" },
+    "Phidippus audax": { k: "Animalia", p: "Arthropoda", c: "Arachnida", o: "Araneae", f: "Salticidae", g: "Phidippus" },
+    "Hymenopus coronatus": { k: "Animalia", p: "Arthropoda", c: "Insecta", o: "Mantodea", f: "Hymenopodidae", g: "Hymenopus" },
+    "Panthera onca": { k: "Animalia", p: "Chordata", c: "Mammalia", o: "Carnivora", f: "Felidae", g: "Panthera" },
+    "Danaus plexippus": { k: "Animalia", p: "Arthropoda", c: "Insecta", o: "Lepidoptera", f: "Nymphalidae", g: "Danaus" },
+    "Octopus vulgaris": { k: "Animalia", p: "Mollusca", c: "Cephalopoda", o: "Octopoda", f: "Octopodidae", g: "Octopus" },
+    "Orcinus orca": { k: "Animalia", p: "Chordata", c: "Mammalia", o: "Artiodactyla", f: "Delphinidae", g: "Orcinus" }
+};
+const SPECIES_LIST = Object.keys(TAXONOMY_DB);
 
 const TABS=[{id:'t1',l:'EVENTOS',i:'Calendar',c:'#3b82f6'},{id:'t2',l:'TAREAS',i:'CheckSquare',c:'#ef4444'},{id:'t3',l:'NOTAS',i:'BookOpen',c:'#eab308'},{id:'t4',l:'PROY',i:'Folder',c:'#22c55e'}];
 const Q={q1:{t:'HACER YA',s:'Urgente+Imp',c:'#ef4444'},q2:{t:'PLANIFICAR',s:'NoUrg+Imp',c:'#3b82f6'},q3:{t:'DELEGAR',s:'Urg+NoImp',c:'#eab308'},q4:{t:'ELIMINAR',s:'NiUrg+NiImp',c:'#64748b'}};
@@ -54,7 +56,7 @@ function App(){
     const [modal,SM]=useState(null),[selId,SSI]=useState(null),[form,SF]=useState({title:'',date:'',time:'',type:'gen',notes:'',cat:'task',quad:'q2',notify:0});
     const [sets,SS]=useState(false),[cals,SC]=useState({}),[bioShow,SBS]=useState(false);
     
-    // ESTADOS WIKI API
+    // WIKI & TAX STATE
     const [wikiData, setWikiData] = useState(null);
     const [loadingBio, setLoadingBio] = useState(false);
     const [bioError, setBioError] = useState(false);
@@ -70,18 +72,17 @@ function App(){
     const curTab=tabs.find(t=>t.id===act)||tabs[0], thStyle={'--theme-color':curTab.c};
 
     const ls=(k,v)=>v?localStorage.setItem(k,JSON.stringify(v)):JSON.parse(localStorage.getItem(k));
+    const reqNotif = async () => { if('Notification' in window) await Notification.requestPermission(); };
 
-    // --- LOGICA WIKI API (MEJORADA) ---
+    // --- FETCH WIKI + TAXONOMY ---
     const fetchWikiBio = async () => {
-        SBS(true); // Abrir modal
-        setLoadingBio(true);
-        setBioError(false);
-        setWikiData(null);
+        SBS(true); setLoadingBio(true); setBioError(false); setWikiData(null);
         
+        // Elegir especie aleatoria de nuestra DB
         const query = SPECIES_LIST[Math.floor(Math.random() * SPECIES_LIST.length)];
-        
+        const taxonomy = TAXONOMY_DB[query]; // Obtener datos técnicos hardcoded
+
         try {
-            // Pide 'original' Y 'thumbnail' (pithumbsize=600 para buena calidad)
             const url = `https://es.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=extracts|pageimages&piprop=original|thumbnail&pithumbsize=600&exintro&explaintext&titles=${query}`;
             const res = await fetch(url);
             const data = await res.json();
@@ -90,17 +91,16 @@ function App(){
             const pageData = pages[pageId];
 
             if (pageId === "-1") throw new Error("No encontrado");
-
-            // Prioriza imagen original, si no thumbnail, si no null
             const imgUrl = pageData.original ? pageData.original.source : (pageData.thumbnail ? pageData.thumbnail.source : null);
 
             setWikiData({
                 title: pageData.title,
                 desc: pageData.extract,
-                img: imgUrl
+                img: imgUrl,
+                tax: taxonomy // Pasamos la taxonomía real a la vista
             });
         } catch (e) {
-            console.error("Wiki Error:", e);
+            console.error(e);
             setBioError(true);
         } finally {
             setLoadingBio(false);
@@ -299,24 +299,40 @@ function App(){
             Icon('Dna',24,`group-active:animate-spin text-[${curTab.c}] drop-shadow-[0_0_8px_${curTab.c}]`)
         ),
 
-        // --- MODAL CONTAINER (FIXED Z-INDEX) ---
-        (modal || confirmDel || sets || bioShow) && h('div',{id:'modal-root',className:"bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"},
+        // --- MODAL CONTAINER ---
+        (modal || confirmDel || sets || bioShow) && h('div',{id:'modal-root',className:"bg-black/90 backdrop-blur-md flex items-center justify-center p-4"},
             
-            // 1. AJUSTES (Arreglado Z-Index y opacidad)
-            sets && h('div',{className:"w-full max-w-2xl max-h-[70vh] bg-zinc-900 border border-neutral-700 rounded-2xl overflow-hidden shadow-2xl flex flex-col relative"},
+            // 1. AJUSTES COMPLETOS (RESTAURADOS DEL V9.3)
+            sets && h('div',{className:"w-full max-w-2xl max-h-[85vh] bg-zinc-900 border border-neutral-700 rounded-2xl overflow-hidden shadow-2xl flex flex-col relative"},
                 h('div',{className:"p-4 border-b border-neutral-700 flex justify-between bg-zinc-950"}, h('h3',{className:"font-bold text-white"},"CONFIGURACIÓN"), h('button',{onClick:()=>SS(false)},Icon('X',20,"text-white"))),
-                h('div',{className:"p-6 space-y-6 overflow-y-auto bg-zinc-900"},
-                     h('div',{},h('h4',{className:"text-xs font-bold text-neutral-400 uppercase border-b border-neutral-800 pb-2 mb-4"},"Estética"),
+                h('div',{className:"p-6 space-y-8 overflow-y-auto bg-zinc-900"},
+                     // SISTEMA
+                     h('div',{},h('h4',{className:"text-xs font-bold text-neutral-500 uppercase border-b border-neutral-800 pb-2"},"Sistema"),
+                        h('button',{onClick:reqNotif,className:"mt-4 w-full flex items-center justify-between p-3 bg-neutral-800 rounded border border-neutral-700 hover:border-white/20 transition-all"},h('span',{className:"text-sm text-white font-bold"},"Activar Notificaciones"),Icon('Bell',16))
+                     ),
+                     // CALENDARIOS
+                     h('div',{},h('h4',{className:"text-xs font-bold text-neutral-500 uppercase border-b border-neutral-800 pb-2"},"Calendarios Google"),
+                        Object.values(cals).length ? Object.values(cals).map(c=>h('div',{key:c.id,className:"flex justify-between items-center p-3 border-b border-neutral-800 hover:bg-white/5"},h('span',{className:"text-sm font-bold",style:{color:c.color}},c.summary),h('button',{onClick:()=>SC(p=>({...p,[c.id]:{...p[c.id],visible:!p[c.id].visible}}))},Icon(c.visible?'Eye':'EyeOff',16,'text-neutral-400')))) : h('div',{className:"text-xs text-neutral-600 mt-2 italic"},"No hay calendarios sincronizados")
+                     ),
+                     // ESTÉTICA
+                     h('div',{},h('h4',{className:"text-xs font-bold text-neutral-500 uppercase border-b border-neutral-800 pb-2"},"Estética"),
                         tabs.map(t=>h('div',{key:t.id,className:"flex items-center justify-between mt-3 p-2 rounded hover:bg-white/5"},
                             h('div',{className:"flex items-center gap-3"}, Icon(t.i,18,"text-neutral-400"), h('span',{className:"text-sm font-bold text-neutral-300"}, t.l)),
                             h('input',{type:'color',value:t.c,onChange:e=>ST(tabs.map(tb=>tb.id===t.id?{...tb,c:e.target.value}:tb)),className:"w-8 h-8 rounded border-none bg-transparent cursor-pointer"})
                         ))
+                     ),
+                     // GOOGLE API
+                     h('div',{},h('h4',{className:"text-xs font-bold text-neutral-500 uppercase border-b border-neutral-800 pb-2"},"Google API"),
+                        h('div',{className:"space-y-3 mt-3"},
+                            h('div',{className:"flex items-center gap-2 bg-black border border-neutral-700 rounded p-2"}, Icon('Database',14,'text-neutral-500'), h('input',{placeholder:"Client ID",value:gCfg.clientId,onChange:e=>SG({...gCfg,clientId:e.target.value}),className:"w-full bg-transparent text-xs text-white outline-none"})),
+                            h('div',{className:"flex items-center gap-2 bg-black border border-neutral-700 rounded p-2"}, Icon('Key',14,'text-neutral-500'), h('input',{placeholder:"API Key",value:gCfg.apiKey,onChange:e=>SG({...gCfg,apiKey:e.target.value}),className:"w-full bg-transparent text-xs text-white outline-none"}))
+                        )
                      )
                 )
             ),
 
-            // 2. WIKIPEDIA BIO (Con fallback de imagen)
-            bioShow && h('div',{className:"w-full max-w-5xl h-[80vh] md:h-[650px] bg-black border border-white/20 rounded-xl overflow-hidden flex flex-col md:flex-row relative shadow-[0_0_50px_rgba(0,0,0,1)]"},
+            // 2. WIKIPEDIA BIO + REJILLA TAXONÓMICA
+            bioShow && h('div',{className:"w-full max-w-5xl h-[85vh] md:h-[650px] bg-black border border-white/20 rounded-xl overflow-hidden flex flex-col md:flex-row relative shadow-[0_0_50px_rgba(0,0,0,1)]"},
                 h('button',{onClick:()=>SBS(false),className:"absolute top-4 right-4 z-50 p-2 bg-black/60 rounded-full text-white hover:text-red-400 border border-white/10 backdrop-blur safe-hover"},Icon('X', 18)),
                 
                 loadingBio ? h('div',{className:"absolute inset-0 z-50 flex flex-col items-center justify-center bg-black text-white"},
@@ -344,11 +360,27 @@ function App(){
                     h('div',{className:"w-full md:w-7/12 flex flex-col bg-[#050505] relative hud-grid"},
                          h('div',{className:"flex items-center justify-between p-4 border-b border-white/10 bg-white/5"},
                             h('button',{onClick:fetchWikiBio, className:"flex items-center gap-2 px-3 py-1.5 bg-[var(--theme-color)]/20 border border-[var(--theme-color)] text-[var(--theme-color)] text-xs font-bold rounded hover:bg-[var(--theme-color)] hover:text-black transition-all"}, Icon('RefreshCw', 12), "Siguiente Muestra"),
-                            h('div',{className:"flex items-center gap-2"}, Icon('Globe',14,"text-blue-500"), h('span',{className:"text-[10px] text-neutral-500 uppercase"}, "Wikipedia"))
+                            h('div',{className:"flex items-center gap-2"}, Icon('Globe',14,"text-blue-500"), h('span',{className:"text-[10px] text-neutral-500 uppercase"}, "Wikipedia API"))
                         ),
-                        h('div',{className:"flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar"},
+                        h('div',{className:"flex-1 overflow-y-auto p-6 space-y-8 no-scrollbar"},
+                            
+                            // LA REJILLA TAXONÓMICA RESTAURADA
                             h('div',{className:"space-y-3"},
-                                h('h4',{className:"text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] flex items-center gap-2"}, Icon('BookOpen',12), "Informe"),
+                                h('h4',{className:"text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] flex items-center gap-2"}, Icon('Activity',12), "Clasificación Taxonómica"),
+                                h('div',{className:"grid grid-cols-2 md:grid-cols-3 gap-[1px] bg-white/10 border border-white/10 rounded overflow-hidden"},
+                                    Object.entries(wikiData.tax).map(([k,v])=>
+                                        h('div',{key:k, className:"bg-[#0c0c0e] p-3 flex flex-col group hover:bg-[#151518] transition-colors"},
+                                            h('span',{className:"text-[9px] text-neutral-600 font-bold uppercase mb-1 tracking-wider"}, 
+                                                k==='k'?'Reino':k==='p'?'Filo':k==='c'?'Clase':k==='o'?'Orden':k==='f'?'Familia':k==='g'?'Género':k
+                                            ),
+                                            h('span',{className:"text-xs font-mono truncate",style:{color:curTab.c}}, v)
+                                        )
+                                    )
+                                )
+                            ),
+
+                            h('div',{className:"space-y-3"},
+                                h('h4',{className:"text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] flex items-center gap-2"}, Icon('BookOpen',12), "Informe Descriptivo"),
                                 h('p',{className:"text-sm md:text-base leading-relaxed text-neutral-300 font-light border-l-2 border-[var(--theme-color)] pl-4 py-1"}, wikiData.desc || "Sin descripción.")
                             )
                         )
