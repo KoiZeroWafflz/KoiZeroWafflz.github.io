@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V15: Projects OS</title>
+<title>CMD V15: iOS Projects</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif'],mono:['JetBrains Mono','Courier New','monospace']},animation:{'pulse-fast':'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite','scan':'scan 2s linear infinite'}} }}</script>
@@ -10,9 +10,10 @@
 <script src="https://apis.google.com/js/api.js" async defer></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
-body{background:#050505;touch-action:none;overscroll-behavior:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent; color: #e2e8f0;}
+body{background:#000;touch-action:none;overscroll-behavior:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent; color: #e2e8f0;}
 .no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
-.glass { background: rgba(10, 10, 12, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid rgba(255, 255, 255, 0.1); }
+.glass { background: rgba(20, 20, 22, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid rgba(255, 255, 255, 0.1); }
+.ios-glass { background: rgba(30, 30, 35, 0.6); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
 .hud-grid { background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 20px 20px; }
 @keyframes scan { 0% {top: 0%} 50% {top: 100%} 100% {top: 0%} }
 .scan-line { position: absolute; left:0; right:0; height: 2px; background: var(--theme-color); box-shadow: 0 0 15px var(--theme-color); opacity: 0.8; animation: scan 3s ease-in-out infinite; }
@@ -36,29 +37,23 @@ body{background:#050505;touch-action:none;overscroll-behavior:none;user-select:n
 }
 .tr-h { transition: height 0.5s cubic-bezier(0.32, 0.725, 0.25, 1); }
 
-/* --- FOLDER SYSTEM ANIMATIONS --- */
-.folder-tab {
-    clip-path: polygon(0 0, 85% 0, 100% 100%, 0% 100%);
-}
-.folder-body {
-    border-radius: 0 8px 8px 8px;
-}
-.zoom-enter-active { animation: zoomInView 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-.zoom-exit-active { animation: zoomOutView 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+/* --- IOS FOLDER ANIMATIONS --- */
+.folder-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; padding: 4px; }
+.zoom-enter { animation: zoomInFolder 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+.zoom-exit { animation: zoomOutFolder 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
 
-@keyframes zoomInView {
-    0% { opacity: 0; transform: scale(0.8) translateY(20px); filter: blur(10px); }
-    100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+@keyframes zoomInFolder {
+    0% { opacity: 0; transform: scale(0.5); filter: blur(10px); }
+    100% { opacity: 1; transform: scale(1); filter: blur(0); }
 }
-@keyframes zoomOutView {
+@keyframes zoomOutFolder {
     0% { opacity: 1; transform: scale(1); filter: blur(0); }
-    100% { opacity: 0; transform: scale(1.1); filter: blur(10px); }
+    100% { opacity: 0; transform: scale(1.5); filter: blur(10px); }
 }
 
-.resource-icon-drive { color: #34A853; }
-.resource-icon-pdf { color: #EA4335; }
-.resource-icon-video { color: #FF0000; }
-.resource-icon-note { color: #FBBC04; }
+/* Card Hover Effects */
+.card-hover { transition: transform 0.2s, box-shadow 0.2s; }
+.card-hover:active { transform: scale(0.96); }
 
 </style>
 </head>
@@ -69,7 +64,6 @@ import{createRoot}from'https://esm.sh/react-dom@18.2.0/client';
 import*as L from'https://esm.sh/lucide-react@0.292.0';
 
 const h=React.createElement, F=React.Fragment;
-// Expanded Icons
 const ICONS={
     Calendar:L.Calendar,CheckSquare:L.CheckSquare,BookOpen:L.BookOpen,Folder:L.Folder,Settings:L.Settings,
     Dna:L.Dna,Activity:L.Activity,Zap:L.Zap,GraduationCap:L.GraduationCap,Dumbbell:L.Dumbbell,
@@ -77,7 +71,7 @@ const ICONS={
     Eye:L.Eye,EyeOff:L.EyeOff,Bell:L.Bell,Search:L.Search,Wifi:L.Wifi,WifiOff:L.WifiOff,
     Globe:L.Globe,Database:L.Database,Key:L.Key, AlertTriangle:L.AlertTriangle, CloudOff:L.CloudOff, Info:L.Info, 
     Plus:L.Plus, Save:L.Save, Check:L.Check, ArrowLeft:L.ArrowLeft, FileText:L.FileText, 
-    Youtube:L.Youtube, Cloud:L.Cloud, File:L.File, ExternalLink:L.ExternalLink, MoreVertical:L.MoreVertical
+    Youtube:L.Youtube, Cloud:L.Cloud, File:L.File, ExternalLink:L.ExternalLink, MoreVertical:L.MoreVertical, Play:L.Play
 };
 
 const TAXONOMY_DB = {
@@ -124,9 +118,10 @@ function App(){
     // Project Manager State
     const [projs, SProjs] = useState([]);
     const [curProjId, SCurProjId] = useState(null);
-    const [projAnim, SProjAnim] = useState('idle'); // idle, entering, exiting
+    const [projAnim, SProjAnim] = useState('idle');
+    const [addingRes, SAddingRes] = useState(false);
     
-    const [modal,SM]=useState(null); // 'e' event, 'c' create event, 'np' new project, 'nr' new resource
+    const [modal,SM]=useState(null); 
     const [selId,SSI]=useState(null);
     const [form,SF]=useState({title:'',date:'',time:'',type:'gen',notes:'',cat:'task',quad:'q2',notify:0});
     
@@ -169,44 +164,37 @@ function App(){
         const t=localStorage.getItem('tb_v9');
         const g=localStorage.getItem('gc_v9');
         const c=localStorage.getItem('cm_v9');
-        const p=localStorage.getItem('pj_v1'); // Projects Storage
+        const p=localStorage.getItem('pj_v2'); 
         if(e) try{ SE(JSON.parse(e) || []) }catch(x){ SE([]) } 
         if(t) try{ ST(JSON.parse(t)) }catch(x){ ST(TABS) }
         if(g) try{ SG(JSON.parse(g)) }catch(x){ SG({apiKey:'',clientId:''}) }
         if(c) try{ SC(JSON.parse(c)) }catch(x){ SC({}) }
         if(p) try{ SProjs(JSON.parse(p) || []) }catch(x){ SProjs([]) }
-
         if(!window.gapi) {
             const script = document.createElement('script');
             script.src = "https://apis.google.com/js/api.js";
             script.onload = () => { if(window.gapi) window.gapi.load('client', initGapi); };
             document.body.appendChild(script);
-        } else {
-            window.gapi.load('client', initGapi);
-        }
+        } else { window.gapi.load('client', initGapi); }
     },[]);
     
     useEffect(()=>{ localStorage.setItem('ev_v14',JSON.stringify(evs)) },[evs]);
     useEffect(()=>{ localStorage.setItem('tb_v9',JSON.stringify(tabs)) },[tabs]);
     useEffect(()=>{ localStorage.setItem('gc_v9',JSON.stringify(gCfg)) },[gCfg]);
     useEffect(()=>{ localStorage.setItem('cm_v9',JSON.stringify(cals)) },[cals]);
-    useEffect(()=>{ localStorage.setItem('pj_v1',JSON.stringify(projs)) },[projs]);
+    useEffect(()=>{ localStorage.setItem('pj_v2',JSON.stringify(projs)) },[projs]);
 
     useEffect(() => {
         if(gSign && gCfg.apiKey) {
             const k = `${date.getFullYear()}-${date.getMonth()}`;
-            if(!fM.current.has(k)) {
-                fetchG(date);
-            }
+            if(!fM.current.has(k)) fetchG(date);
         }
     }, [date, gSign]);
 
     const initGapi = async () => {
         if(gCfg.apiKey && window.gapi && !gI.current){
-            try {
-                await window.gapi.client.init({apiKey: gCfg.apiKey, discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"]});
-                gI.current = true;
-            } catch(e) { console.warn("GAPI Init Error", e); }
+            try { await window.gapi.client.init({apiKey: gCfg.apiKey, discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"]}); gI.current = true; } 
+            catch(e) { console.warn("GAPI Init Error", e); }
         }
     };
     
@@ -214,17 +202,13 @@ function App(){
         if(gCfg.clientId && window.google && window.google.accounts && !gsI.current){
             try {
                 tC.current = window.google.accounts.oauth2.initTokenClient({
-                    client_id: gCfg.clientId,
-                    scope: "https://www.googleapis.com/auth/calendar.events",
+                    client_id: gCfg.clientId, scope: "https://www.googleapis.com/auth/calendar.events",
                     callback: (r) => {
                         if(r.error) { alert("Error Auth: " + r.error); return; }
                         if(window.gapi && window.gapi.client) window.gapi.client.setToken(r);
-                        SGS(true);
-                        fM.current.clear();
-                        fetchG(date); 
+                        SGS(true); fM.current.clear(); fetchG(date); 
                     }
-                });
-                gsI.current = true;
+                }); gsI.current = true;
             } catch(e) { console.warn("GIS Init Error", e); }
         }
     };
@@ -249,9 +233,7 @@ function App(){
             const calListReq = await window.gapi.client.calendar.calendarList.list();
             const calItems = calListReq.result.items || [];
             const nextCals = {};
-            calItems.forEach(c => {
-                nextCals[c.id] = { id: c.id, summary: c.summary, color: c.backgroundColor, visible: cals[c.id]?.visible ?? true };
-            });
+            calItems.forEach(c => { nextCals[c.id] = { id: c.id, summary: c.summary, color: c.backgroundColor, visible: cals[c.id]?.visible ?? true }; });
             SC(nextCals);
 
             const promises = calItems.map(c => {
@@ -402,12 +384,13 @@ function App(){
         setSaving(false); SM(null);
     };
 
-    // --- PROJECT MANAGER LOGIC ---
-    const detectResourceType = (content) => {
-        if(content.includes('drive.google.com')) return { type: 'drive', icon: 'Cloud', color: '#34A853' }; // Google Green
-        if(content.includes('.pdf')) return { type: 'pdf', icon: 'File', color: '#EA4335' }; // PDF Red
-        if(content.includes('youtube.com') || content.includes('youtu.be')) return { type: 'video', icon: 'Youtube', color: '#FF0000' }; // YT Red
-        return { type: 'note', icon: 'FileText', color: '#FBBC04' }; // Note Yellow
+    // --- ENHANCED PROJECT MANAGER ---
+
+    // Youtube ID Extractor
+    const getYouTubeId = (url) => {
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2].length === 11) ? match[2] : null;
     };
 
     const addProject = () => {
@@ -417,37 +400,53 @@ function App(){
         SM(null); SF({title:'',date:'',time:'',type:'gen',notes:'',cat:'task',quad:'q2',notify:0});
     };
 
-    const addResource = () => {
+    const addResource = async () => {
         if(!resForm.content) return;
-        const { type, icon, color } = detectResourceType(resForm.content);
-        const newRes = { id: Date.now(), type, icon, color, content: resForm.content, date: new Date().toISOString() };
+        SAddingRes(true);
+        const content = resForm.content.trim();
+        let type = 'note', icon = 'FileText', color = '#FBBC04', thumb = null, title = content;
+        
+        // 1. YouTube Detection & Metadata Fetch
+        const ytId = getYouTubeId(content);
+        if (ytId) {
+            type = 'video';
+            icon = 'Youtube';
+            color = '#FF0000';
+            thumb = `https://img.youtube.com/vi/${ytId}/mqdefault.jpg`;
+            try {
+                const res = await fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${ytId}`);
+                const data = await res.json();
+                if(data.title) title = data.title;
+            } catch(e) { console.warn("NoEmbed failed", e); }
+        } 
+        // 2. Drive / PDF / General Link Detection
+        else if(content.includes('drive.google.com')) { type = 'drive'; icon = 'Cloud'; color = '#34A853'; }
+        else if(content.includes('.pdf')) { type = 'pdf'; icon = 'File'; color = '#EA4335'; }
+        else if(content.startsWith('http')) { type = 'link'; icon = 'ExternalLink'; color = '#3b82f6'; }
+
+        const newRes = { id: Date.now(), type, icon, color, content, title, thumb, date: new Date().toISOString() };
+        
         SProjs(projs.map(p => p.id === curProjId ? { ...p, resources: [...p.resources, newRes] } : p));
+        SAddingRes(false);
         SM(null); SResForm({ content: '' });
     };
 
     const deleteResource = (rId) => {
-        if(confirm('¿Eliminar recurso?')) {
-            SProjs(projs.map(p => p.id === curProjId ? { ...p, resources: p.resources.filter(r => r.id !== rId) } : p));
-        }
+        if(confirm('¿Eliminar recurso?')) SProjs(projs.map(p => p.id === curProjId ? { ...p, resources: p.resources.filter(r => r.id !== rId) } : p));
     };
 
     const deleteProject = (pId) => {
-        if(confirm('¿Eliminar proyecto y todos sus contenidos?')) {
-            SProjs(projs.filter(p => p.id !== pId));
-        }
+        if(confirm('¿Eliminar proyecto y todos sus contenidos?')) SProjs(projs.filter(p => p.id !== pId));
     }
 
     const openProject = (pId) => {
-        // iOS Style Zoom In
         SProjAnim('entering');
-        setTimeout(() => {
-            SCurProjId(pId);
-            SProjAnim('idle');
-        }, 300);
+        SCurProjId(pId);
+        // Wait for render then animate
+        setTimeout(() => SProjAnim('idle'), 400); 
     };
 
     const closeProject = () => {
-        // iOS Style Zoom Out
         SProjAnim('exiting');
         setTimeout(() => {
             SCurProjId(null);
@@ -458,35 +457,74 @@ function App(){
     const currentProject = projs.find(p => p.id === curProjId);
 
     // --- RENDER HELPERS ---
-    const renderFolder = (p) => h('div', {
-        key: p.id,
-        onClick: () => openProject(p.id),
-        className: "relative cursor-pointer group hover:scale-[1.02] transition-transform duration-200"
-    },
-        // Physical Folder Tab
-        h('div', { 
-            className: "folder-tab w-1/3 h-4 absolute -top-4 left-0 z-0 brightness-90",
-            style: { backgroundColor: p.color }
-        }),
-        // Folder Body
-        h('div', { 
-            className: "folder-body w-full aspect-[4/3] bg-neutral-800 relative z-10 p-3 flex flex-col justify-between shadow-lg border-t border-white/10",
-            style: { backgroundColor: p.color }
+    
+    // iOS App Library Style Folder
+    const renderFolder = (p) => {
+        // Get first 4 items for preview
+        const previewItems = p.resources.slice(0, 4);
+        
+        return h('div', {
+            key: p.id,
+            onClick: () => openProject(p.id),
+            className: "group flex flex-col items-center gap-2 cursor-pointer active:scale-95 transition-transform duration-200"
         },
-            h('div', { className: "bg-black/20 rounded p-2 backdrop-blur-sm self-start" }, Icon('Folder', 24, "text-white/80")),
-            h('div', {},
-                h('h3', { className: "text-white font-bold text-sm leading-tight drop-shadow-md truncate" }, p.title),
-                h('span', { className: "text-[10px] text-white/70 font-mono" }, `${p.resources.length} items`)
-            )
-        ),
-        // Delete button (visible on hover)
-        h('button', {
-            onClick: (e) => { e.stopPropagation(); deleteProject(p.id); },
-            className: "absolute -top-2 -right-2 bg-red-600 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-20 shadow-lg"
-        }, Icon('X', 12, "text-white"))
-    );
+            // Folder Container
+            h('div', { 
+                className: "w-[72px] h-[72px] md:w-[90px] md:h-[90px] rounded-[22px] bg-white/10 backdrop-blur-md border border-white/5 folder-grid overflow-hidden p-1.5 shadow-lg group-hover:bg-white/15 transition-colors"
+            },
+                previewItems.map((r, i) => h('div', { key: i, className: "w-full h-full rounded-[6px] overflow-hidden flex items-center justify-center bg-black/30 relative" },
+                    r.type === 'video' && r.thumb 
+                    ? h('img', { src: r.thumb, className: "w-full h-full object-cover opacity-80" }) 
+                    : Icon(r.icon, 12, `text-[${r.color}]`)
+                )),
+                previewItems.length === 0 && h('div', { className: "col-span-2 row-span-2 flex items-center justify-center" }, Icon('Folder', 24, "text-white/20"))
+            ),
+            // Title
+            h('span', { className: "text-[11px] md:text-xs font-medium text-white/90 text-center truncate w-full px-1" }, p.title),
+            
+            // Delete (hover only)
+            h('button', {
+                onClick: (e) => { e.stopPropagation(); deleteProject(p.id); },
+                className: "absolute top-0 right-0 bg-neutral-800 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-20 -mr-2 -mt-2 shadow-lg border border-white/10"
+            }, Icon('X', 10, "text-white"))
+        );
+    };
 
-    return h('div',{className:"h-screen w-screen bg-[#050505] text-slate-200 font-sans overflow-hidden flex flex-col relative selection:bg-[var(--theme-color)] selection:text-black",style:thStyle},
+    // Card Renderer for Resource View
+    const renderResourceCard = (r) => {
+        const isVideo = r.type === 'video';
+        return h('div', {
+            key: r.id,
+            onClick: () => r.type !== 'note' && window.open(r.content, '_blank'),
+            className: "relative aspect-square md:aspect-[4/3] rounded-2xl overflow-hidden bg-neutral-900/60 border border-white/5 shadow-xl flex flex-col card-hover cursor-pointer group"
+        },
+            // Visual Header
+            h('div', { className: `flex-1 w-full relative overflow-hidden ${isVideo ? 'bg-black' : 'bg-gradient-to-br from-white/5 to-transparent flex items-center justify-center'}` },
+                isVideo && r.thumb 
+                ? h(F, null, 
+                    h('img', { src: r.thumb, className: "w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" }),
+                    h('div', { className: "absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-transparent transition-colors" }, 
+                        h('div', { className: "w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center shadow-lg" }, Icon('Play', 16, "text-white fill-current"))
+                    )
+                )
+                : Icon(r.icon, 48, `text-[${r.color}] drop-shadow-[0_10px_20px_${r.color}40]`)
+            ),
+            
+            // Info Footer
+            h('div', { className: "h-[50px] shrink-0 bg-white/5 backdrop-blur-md p-3 flex items-center justify-between" },
+                h('div', { className: "flex-1 min-w-0 pr-2" },
+                    h('p', { className: "text-[11px] font-bold text-white truncate leading-tight" }, r.title || r.content),
+                    h('span', { className: "text-[9px] text-neutral-500 uppercase tracking-wider" }, r.type)
+                ),
+                h('button', {
+                    onClick: (e) => { e.stopPropagation(); deleteResource(r.id); },
+                    className: "text-neutral-600 hover:text-red-500 transition-colors"
+                }, Icon('Trash2', 14))
+            )
+        );
+    }
+
+    return h('div',{className:"h-screen w-screen bg-[#000] text-slate-200 font-sans overflow-hidden flex flex-col relative selection:bg-[var(--theme-color)] selection:text-black",style:thStyle},
         h('div',{className:"absolute inset-0 pointer-events-none"},
             h('div',{className:"absolute inset-0 opacity-10",style:{backgroundImage:`radial-gradient(circle at 50% 0%,var(--theme-color),transparent 80%)`}}),
             h('div',{className:"absolute inset-0 opacity-[0.03]",style:{backgroundImage:`linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)`,backgroundSize:'50px 50px'}})
@@ -494,7 +532,7 @@ function App(){
         
         h('header',{className:"z-20 flex flex-col pt-2 bg-black/80 border-b border-white/5 shrink-0 backdrop-blur-md relative"},
             h('div',{className:"flex overflow-x-auto no-scrollbar px-4 gap-2"}, tabs.map(t=>
-                h('button',{key:t.id,onClick:()=>SA(t.id),style:{borderColor:act===t.id?t.c:'transparent',color:act===t.id?t.c:'#525252',backgroundColor:act===t.id?t.c+'08':'transparent'},className:"flex items-center gap-2 px-6 py-4 rounded-t-lg text-sm font-black tracking-widest transition-all border-b-2 safe-hover active:bg-white/5 uppercase shrink-0 outline-none"},Icon(t.i),t.l)
+                h('button',{key:t.id,onClick:()=>{SA(t.id);if(t.id!=='t4')SCurProjId(null)},style:{borderColor:act===t.id?t.c:'transparent',color:act===t.id?t.c:'#525252',backgroundColor:act===t.id?t.c+'08':'transparent'},className:"flex items-center gap-2 px-6 py-4 rounded-t-lg text-sm font-black tracking-widest transition-all border-b-2 safe-hover active:bg-white/5 uppercase shrink-0 outline-none"},Icon(t.i),t.l)
             )),
             h('button',{onClick:()=>SGS_Guide(true), className:"absolute top-3 right-4 p-2 text-neutral-600 hover:text-white transition-colors"}, Icon('Info', 18))
         ),
@@ -503,8 +541,8 @@ function App(){
             // Header Action Bar
             h('div',{className:"py-4 flex justify-between shrink-0"},
                 h('div',{className:"flex items-baseline gap-2"},
-                    h('h1',{className:"text-4xl md:text-5xl font-black text-white tracking-tighter leading-none drop-shadow-lg"}, 
-                        act==='t4' ? (curProjId ? currentProject?.title.toUpperCase() : 'PROYECTOS') 
+                    h('h1',{className:"text-3xl md:text-5xl font-black text-white tracking-tighter leading-none drop-shadow-lg"}, 
+                        act==='t4' ? (curProjId ? currentProject?.title.toUpperCase() : 'BIBLIOTECA') 
                         : act==='t2'?"MATRIZ":date.toLocaleString('es-ES',{month:'long'}).toUpperCase()
                     ),
                     act==='t1'&&h('span',{className:"text-neutral-600 font-bold text-2xl"},date.getFullYear())
@@ -512,8 +550,8 @@ function App(){
                 h('div',{className:"flex gap-3"},
                     act==='t4' ? (
                         curProjId 
-                        ? h('button', {onClick: () => SM('nr'), className: "flex items-center gap-2 px-4 py-2 bg-[var(--theme-color)] text-black font-bold rounded shadow-lg hover:brightness-110 active:scale-95"}, Icon('Plus', 18), "RECURSO")
-                        : h('button', {onClick: () => SM('np'), className: "flex items-center gap-2 px-4 py-2 bg-white/10 border border-white/20 text-white font-bold rounded hover:bg-white/20 active:scale-95"}, Icon('Plus', 18), "NUEVO")
+                        ? h('button', {onClick: () => SM('nr'), className: "flex items-center gap-2 px-4 py-2 bg-[var(--theme-color)] text-black font-bold rounded-full shadow-[0_0_15px_var(--theme-color)] hover:brightness-110 active:scale-95 transition-all"}, Icon('Plus', 18), "Añadir")
+                        : h('button', {onClick: () => SM('np'), className: "flex items-center gap-2 px-4 py-2 bg-white/10 border border-white/20 text-white font-bold rounded-full hover:bg-white/20 active:scale-95 transition-all"}, Icon('Plus', 18), "Carpeta")
                     ) : (
                         act==='t1'&&h('button',{onClick:()=>SD(new Date()),className:"hidden md:block px-4 py-1 text-xs font-bold text-neutral-400 border border-neutral-800 rounded bg-neutral-900 safe-hover"},"HOY")
                     ),
@@ -527,51 +565,44 @@ function App(){
             act==='t4' ? (
                 // --- PROJECT MANAGER ---
                 h('div', { className: "flex-1 overflow-hidden relative" },
-                    // PROJECT GRID (FOLDER VIEW)
+                    
+                    // FOLDER GRID VIEW (App Library Style)
                     !curProjId && h('div', { 
-                        className: `absolute inset-0 overflow-y-auto p-4 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 content-start ${projAnim === 'entering' ? 'zoom-enter-active' : projAnim === 'exiting' ? 'zoom-exit-active' : 'opacity-100'}` 
+                        className: `absolute inset-0 overflow-y-auto p-4 content-start grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-x-4 gap-y-8 ${projAnim === 'exiting' ? 'zoom-exit' : 'zoom-enter'}` 
                     },
                         projs.map(p => renderFolder(p)),
                         projs.length === 0 && h('div', { className: "col-span-full flex flex-col items-center justify-center opacity-30 mt-20" },
-                            Icon('Folder', 64, "mb-4"),
-                            h('span', { className: "text-sm font-mono" }, "Crea tu primer proyecto")
+                            Icon('Folder', 64, "mb-4 stroke-[1]"),
+                            h('span', { className: "text-sm font-mono" }, "Sin proyectos activos")
                         )
                     ),
                     
-                    // PROJECT DETAIL (FILE VIEW)
+                    // PROJECT DETAIL VIEW (Gallery Style)
                     curProjId && currentProject && h('div', { 
-                        className: `absolute inset-0 bg-zinc-900/50 backdrop-blur-xl flex flex-col ${projAnim === 'entering' ? 'zoom-enter-active' : projAnim === 'exiting' ? 'zoom-exit-active' : 'opacity-100'}` 
+                        className: `absolute inset-0 bg-black/60 backdrop-blur-2xl flex flex-col z-20 ${projAnim === 'entering' ? 'zoom-enter' : projAnim === 'exiting' ? 'zoom-exit' : ''}` 
                     },
-                        h('div', { className: "flex items-center gap-4 p-4 border-b border-white/5 bg-black/40" },
-                            h('button', { onClick: closeProject, className: "p-2 rounded-full hover:bg-white/10 active:scale-90 transition-all" }, Icon('ArrowLeft', 24)),
+                        // Nav Header
+                        h('div', { className: "flex items-center gap-4 p-4 border-b border-white/5 bg-white/5 backdrop-blur-xl shrink-0" },
+                            h('button', { onClick: closeProject, className: "p-2 rounded-full hover:bg-white/10 text-white active:scale-90 transition-all flex items-center gap-1" }, 
+                                Icon('ArrowLeft', 20), h('span',{className:"text-sm font-bold"},"Atrás")
+                            ),
                             h('div', {},
-                                h('h2', { className: "text-lg font-bold text-white" }, currentProject.title),
-                                h('span', { className: "text-xs text-neutral-400" }, `${currentProject.resources.length} recursos`)
+                                h('h2', { className: "text-lg font-black text-white tracking-tight" }, currentProject.title),
+                                h('span', { className: "text-[10px] font-mono text-neutral-400" }, `${currentProject.resources.length} ITEMS`)
                             )
                         ),
-                        h('div', { className: "flex-1 overflow-y-auto p-4 space-y-3" },
-                            currentProject.resources.map(r => h('div', { 
-                                key: r.id, 
-                                onClick: () => r.type !== 'note' && window.open(r.content, '_blank'),
-                                className: "group relative flex items-start gap-4 p-4 bg-black/40 border border-white/5 rounded-xl hover:bg-white/5 hover:border-white/10 transition-all cursor-pointer"
-                            },
-                                h('div', { 
-                                    className: "w-12 h-12 rounded-lg flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(0,0,0,0.5)]",
-                                    style: { backgroundColor: r.color + '20', color: r.color }
-                                }, Icon(r.icon, 24)),
-                                h('div', { className: "flex-1 min-w-0" },
-                                    h('p', { className: "text-sm font-bold text-white truncate mb-1" }, r.content),
-                                    h('div', { className: "flex items-center gap-2" },
-                                        h('span', { className: "px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-white/10 text-neutral-400" }, r.type),
-                                        h('span', { className: "text-[10px] text-neutral-500" }, new Date(r.date).toLocaleDateString())
-                                    )
-                                ),
-                                h('button', {
-                                    onClick: (e) => { e.stopPropagation(); deleteResource(r.id); },
-                                    className: "opacity-0 group-hover:opacity-100 p-2 text-neutral-500 hover:text-red-500 transition-all"
-                                }, Icon('Trash2', 16))
-                            )),
-                            currentProject.resources.length === 0 && h('div', { className: "text-center text-neutral-500 mt-20 italic" }, "Carpeta vacía. Añade un recurso.")
+                        
+                        // Resource Grid
+                        h('div', { className: "flex-1 overflow-y-auto p-6" },
+                            h('div', { className: "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4" },
+                                currentProject.resources.map(r => renderResourceCard(r)),
+                                // Empty State within Project
+                                currentProject.resources.length === 0 && h('div', { className: "col-span-full flex flex-col items-center justify-center py-20 text-neutral-600" },
+                                    Icon('Plus', 48, "mb-4 opacity-20"),
+                                    h('p', { className: "text-sm" }, "Carpeta vacía"),
+                                    h('p', { className: "text-xs opacity-50" }, "Añade un link, video o nota")
+                                )
+                            )
                         )
                     )
                 )
@@ -642,27 +673,25 @@ function App(){
         (modal || confirmDel || sets || bioShow || guideShow) && h('div',{id:'modal-root',className:"bg-black/90 backdrop-blur-md flex items-center justify-center p-4"},
             
             // --- NEW PROJECT MODAL ---
-            modal === 'np' && h('div',{className:"w-full max-w-sm bg-zinc-900 border border-neutral-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col"},
-                h('div',{className:"p-4 bg-black/50 border-b border-neutral-800 flex justify-between"},h('span',{className:"font-black text-white tracking-widest"},"NUEVO PROYECTO"),h('button',{onClick:()=>SM(null)},Icon('X'))),
+            modal === 'np' && h('div',{className:"w-full max-w-sm ios-glass rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-pulse-fast", style:{animation:'none'}},
+                h('div',{className:"p-4 bg-white/5 border-b border-white/5 flex justify-between"},h('span',{className:"font-black text-white tracking-widest"},"NUEVO PROYECTO"),h('button',{onClick:()=>SM(null)},Icon('X'))),
                 h('div',{className:"p-5 space-y-4"},
-                    h('input',{autoFocus:true,placeholder:"Nombre del proyecto...",className:"w-full bg-black/50 border border-neutral-700 rounded p-3 text-white font-bold outline-none focus:border-[var(--theme-color)]",value:form.title,onChange:e=>SF({...form,title:e.target.value})}),
-                    h('div',{className:"flex justify-between items-center"},
-                         h('span',{className:"text-sm text-neutral-400"},"Color de Carpeta"),
-                         h('input',{type:'color',value:form.color||'#22c55e',onChange:e=>SF({...form,color:e.target.value}),className:"w-8 h-8 rounded border-none bg-transparent cursor-pointer"})
-                    ),
-                    h('button',{onClick:addProject,className:"w-full py-3 rounded bg-[var(--theme-color)] text-black font-black hover:brightness-110"},"CREAR CARPETA")
+                    h('input',{autoFocus:true,placeholder:"Nombre...",className:"w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white font-bold outline-none focus:border-[var(--theme-color)] transition-all",value:form.title,onChange:e=>SF({...form,title:e.target.value})}),
+                    h('button',{onClick:addProject,className:"w-full py-3 rounded-xl bg-[var(--theme-color)] text-black font-black hover:scale-[1.02] transition-transform shadow-[0_0_20px_var(--theme-color)]"},"CREAR")
                 )
             ),
 
             // --- NEW RESOURCE MODAL ---
-            modal === 'nr' && h('div',{className:"w-full max-w-sm bg-zinc-900 border border-neutral-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col"},
-                h('div',{className:"p-4 bg-black/50 border-b border-neutral-800 flex justify-between"},h('span',{className:"font-black text-white tracking-widest"},"AÑADIR RECURSO"),h('button',{onClick:()=>SM(null)},Icon('X'))),
+            modal === 'nr' && h('div',{className:"w-full max-w-sm ios-glass rounded-3xl overflow-hidden shadow-2xl flex flex-col"},
+                h('div',{className:"p-4 bg-white/5 border-b border-white/5 flex justify-between"},h('span',{className:"font-black text-white tracking-widest"},"AÑADIR RECURSO"),h('button',{onClick:()=>SM(null)},Icon('X'))),
                 h('div',{className:"p-5 space-y-4"},
-                    h('div',{className:"text-xs text-neutral-500 bg-white/5 p-2 rounded"}, 
-                        "Pega un link de Drive, YouTube, PDF, o escribe una nota simple. El sistema detectará el tipo automáticamente."
+                    h('div',{className:"text-xs text-neutral-400 bg-white/5 p-3 rounded-xl border border-white/5"}, 
+                        "Pega un link de YouTube, Drive o PDF. Detectaremos título y miniatura automáticamente."
                     ),
-                    h('textarea',{autoFocus:true,rows:4,placeholder:"https://docs.google.com/...\nO nota rápida...",className:"w-full bg-black/50 border border-neutral-700 rounded p-3 text-sm text-white outline-none focus:border-[var(--theme-color)]",value:resForm.content,onChange:e=>SResForm({...resForm,content:e.target.value})}),
-                    h('button',{onClick:addResource,className:"w-full py-3 rounded bg-[var(--theme-color)] text-black font-black hover:brightness-110"},"GUARDAR")
+                    h('textarea',{autoFocus:true,rows:3,placeholder:"https://...",className:"w-full bg-black/40 border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-[var(--theme-color)] transition-all",value:resForm.content,onChange:e=>SResForm({...resForm,content:e.target.value})}),
+                    h('button',{onClick:addResource, disabled: addingRes, className:"w-full py-3 rounded-xl bg-[var(--theme-color)] text-black font-black hover:scale-[1.02] transition-transform flex justify-center items-center gap-2"},
+                        addingRes ? Icon('RefreshCw', 18, "animate-spin") : "GUARDAR"
+                    )
                 )
             ),
 
@@ -674,25 +703,11 @@ function App(){
                 h('div',{className:"p-6 space-y-6 overflow-y-auto max-h-[70vh] text-sm text-neutral-300"},
                     h('div',{},
                         h('h4',{className:"font-bold text-white mb-2 flex items-center gap-2"}, Icon('Calendar',14,"text-blue-500"), "1. CALENDARIO & SINCRONIZACIÓN"),
-                        h('p',{className:"mb-2"}, "Esta herramienta es independiente, pero se comunica con tu Google Calendar."),
-                        h('ul',{className:"list-disc list-inside space-y-1 ml-2 text-neutral-400"},
-                            h('li',{}, "Lo que creas aquí, se guarda en la nube."),
-                            h('li',{}, "Las clases (detectadas por palabras clave) no se borran."),
-                            h('li',{}, "Usa esto para tu horario base y fechas de entrega.")
-                        )
+                        h('p',{className:"mb-2"}, "Esta herramienta es independiente, pero se comunica con tu Google Calendar.")
                     ),
                     h('div',{},
-                        h('h4',{className:"font-bold text-white mb-2 flex items-center gap-2"}, Icon('CheckSquare',14,"text-red-500"), "2. LA MATRIZ DE PRIORIDADES"),
-                        h('p',{className:"mb-2"}, "Organiza tu estudio usando el método Eisenhower:"),
-                        h('div',{className:"grid grid-cols-2 gap-2 mt-2"},
-                            h('div',{className:"bg-red-900/20 p-2 rounded border border-red-900/50"}, h('strong',{className:"text-red-400 block text-xs"},"HACER YA"), "Exámenes mañana, entregas hoy."),
-                            h('div',{className:"bg-blue-900/20 p-2 rounded border border-blue-900/50"}, h('strong',{className:"text-blue-400 block text-xs"},"PLANIFICAR"), "Proyectos semestrales, rutinas de estudio."),
-                            h('div',{className:"bg-yellow-900/20 p-2 rounded border border-yellow-900/50"}, h('strong',{className:"text-yellow-400 block text-xs"},"DELEGAR"), "Trámites, correos, imprimir cosas."),
-                            h('div',{className:"bg-neutral-800 p-2 rounded border border-neutral-700"}, h('strong',{className:"text-neutral-400 block text-xs"},"ELIMINAR"), "Distracciones, RRSS.")
-                        )
-                    ),
-                    h('div',{className:"bg-[var(--theme-color)]/10 p-3 rounded border border-[var(--theme-color)]/30 text-xs italic"},
-                        "\"El orden externo trae calma interna. Usa este sistema para vaciar tu mente y enfocarte solo en lo que importa hoy.\""
+                        h('h4',{className:"font-bold text-white mb-2 flex items-center gap-2"}, Icon('Folder',14,"text-green-500"), "3. GESTOR DE PROYECTOS"),
+                        h('p',{className:"mb-2"}, "Pega links de YouTube y se verán como videos con miniatura. Organiza todo en carpetas visuales.")
                     )
                 )
             ),
