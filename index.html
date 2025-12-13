@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V13: Creativity</title>
+<title>CMD V14: Theme</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif'],mono:['JetBrains Mono','Courier New','monospace']},animation:{'pulse-fast':'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite','scan':'scan 2s linear infinite'}} }}</script>
@@ -25,12 +25,53 @@ body{background:#050505;touch-action:none;overscroll-behavior:none;user-select:n
 @keyframes slideNext { from { transform: translateX(20%); opacity: 0; filter: blur(5px); } to { transform: translateX(0); opacity: 1; filter: blur(0); } }
 @keyframes slidePrev { from { transform: translateX(-20%); opacity: 0; filter: blur(5px); } to { transform: translateX(0); opacity: 1; filter: blur(0); } }
 
-/* CREATIVE DELETE ANIMATION: VORTEX PURGE */
-.anim-purge { animation: vortexPurge 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards; transform-origin: center; pointer-events: none; }
-@keyframes vortexPurge {
-    0% { transform: scale(1) rotate(0deg); opacity: 1; filter: brightness(1); }
-    40% { transform: scale(0.8) rotate(-5deg); opacity: 0.8; filter: brightness(2) hue-rotate(90deg); }
-    100% { transform: scale(0) rotate(180deg); opacity: 0; margin: 0; padding: 0; height: 0; border: none; }
+/* --- TV PURGE ANIMATION --- */
+.anim-purge { 
+    animation: tvPurge 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
+    transform-origin: center; 
+    pointer-events: none; 
+    /* Optimización de renderizado */
+    will-change: transform, opacity, max-height, margin;
+}
+
+@keyframes tvPurge {
+    0% {
+        transform: scale(1);
+        filter: brightness(1);
+        opacity: 1;
+        max-height: 80px; /* Altura aprox del elemento */
+        margin-bottom: 0.75rem;
+    }
+    30% {
+        /* FASE 1: Acumulación de Energía */
+        transform: scale(1.05);
+        filter: brightness(2.5) drop-shadow(0 0 15px var(--theme-color));
+        opacity: 1;
+        max-height: 80px;
+    }
+    50% {
+        /* FASE 2: Compresión Vertical (Línea de luz) */
+        transform: scale(1, 0.05); /* Aplasta en Y */
+        filter: brightness(5) drop-shadow(0 0 25px white); /* Luz pura */
+        opacity: 1;
+        max-height: 80px; /* Mantiene espacio aun */
+    }
+    70% {
+         /* FASE 3: Desvanecimiento de la línea */
+         transform: scale(0.5, 0.05);
+         opacity: 0;
+         max-height: 80px;
+    }
+    100% {
+        /* FASE 4: Colapso del espacio (Slide Up) */
+        transform: scale(0, 0);
+        opacity: 0;
+        max-height: 0;
+        margin-bottom: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        border-width: 0;
+    }
 }
 
 .tr-h { transition: height 0.5s cubic-bezier(0.32, 0.725, 0.25, 1); }
@@ -96,7 +137,7 @@ function App(){
     const [form,SF]=useState({title:'',date:'',time:'',type:'gen',notes:'',cat:'task',quad:'q2',notify:0});
     const [sets,SS]=useState(false);
     const [bioShow,SBS]=useState(false);
-    const [guideShow, SGS_Guide] = useState(false); // NEW: Guide Modal State
+    const [guideShow, SGS_Guide] = useState(false);
     
     const [sync,SSy]=useState(false);
     const [gCfg,SG]=useState({apiKey:'',clientId:''});
@@ -110,7 +151,7 @@ function App(){
     const [confirmDel, SConfirm] = useState(null);
     const [exitingIds, setExitingIds] = useState(new Set());
     const [deleting, setDeleting] = useState(false);
-    const [saving, setSaving] = useState(false); // NEW: Saving state
+    const [saving, setSaving] = useState(false);
 
     const [wikiData, setWikiData] = useState(null);
     const [loadingBio, setLoadingBio] = useState(false);
@@ -129,7 +170,7 @@ function App(){
     const thStyle={'--theme-color':curTab.c};
 
     useEffect(()=>{
-        const e=localStorage.getItem('ev_v13'); // Updated Version Key
+        const e=localStorage.getItem('ev_v14'); // Version Bump
         const t=localStorage.getItem('tb_v9');
         const g=localStorage.getItem('gc_v9');
         const c=localStorage.getItem('cm_v9');
@@ -147,7 +188,7 @@ function App(){
         }
     },[]);
     
-    useEffect(()=>{ localStorage.setItem('ev_v13',JSON.stringify(evs)) },[evs]);
+    useEffect(()=>{ localStorage.setItem('ev_v14',JSON.stringify(evs)) },[evs]);
     useEffect(()=>{ localStorage.setItem('tb_v9',JSON.stringify(tabs)) },[tabs]);
     useEffect(()=>{ localStorage.setItem('gc_v9',JSON.stringify(gCfg)) },[gCfg]);
     useEffect(()=>{ localStorage.setItem('cm_v9',JSON.stringify(cals)) },[cals]);
@@ -365,25 +406,24 @@ function App(){
         setDeleting(false);
         SConfirm(null); 
         setExitingIds(prev => new Set(prev).add(id));
+        
+        // Wait 700ms to match the 0.7s animation duration
         setTimeout(() => { 
             SE(prev => prev.filter(e => e.id !== id)); 
             setExitingIds(prev => { const n = new Set(prev); n.delete(id); return n; }); 
-        }, 600); // Wait for vortex animation
+        }, 700); 
     };
 
-    // --- NEW: HANDLE SAVE (CREATE ON GOOGLE) ---
     const handleSave = async () => {
         setSaving(true);
         const newId = modal === 'c' ? Date.now() : selId;
         
         let newEvent = { ...form, id: newId, type: 'local', gCol: null };
 
-        // If creating new event and signed in, try sync to Google
         if (modal === 'c' && gSign && gCfg.apiKey && window.gapi && window.gapi.client) {
             try {
-                // Construct Google Resource
                 const startDateTime = new Date(`${form.date}T${form.time}`).toISOString();
-                const endDateTime = new Date(new Date(`${form.date}T${form.time}`).getTime() + 60*60*1000).toISOString(); // Default 1h
+                const endDateTime = new Date(new Date(`${form.date}T${form.time}`).getTime() + 60*60*1000).toISOString(); 
                 
                 const resource = {
                     summary: form.title,
@@ -397,16 +437,14 @@ function App(){
                     resource: resource
                 });
 
-                // Update to google event
-                newEvent = { ...newEvent, id: res.result.id, type: 'google', calId: 'primary', gCol: '#4285F4' }; // Default Google Blue
-                console.log("Created on Google:", res.result.id);
+                newEvent = { ...newEvent, id: res.result.id, type: 'google', calId: 'primary', gCol: '#4285F4' }; 
 
             } catch (err) {
                 console.warn("Could not sync to Google, saving locally", err);
             }
         }
 
-        SE(prev => modal === 'c' ? [...prev, newEvent] : prev.map(e => e.id === selId ? { ...newEvent, id: selId } : e)); // Keep original ID if editing
+        SE(prev => modal === 'c' ? [...prev, newEvent] : prev.map(e => e.id === selId ? { ...newEvent, id: selId } : e)); 
         setSaving(false);
         SM(null);
     };
@@ -421,7 +459,6 @@ function App(){
             h('div',{className:"flex overflow-x-auto no-scrollbar px-4 gap-2"}, tabs.map(t=>
                 h('button',{key:t.id,onClick:()=>SA(t.id),style:{borderColor:act===t.id?t.c:'transparent',color:act===t.id?t.c:'#525252',backgroundColor:act===t.id?t.c+'08':'transparent'},className:"flex items-center gap-2 px-6 py-4 rounded-t-lg text-sm font-black tracking-widest transition-all border-b-2 safe-hover active:bg-white/5 uppercase shrink-0 outline-none"},Icon(t.i),t.l)
             )),
-            // INFO BUTTON
             h('button',{onClick:()=>SGS_Guide(true), className:"absolute top-3 right-4 p-2 text-neutral-600 hover:text-white transition-colors"}, Icon('Info', 18))
         ),
 
@@ -503,7 +540,6 @@ function App(){
 
         (modal || confirmDel || sets || bioShow || guideShow) && h('div',{id:'modal-root',className:"bg-black/90 backdrop-blur-md flex items-center justify-center p-4"},
             
-            // --- NEW: ACADEMIC GUIDE MODAL ---
             guideShow && h('div',{className:"w-full max-w-lg bg-zinc-900 border border-neutral-700 rounded-2xl overflow-hidden shadow-2xl flex flex-col"},
                 h('div',{className:"p-4 border-b border-neutral-700 flex justify-between bg-zinc-950 items-center"}, 
                     h('h3',{className:"font-black text-white tracking-widest flex items-center gap-2"}, Icon('Zap',16,"text-[var(--theme-color)]"), "MODO ZEN: UNIVERSIDAD"), 
