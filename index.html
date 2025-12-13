@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V15: Proyects</title>
+<title>CMD V16: OS UI</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif'],mono:['JetBrains Mono','Courier New','monospace']},animation:{'pulse-fast':'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite','scan':'scan 2s linear infinite'}} }}</script>
@@ -35,7 +35,7 @@ body{background:#050505;touch-action:none;overscroll-behavior:none;user-select:n
     100% { transform: scale(0, 0); opacity: 0; max-height: 0; margin-bottom: 0; padding: 0; border: 0; }
 }
 
-/* PROJECT ZOOM NAVIGATION (iOS Style) */
+/* PROJECT ZOOM NAVIGATION */
 .zoom-container { position: relative; width: 100%; height: 100%; overflow: hidden; perspective: 1000px; }
 .zoom-layer { position: absolute; inset: 0; transition: transform 0.5s cubic-bezier(0.32, 0.725, 0.25, 1), opacity 0.4s ease; backface-visibility: hidden; }
 /* Root View State */
@@ -63,7 +63,7 @@ const ICONS={
     Wifi:L.Wifi, WifiOff:L.WifiOff, Globe:L.Globe, Database:L.Database, Key:L.Key,
     AlertTriangle:L.AlertTriangle, CloudOff:L.CloudOff, Info:L.Info, Plus:L.Plus, Save:L.Save, 
     Check:L.Check, ArrowLeft:L.ArrowLeft, FileText:L.FileText, Youtube:L.Youtube, 
-    HardDrive:L.HardDrive, File:L.File, ExternalLink:L.ExternalLink
+    HardDrive:L.HardDrive, File:L.File, ExternalLink:L.ExternalLink, FolderOpen:L.FolderOpen
 };
 
 // --- DATA & CONFIG ---
@@ -125,7 +125,7 @@ function App(){
     // PROJECTS STATE
     const [projs, setProjs] = useState([]);
     const [res, setRes] = useState([]);
-    const [curProj, setCurProj] = useState(null); // ID of currently open project
+    const [curProj, setCurProj] = useState(null); 
     
     const [modal,SM]=useState(null);
     const [selId,SSI]=useState(null);
@@ -167,8 +167,8 @@ function App(){
     // --- INIT ---
     useEffect(()=>{
         const e=localStorage.getItem('ev_v14');
-        const p=localStorage.getItem('pj_v15');
-        const r=localStorage.getItem('rs_v15');
+        const p=localStorage.getItem('pj_v16'); // Updated
+        const r=localStorage.getItem('rs_v16'); // Updated
         const t=localStorage.getItem('tb_v9');
         const g=localStorage.getItem('gc_v9');
         const c=localStorage.getItem('cm_v9');
@@ -191,13 +191,12 @@ function App(){
     },[]);
     
     useEffect(()=>{ localStorage.setItem('ev_v14',JSON.stringify(evs)) },[evs]);
-    useEffect(()=>{ localStorage.setItem('pj_v15',JSON.stringify(projs)) },[projs]);
-    useEffect(()=>{ localStorage.setItem('rs_v15',JSON.stringify(res)) },[res]);
+    useEffect(()=>{ localStorage.setItem('pj_v16',JSON.stringify(projs)) },[projs]);
+    useEffect(()=>{ localStorage.setItem('rs_v16',JSON.stringify(res)) },[res]);
     useEffect(()=>{ localStorage.setItem('tb_v9',JSON.stringify(tabs)) },[tabs]);
     useEffect(()=>{ localStorage.setItem('gc_v9',JSON.stringify(gCfg)) },[gCfg]);
     useEffect(()=>{ localStorage.setItem('cm_v9',JSON.stringify(cals)) },[cals]);
 
-    // Google API logic omitted for brevity (same as V14)
     useEffect(() => {
         if(gSign && gCfg.apiKey) {
             const k = `${date.getFullYear()}-${date.getMonth()}`;
@@ -311,7 +310,7 @@ function App(){
         SE(p => modal==='c' ? [...p, nE] : p.map(e => e.id === selId ? { ...nE, id: selId } : e)); setSaving(false); SM(null);
     };
 
-    // --- NEW PROJECT HANDLERS ---
+    // --- PROJECT HANDLERS ---
     const addProject = () => {
         const title = prompt("Nombre del Proyecto:");
         if(title) setProjs([...projs, { id: Date.now(), title, color: `hsl(${Math.random()*360}, 70%, 50%)` }]);
@@ -338,7 +337,6 @@ function App(){
 
         h('main',{className:"flex-1 px-2 pb-2 md:px-6 md:pb-8 overflow-hidden flex flex-col z-10 relative zoom-container"},
             
-            // --- HEADER TITLE ---
             act !== 't4' && h('div',{className:"py-4 flex justify-between shrink-0"},
                 h('div',{className:"flex items-baseline gap-2"},
                     h('h1',{className:"text-4xl md:text-5xl font-black text-white tracking-tighter leading-none drop-shadow-lg"}, act==='t2'?"MATRIZ":act==='t3'?"NOTAS":date.toLocaleString('es-ES',{month:'long'}).toUpperCase()),
@@ -351,7 +349,6 @@ function App(){
                 )
             ),
 
-            // --- TAB CONTENT ---
             act==='t1' ? (
                 h('div',{onTouchStart:e=>{tE.current=null;tS.current=e.targetTouches[0].clientX},onTouchMove:e=>tE.current=e.targetTouches[0].clientX,onTouchEnd:()=>{if(!tS.current||!tE.current)return; const d=tS.current-tE.current; if(Math.abs(d)>50){SDir(d>0?'n':'p');SD(new Date(date.getFullYear(),date.getMonth()+(d>0?1:-1),1));}},className:"flex-1 bg-black/40 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden flex flex-col relative shadow-2xl"}, 
                     h('div',{className:"grid grid-cols-7 bg-white/5 border-b border-white/5"},['L','M','X','J','V','S','D'].map(d=>h('div',{key:d,className:"py-3 text-center text-[10px] font-black tracking-widest text-neutral-500"},d))),
@@ -393,65 +390,58 @@ function App(){
                     })
                 ) 
             ) : act === 't4' ? (
-                // --- PROJECT OS TAB ---
                 h('div',{className:`flex-1 relative w-full h-full ${curProj ? 'view-folder' : 'view-root'}`},
-                    
-                    // LAYER 1: PROJECT GRID (ROOT)
+                    // PROJECT ROOT
                     h('div',{className:"layer-projects w-full h-full flex flex-col"},
-                        h('div',{className:"flex justify-between items-center mb-6 px-4 pt-4"},
-                            h('h1',{className:"text-4xl font-black text-white tracking-tighter"}, "PROYECTOS"),
-                            h('button',{onClick:addProject, className:"p-3 bg-[var(--theme-color)] rounded-full text-black hover:scale-110 transition-transform"}, Icon('Plus', 20))
+                        h('div',{className:"flex justify-between items-center mb-6 px-6 pt-6"}, 
+                            h('h1',{className:"text-4xl font-black text-white tracking-tighter"}, "PROYECTOS")
                         ),
-                        h('div',{className:"flex-1 overflow-y-auto grid grid-cols-2 md:grid-cols-4 gap-4 p-4 content-start"},
+                        h('div',{className:"flex-1 overflow-y-auto grid grid-cols-2 md:grid-cols-4 gap-4 p-4 content-start pb-24"}, 
+                            // NEW PROJECT CARD
+                            h('div',{onClick:addProject, className:"bg-[var(--theme-color)]/10 border border-[var(--theme-color)]/30 border-dashed p-4 rounded-xl flex flex-col items-center justify-center gap-3 aspect-square hover:bg-[var(--theme-color)]/20 transition-all cursor-pointer group"},
+                                h('div',{className:"p-3 rounded-full bg-[var(--theme-color)]/20 text-[var(--theme-color)]"}, Icon('Plus', 24)),
+                                h('span',{className:"font-bold text-sm text-[var(--theme-color)]"}, "Nuevo Proyecto")
+                            ),
                             projs.map(p => 
-                                h('div',{key:p.id, onClick:()=>setCurProj(p.id), className:"bg-neutral-900/50 border border-white/5 p-4 rounded-xl flex flex-col items-center justify-center gap-3 aspect-square hover:bg-white/10 hover:border-white/20 transition-all cursor-pointer group"},
+                                h('div',{key:p.id, onClick:()=>setCurProj(p.id), className:"bg-neutral-900/80 border border-white/5 p-4 rounded-xl flex flex-col items-center justify-center gap-3 aspect-square hover:bg-white/10 hover:border-white/20 transition-all cursor-pointer group"},
                                     Icon('Folder', 48, "text-neutral-700 group-hover:text-[var(--theme-color)] transition-colors"),
-                                    h('span',{className:"font-bold text-sm text-center truncate w-full"}, p.title),
+                                    h('span',{className:"font-bold text-sm text-center truncate w-full text-neutral-300 group-hover:text-white"}, p.title),
                                     h('div',{className:"w-8 h-1 rounded-full", style:{background:p.color}})
                                 )
                             )
                         )
                     ),
-
-                    // LAYER 2: FILE EXPLORER (FOLDER)
+                    // PROJECT FOLDER
                     h('div',{className:"layer-files w-full h-full bg-black/50 backdrop-blur-xl flex flex-col"},
-                        // Project Header
-                        h('div',{className:"p-4 border-b border-white/10 flex items-center gap-4 bg-black/80"},
-                            h('button',{onClick:()=>setCurProj(null), className:"p-2 hover:bg-white/10 rounded-full"}, Icon('ArrowLeft', 20)),
+                        h('div',{className:"p-4 border-b border-white/10 flex items-center gap-4 bg-black/80 z-20"},
+                            h('button',{onClick:()=>setCurProj(null), className:"p-2 hover:bg-white/10 rounded-full text-white"}, Icon('ArrowLeft', 24)),
                             h('div',{className:"flex-1"},
-                                h('h2',{className:"text-2xl font-black text-white"}, projs.find(p=>p.id===curProj)?.title || "Proyecto"),
-                                h('span',{className:"text-xs text-neutral-500 font-mono"}, res.filter(r=>r.pid===curProj).length + " Recursos")
+                                h('h2',{className:"text-xl font-black text-white truncate"}, projs.find(p=>p.id===curProj)?.title || "Proyecto"),
+                                h('span',{className:"text-xs text-[var(--theme-color)] font-mono flex items-center gap-1"}, Icon('Database',10), res.filter(r=>r.pid===curProj).length + " Recursos")
                             ),
-                            h('div',{className:"w-4 h-4 rounded-full", style:{background: projs.find(p=>p.id===curProj)?.color}})
+                            h('button',{onClick:()=>{ if(confirm("¿Eliminar proyecto y sus archivos?")){ setProjs(projs.filter(p=>p.id!==curProj)); setRes(res.filter(r=>r.pid!==curProj)); setCurProj(null); } }, className:"p-2 hover:bg-red-500/20 text-neutral-500 hover:text-red-500 rounded-full transition-colors"}, Icon('Trash2', 18))
                         ),
-                        // Resource List
-                        h('div',{className:"flex-1 overflow-y-auto p-4 space-y-2"},
-                            res.filter(r=>r.pid===curProj).length === 0 && h('div',{className:"text-center text-neutral-600 mt-20 italic"}, "Carpeta vacía. Añade recursos."),
+                        h('div',{className:"flex-1 overflow-y-auto p-4 space-y-3"},
+                            res.filter(r=>r.pid===curProj).length === 0 && h('div',{className:"h-full flex flex-col items-center justify-center text-neutral-600 opacity-50"}, Icon('FolderOpen', 64, "mb-4 text-neutral-800"), h('p',{className:"text-sm font-bold"}, "CARPETA VACÍA"), h('p',{className:"text-xs"}, "Usa la barra inferior para añadir contenido")),
                             res.filter(r=>r.pid===curProj).map(r => 
-                                h('div',{key:r.id, onClick:()=>r.content.includes('http')?window.open(r.content,'_blank'):null, className:"flex items-center gap-4 p-4 bg-neutral-900 border border-white/5 rounded-lg hover:border-white/20 transition-all cursor-pointer group"},
-                                    h('div',{className:`p-3 rounded-lg bg-black ${r.color}`}, Icon(r.icon, 20)),
-                                    h('div',{className:"flex-1"},
-                                        h('h4',{className:"font-bold text-sm text-white group-hover:text-[var(--theme-color)] transition-colors"}, r.title),
-                                        h('p',{className:"text-xs text-neutral-500 truncate max-w-[200px]"}, r.content)
-                                    ),
-                                    r.content.includes('http') && Icon('ExternalLink', 14, "text-neutral-600")
+                                h('div',{key:r.id, onClick:()=>r.content.includes('http')?window.open(r.content,'_blank'):null, className:"flex items-center gap-4 p-4 bg-neutral-900/80 border border-white/5 rounded-xl hover:border-[var(--theme-color)]/50 transition-all cursor-pointer group"},
+                                    h('div',{className:`p-3 rounded-lg bg-black/50 ${r.color}`}, Icon(r.icon, 20)),
+                                    h('div',{className:"flex-1 overflow-hidden"}, h('h4',{className:"font-bold text-sm text-white truncate group-hover:text-[var(--theme-color)] transition-colors"}, r.title), h('p',{className:"text-[10px] text-neutral-500 truncate font-mono"}, r.content)),
+                                    h('button',{onClick:(e)=>{e.stopPropagation(); setRes(res.filter(x=>x.id!==r.id))}, className:"opacity-0 group-hover:opacity-100 p-2 hover:text-red-500 transition-all"}, Icon('X', 14))
                                 )
                             )
                         ),
-                        // Add Resource Input
-                        h('div',{className:"p-4 bg-black/80 border-t border-white/10"},
-                            h('input',{
-                                placeholder:"Pegar Link (Drive, YT) o Texto...",
-                                className:"w-full bg-neutral-900 border border-neutral-700 rounded-full py-3 px-5 text-sm text-white focus:border-[var(--theme-color)] outline-none",
-                                onKeyDown: (e) => { if(e.key === 'Enter'){ addResource(curProj, e.target.value); e.target.value = ''; } }
-                            })
+                        h('div',{className:"p-4 bg-black border-t border-white/10 z-20"},
+                            h('div',{className:"relative flex items-center gap-2"},
+                                h('input',{ id: "res-input", placeholder:"Pegar Link (Drive, YT, PDF) o Nota...", className:"flex-1 bg-neutral-900 border border-neutral-800 rounded-xl py-3 pl-4 pr-12 text-sm text-white focus:border-[var(--theme-color)] outline-none transition-colors", onKeyDown: (e) => { if(e.key === 'Enter'){ addResource(curProj, e.target.value); e.target.value = ''; } } }),
+                                h('button',{ onClick:() => { const el=document.getElementById('res-input'); addResource(curProj, el.value); el.value=''; }, className:"absolute right-2 p-2 bg-[var(--theme-color)] rounded-lg text-black hover:scale-105 transition-transform" }, Icon('Plus', 16))
+                            )
                         )
                     )
                 )
-            ) : h('div',{className:"flex-1 flex items-center justify-center text-neutral-600 font-mono"}, "MÓDULO DE NOTAS EN CONSTRUCCIÓN") // Fallback for T3
+            ) : h('div',{className:"flex-1 flex items-center justify-center text-neutral-600 font-mono"}, "MÓDULO DE NOTAS EN CONSTRUCCIÓN")
         ),
 
-        // DRAWER (UPCOMING)
         h('div',{className:`fixed bottom-0 left-0 right-[60px] z-50 rounded-tr-2xl glass flex flex-col ${!drag?'tr-h':''}`,style:{height:dH}},
             h('div',{className:"w-full h-6 flex justify-center items-center cursor-grab touch-none shrink-0",onTouchStart:e=>{SDr(true);dY.current=e.touches[0].clientY;dH0.current=dH},onTouchMove:e=>{if(drag)SH(Math.min(window.innerHeight-50,Math.max(40,dH0.current+(dY.current-e.touches[0].clientY))))},onTouchEnd:()=>{SDr(false);const h=window.innerHeight;SH(dH>h*.75?h-20:dH>h*.3?h*.5:40)}},h('div',{className:"w-12 h-1 bg-white/20 rounded-full"})),
             h('div',{className:`flex-1 overflow-x-auto p-4 flex gap-4 no-scrollbar fade-content ${dH<80?'opacity-0 pointer-events-none':'opacity-100'}`}, upGrouped.length?upGrouped.map(([dStr,evs])=>
@@ -459,10 +449,7 @@ function App(){
                     h('div',{className:"sticky top-0 z-10"},h('span',{className:"text-[9px] font-black tracking-widest text-[var(--theme-color)] bg-black/80 px-2 py-1 rounded border border-[var(--theme-color)]/30"},fmtD(dStr))),
                     evs.map(e=>h('div',{key:e.id,onClick:()=>{SF({...e});SSI(e.id);SM('e')},className:"w-full bg-neutral-900/80 border border-white/10 border-l-4 p-3 rounded hover:bg-neutral-800 cursor-pointer",style:{borderLeftColor:e.gCol||'white'}},
                         h('div',{className:"flex justify-between items-start mb-1"},
-                            h('div',{className:"flex flex-col overflow-hidden"},
-                                h('span',{className:"text-[8px] font-bold uppercase tracking-wider opacity-60 truncate mb-0.5", style:{color: e.gCol}}, cals[e.calId]?.summary || 'BioZen'),
-                                h('span',{className:"text-xs font-bold text-white truncate"},e.title)
-                            ),
+                            h('div',{className:"flex flex-col overflow-hidden"}, h('span',{className:"text-[8px] font-bold uppercase tracking-wider opacity-60 truncate mb-0.5", style:{color: e.gCol}}, cals[e.calId]?.summary || 'BioZen'), h('span',{className:"text-xs font-bold text-white truncate"},e.title)),
                             h('span',{className:"text-[9px] text-neutral-500 font-mono whitespace-nowrap ml-2"},e.time)
                         )
                     ))
@@ -475,7 +462,6 @@ function App(){
         ),
 
         (modal || confirmDel || sets || bioShow || guideShow) && h('div',{id:'modal-root',className:"bg-black/90 backdrop-blur-md flex items-center justify-center p-4"},
-            
             guideShow && h('div',{className:"w-full max-w-lg bg-zinc-900 border border-neutral-700 rounded-2xl overflow-hidden shadow-2xl flex flex-col"},
                 h('div',{className:"p-4 border-b border-neutral-700 flex justify-between bg-zinc-950 items-center"}, h('h3',{className:"font-black text-white tracking-widest flex items-center gap-2"}, Icon('Zap',16,"text-[var(--theme-color)]"), "MODO ZEN: UNIVERSIDAD"), h('button',{onClick:()=>SGS_Guide(false)},Icon('X',20,"text-white"))),
                 h('div',{className:"p-6 space-y-6 overflow-y-auto max-h-[70vh] text-sm text-neutral-300"},
@@ -483,7 +469,6 @@ function App(){
                     h('div',{}, h('h4',{className:"font-bold text-white mb-2 flex items-center gap-2"}, Icon('Folder',14,"text-green-500"), "2. PROYECTOS"), h('p',{className:"mb-2"}, "Pega links de Drive o YouTube en tus carpetas para organizar la tesis."))
                 )
             ),
-
             sets && h('div',{className:"w-full max-w-2xl max-h-[85vh] bg-zinc-900 border border-neutral-700 rounded-2xl overflow-hidden shadow-2xl flex flex-col relative"},
                 h('div',{className:"p-4 border-b border-neutral-700 flex justify-between bg-zinc-950"}, h('h3',{className:"font-bold text-white"},"CONFIGURACIÓN"), h('button',{onClick:()=>SS(false)},Icon('X',20,"text-white"))),
                 h('div',{className:"p-6 space-y-8 overflow-y-auto bg-zinc-900"},
@@ -491,7 +476,6 @@ function App(){
                      h('div',{},h('h4',{className:"text-xs font-bold text-neutral-500 uppercase border-b border-neutral-800 pb-2"},"Google API"), h('div',{className:"space-y-3 mt-3"}, h('div',{className:"flex items-center gap-2 bg-black border border-neutral-700 rounded p-2"}, Icon('Database',14,'text-neutral-500'), h('input',{placeholder:"Client ID",value:gCfg.clientId,onChange:e=>SG({...gCfg,clientId:e.target.value}),className:"w-full bg-transparent text-xs text-white outline-none"})), h('div',{className:"flex items-center gap-2 bg-black border border-neutral-700 rounded p-2"}, Icon('Key',14,'text-neutral-500'), h('input',{placeholder:"API Key",value:gCfg.apiKey,onChange:e=>SG({...gCfg,apiKey:e.target.value}),className:"w-full bg-transparent text-xs text-white outline-none"})) ))
                 )
             ),
-
             bioShow && h('div',{className:"w-full max-w-5xl h-[85vh] md:h-[650px] bg-black border border-white/20 rounded-xl overflow-hidden flex flex-col md:flex-row relative shadow-[0_0_50px_rgba(0,0,0,1)]"},
                 h('button',{onClick:()=>SBS(false),className:"absolute top-4 right-4 z-50 p-2 bg-black/60 rounded-full text-white hover:text-red-400 border border-white/10 backdrop-blur safe-hover"},Icon('X', 18)),
                 loadingBio ? h('div',{className:"absolute inset-0 z-50 flex flex-col items-center justify-center bg-black text-white"}, h('div',{className:"w-16 h-16 border-4 border-t-[var(--theme-color)] border-neutral-800 rounded-full animate-spin mb-4"}), h('p',{className:"text-sm font-mono tracking-widest animate-pulse"}, "ANALIZANDO...")) : bioError ? h('div',{className:"absolute inset-0 z-50 flex flex-col items-center justify-center bg-black text-red-500"}, Icon('WifiOff', 48, "mb-4 opacity-50"), h('h3',{className:"text-xl font-bold"}, "ERROR DE ENLACE"), h('button',{onClick:fetchWikiBio, className:"mt-6 px-6 py-2 bg-white/10 rounded hover:bg-white/20 text-white"}, "Reintentar")) : wikiData && h(F, null,
@@ -499,14 +483,12 @@ function App(){
                     h('div',{className:"w-full md:w-7/12 flex flex-col bg-[#050505] relative hud-grid"}, h('div',{className:"flex items-center justify-between p-4 border-b border-white/10 bg-white/5"}, h('button',{onClick:fetchWikiBio, className:"flex items-center gap-2 px-3 py-1.5 bg-[var(--theme-color)]/20 border border-[var(--theme-color)] text-[var(--theme-color)] text-xs font-bold rounded hover:bg-[var(--theme-color)] hover:text-black transition-all"}, Icon('RefreshCw', 12), "Siguiente Muestra"), h('div',{className:"flex items-center gap-2"}, Icon('Globe',14,"text-blue-500"), h('span',{className:"text-[10px] text-neutral-500 uppercase"}, "Wikipedia API"))), h('div',{className:"flex-1 overflow-y-auto p-6 space-y-8 no-scrollbar"}, h('div',{className:"space-y-3"}, h('h4',{className:"text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] flex items-center gap-2"}, Icon('Activity',12), "Clasificación Taxonómica"), h('div',{className:"grid grid-cols-2 md:grid-cols-3 gap-[1px] bg-white/10 border border-white/10 rounded overflow-hidden"}, Object.entries(wikiData.tax).map(([k,v])=> h('div',{key:k, className:"bg-[#0c0c0e] p-3 flex flex-col group hover:bg-[#151518] transition-colors"}, h('span',{className:"text-[9px] text-neutral-600 font-bold uppercase mb-1 tracking-wider"}, k==='k'?'Reino':k==='p'?'Filo':k==='c'?'Clase':k==='o'?'Orden':k==='f'?'Familia':k==='g'?'Género':k), h('span',{className:"text-xs font-mono truncate",style:{color:curTab.c}}, v))))), h('div',{className:"space-y-4"}, h('h4',{className:"text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] flex items-center gap-2"}, Icon('BookOpen',12), "Informe Descriptivo"), h('div',{className:"grid gap-3"}, getDescBlocks(wikiData.desc).map((block, i) => h('div',{key:i, className:"bg-white/5 p-4 rounded border-l-2 border-[var(--theme-color)]/50 hover:bg-white/10 transition-colors"}, h('p',{className:"text-sm text-neutral-300 leading-relaxed"}, block)))))))
                 )
             ),
-            
             confirmDel && h('div',{className:"w-full max-w-sm bg-zinc-900 border border-red-900 rounded-xl overflow-hidden flex flex-col p-6 items-center text-center space-y-4"},
                 h('div',{className:"bg-red-500/10 p-4 rounded-full text-red-500 mb-2"}, Icon(deleting ? 'RefreshCw' : 'Trash2', 32, deleting ? 'animate-spin' : '')),
                 h('h3',{className:"text-lg font-black text-white"}, deleting ? "Eliminando..." : "¿Purgar Registro?"),
                 !deleting && h('div',{className:"flex gap-3 w-full mt-4"}, h('button',{onClick:()=>SConfirm(null),className:"flex-1 py-3 rounded border border-neutral-700 text-neutral-300 font-bold hover:bg-white/5"},"CANCELAR"), h('button',{onClick:confirmDelete,className:"flex-1 py-3 rounded bg-red-600 text-white font-bold hover:bg-red-500"},"ELIMINAR")),
                 confirmDel.type === 'google' && !deleting && h('span',{className:"text-xs text-red-400 mt-2 flex items-center gap-1"}, Icon('CloudOff',10), "Se eliminará de Google Calendar")
             ),
-            
             modal && !confirmDel && !sets && !bioShow && !guideShow && h('div',{className:"w-full max-w-md bg-zinc-900 border border-neutral-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col"},
                 h('div',{className:"p-4 bg-black/50 border-b border-neutral-800 flex justify-between"},h('span',{className:"font-black text-white tracking-widest"},modal==='e'?'EDITAR':'NUEVO'),h('button',{onClick:()=>SM(null)},Icon('X'))),
                 h('div',{className:"p-5 space-y-4"},
