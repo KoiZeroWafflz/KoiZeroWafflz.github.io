@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V9.9: BioZen Fix</title>
+<title>CMD V9.10: BioZen Ultimate</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif'],mono:['JetBrains Mono','Courier New','monospace']},animation:{'pulse-fast':'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite','scan':'scan 2s linear infinite'}} }}</script>
@@ -173,18 +173,26 @@ function App(){
         }
     };
     
-    // FIX 2: Check window.google existence safely
     const initGis=()=>{
         if(gCfg.clientId && window.google && window.google.accounts){
             tC.current=window.google.accounts.oauth2.initTokenClient({
                 client_id:gCfg.clientId,
                 scope:"https://www.googleapis.com/auth/calendar.readonly",
                 callback:async(r)=>{
-                    if(!r.error){
-                        SGS(true);
-                        fM.current.clear();
-                        await fetchG(date);
+                    if(r.error) {
+                        console.error("Login Error:", r);
+                        alert("Error de autenticación");
+                        return;
                     }
+                    // --- FIX CRÍTICO: Puente entre GIS y GAPI ---
+                    // Sin esto, GAPI no tiene el token aunque el login haya sido exitoso.
+                    if (window.gapi && window.gapi.client) {
+                        window.gapi.client.setToken(r);
+                    }
+                    // -------------------------------------------
+                    SGS(true);
+                    fM.current.clear();
+                    await fetchG(date);
                 }
             });
             gsI.current=true
@@ -192,27 +200,40 @@ function App(){
     };
     
     const auth=async()=>{
-        if(!gCfg.apiKey||!gCfg.clientId)return alert("Faltan Credenciales");
+        if(!gCfg.apiKey||!gCfg.clientId)return alert("Faltan Credenciales en Ajustes");
         try {
             if(!gI.current) await initGapi();
             if(!gsI.current) initGis();
-            if(tC.current) setTimeout(()=>tC.current.requestAccessToken({prompt:'select_account'}),500);
-            else alert("Error: Google Identity Services no cargó. Verifica tu conexión o Adblock.");
-        } catch(e) { console.error(e); alert("Error de inicialización"); }
+            if(tC.current) {
+                // Pequeño delay para asegurar que el stack esté limpio antes del popup
+                setTimeout(()=>tC.current.requestAccessToken({prompt:'select_account'}), 100);
+            } else {
+                alert("Error: Librerías de Google no cargadas. Recarga la página.");
+            }
+        } catch(e) { console.error(e); alert("Error inicializando Google API"); }
     };
     
-    // FIX 1: Robust Fetch & Filter to prevent Black Screen Crashes
     const fetchG=async(td=new Date())=>{
-        SSy(true);try{
-            if(!window.gapi || !window.gapi.client) throw new Error("GAPI not loaded");
+        // Si no hay token, no intentamos nada para evitar cuelgues
+        if(!window.gapi || !window.gapi.client || !window.gapi.client.getToken()) return;
+
+        SSy(true);
+        try{
             if(!window.gapi.client.calendar) await window.gapi.client.load('calendar','v3');
             
             const y=td.getFullYear(),m=td.getMonth();
             const minIso = new Date(y,m-1,1).toISOString();
             const maxIso = new Date(y,m+2,0,23,59,59).toISOString();
             
-            const cl=await window.gapi.client.calendar.calendarList.list();
-            const rC=cl.result.items || []; // SAFETY CHECK: Ensure array
+            // 1. Obtener lista de calendarios de forma segura
+            let rC = [];
+            try {
+                const cl = await window.gapi.client.calendar.calendarList.list();
+                rC = cl.result.items || [];
+            } catch (err) {
+                console.warn("Error listando calendarios:", err);
+                rC = []; // Fallback a array vacío para no romper el loop
+            }
             
             const nextCals = {}; 
             rC.forEach(c => { 
@@ -225,42 +246,66 @@ function App(){
             });
             SC(nextCals); 
 
-            const all=await Promise.all(rC.map(async c=>{
+            // 2. Obtener eventos en paralelo con protección individual
+            const allPromises = rC.map(async c => {
                 if(nextCals[c.id] && !nextCals[c.id].visible) return [];
-                try{
-                    const r=await window.gapi.client.calendar.events.list({calendarId:c.id, timeMin:minIso, timeMax:maxIso, singleEvents:true, maxResults:999, orderBy:'startTime'});
-                    const items = r.result.items || []; // SAFETY CHECK
+                try {
+                    const r = await window.gapi.client.calendar.events.list({
+                        calendarId: c.id, 
+                        timeMin: minIso, 
+                        timeMax: maxIso, 
+                        singleEvents: true, 
+                        maxResults: 999, 
+                        orderBy: 'startTime'
+                    });
+                    const items = r.result.items || [];
                     
-                    return items.filter(i => i.status !== 'cancelled').map(i=>{
-                        const t=(i.summary||'').toLowerCase();
-                        let cat='task',q='q2'; if(t.includes('clase')||t.includes('aula')){ cat='class'; q=null; }
-                        // SAFETY CHECK: Valid date string
-                        let dRaw = i.start.dateTime || i.start.date || '';
-                        if(!dRaw) return null;
+                    return items.filter(i => i && i.status !== 'cancelled').map(i => {
+                        // Validación estricta de datos
+                        const start = i.start || {};
+                        let dRaw = start.dateTime || start.date;
+                        if(typeof dRaw !== 'string') return null;
+
+                        const t = (i.summary || '').toLowerCase();
+                        let cat='task', q='q2'; 
+                        if(t.includes('clase')||t.includes('aula')){ cat='class'; q=null; }
                         
                         return { 
-                            id:i.id, 
-                            calId:c.id, 
-                            title:i.summary||'(No Title)', 
-                            date:dRaw.includes('T')?dRaw.split('T')[0]:dRaw, 
-                            time:i.start.dateTime?.split('T')[1]?.substring(0,5)||'', 
-                            type:'google', 
-                            notes:i.description||'', 
+                            id: i.id || Math.random().toString(), // Fallback ID
+                            calId: c.id, 
+                            title: i.summary || '(Sin Título)', 
+                            date: dRaw.includes('T') ? dRaw.split('T')[0] : dRaw, 
+                            time: start.dateTime?.split('T')[1]?.substring(0,5) || '', 
+                            type: 'google', 
+                            notes: i.description || '', 
                             cat, 
-                            quad:q, 
-                            gCol:c.backgroundColor 
+                            quad: q, 
+                            gCol: c.backgroundColor 
                         }
-                    }).filter(Boolean); // Clean nulls
-                }catch(e){console.warn("Skipping cal", c.id, e); return[]}
-            }));
-            
-            const flat=all.flat();
-            SE(p=>{
-                const loc=p.filter(e=>e.type!=='google'), merged=new Map(); 
-                loc.forEach(e=>merged.set(e.id,e)); flat.forEach(e=>merged.set(e.id,e));
-                return Array.from(merged.values())
+                    }).filter(Boolean); // Eliminar nulos
+                } catch(e) {
+                    console.warn(`Error en calendario ${c.summary}:`, e);
+                    return []; // Retorno seguro
+                }
             });
-        }catch(e){console.error("Critical Sync Error:", e)}finally{SSy(false)};
+
+            const allResults = await Promise.all(allPromises);
+            const flatEvents = allResults.flat();
+            
+            // 3. Mezclar con eventos locales (evitando duplicados)
+            SE(prev => {
+                const localEvents = (Array.isArray(prev) ? prev : []).filter(e => e.type !== 'google');
+                const merged = new Map();
+                localEvents.forEach(e => merged.set(e.id, e));
+                flatEvents.forEach(e => merged.set(e.id, e));
+                return Array.from(merged.values());
+            });
+
+        } catch(e){
+            console.error("Error Crítico de Sincronización:", e);
+        } finally {
+            SSy(false);
+        };
     };
 
     const days=useMemo(()=>{
@@ -272,7 +317,10 @@ function App(){
 
     const {lk,mx,upGrouped}=useMemo(()=>{
         const l={},m=[],u=[],now=locDate(new Date()); 
-        evs.forEach(e=>{
+        // Verificación de seguridad: evs debe ser array
+        const safeEvs = Array.isArray(evs) ? evs : [];
+        
+        safeEvs.forEach(e=>{
             if(e.type==='google'&&cals[e.calId]&&!cals[e.calId].visible)return;
             if(e.date){if(!l[e.date])l[e.date]=[];l[e.date].push(e)}
             if(e.cat!=='class' && e.cat!=='fitness') m.push(e);
