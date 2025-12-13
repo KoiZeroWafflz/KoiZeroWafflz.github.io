@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V9.10: BioZen Ultimate</title>
+<title>CMD V9.11: BioZen Ultimate</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif'],mono:['JetBrains Mono','Courier New','monospace']},animation:{'pulse-fast':'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite','scan':'scan 2s linear infinite'}} }}</script>
@@ -51,8 +51,10 @@ const TABS=[{id:'t1',l:'EVENTOS',i:'Calendar',c:'#3b82f6'},{id:'t2',l:'TAREAS',i
 const Q={q1:{t:'HACER YA',s:'Urgente+Imp',c:'#ef4444'},q2:{t:'PLANIFICAR',s:'NoUrg+Imp',c:'#3b82f6'},q3:{t:'DELEGAR',s:'Urg+NoImp',c:'#eab308'},q4:{t:'ELIMINAR',s:'NiUrg+NiImp',c:'#64748b'}};
 
 const locDate = (d) => {
-    const z = d.getTimezoneOffset() * 60000;
-    return new Date(d.getTime() - z).toISOString().split('T')[0];
+    try {
+        const z = d.getTimezoneOffset() * 60000;
+        return new Date(d.getTime() - z).toISOString().split('T')[0];
+    } catch(e) { return new Date().toISOString().split('T')[0]; } // Fail-safe
 };
 
 function App(){
@@ -184,12 +186,10 @@ function App(){
                         alert("Error de autenticación");
                         return;
                     }
-                    // --- FIX CRÍTICO: Puente entre GIS y GAPI ---
-                    // Sin esto, GAPI no tiene el token aunque el login haya sido exitoso.
-                    if (window.gapi && window.gapi.client) {
-                        window.gapi.client.setToken(r);
+                    // FIX CRÍTICO: Asignación explícita del token para GAPI
+                    if (window.gapi && window.gapi.client && r.access_token) {
+                        window.gapi.client.setToken({ access_token: r.access_token });
                     }
-                    // -------------------------------------------
                     SGS(true);
                     fM.current.clear();
                     await fetchG(date);
@@ -205,7 +205,6 @@ function App(){
             if(!gI.current) await initGapi();
             if(!gsI.current) initGis();
             if(tC.current) {
-                // Pequeño delay para asegurar que el stack esté limpio antes del popup
                 setTimeout(()=>tC.current.requestAccessToken({prompt:'select_account'}), 100);
             } else {
                 alert("Error: Librerías de Google no cargadas. Recarga la página.");
@@ -214,8 +213,11 @@ function App(){
     };
     
     const fetchG=async(td=new Date())=>{
-        // Si no hay token, no intentamos nada para evitar cuelgues
-        if(!window.gapi || !window.gapi.client || !window.gapi.client.getToken()) return;
+        // Si no tenemos GAPI cargado, salimos sin error
+        if(!window.gapi || !window.gapi.client) return;
+        
+        // NOTA: No hacemos return si no hay token aún para no bloquear eventos locales
+        // Simplemente intentamos, y si falla, el catch lo maneja
 
         SSy(true);
         try{
@@ -231,8 +233,9 @@ function App(){
                 const cl = await window.gapi.client.calendar.calendarList.list();
                 rC = cl.result.items || [];
             } catch (err) {
-                console.warn("Error listando calendarios:", err);
-                rC = []; // Fallback a array vacío para no romper el loop
+                console.warn("No se pudieron obtener calendarios (quizás falta login):", err);
+                // Si falla esto, no podemos seguir con Google, pero no rompemos la app
+                return; 
             }
             
             const nextCals = {}; 
@@ -246,7 +249,7 @@ function App(){
             });
             SC(nextCals); 
 
-            // 2. Obtener eventos en paralelo con protección individual
+            // 2. Obtener eventos en paralelo
             const allPromises = rC.map(async c => {
                 if(nextCals[c.id] && !nextCals[c.id].visible) return [];
                 try {
@@ -261,7 +264,6 @@ function App(){
                     const items = r.result.items || [];
                     
                     return items.filter(i => i && i.status !== 'cancelled').map(i => {
-                        // Validación estricta de datos
                         const start = i.start || {};
                         let dRaw = start.dateTime || start.date;
                         if(typeof dRaw !== 'string') return null;
@@ -271,7 +273,7 @@ function App(){
                         if(t.includes('clase')||t.includes('aula')){ cat='class'; q=null; }
                         
                         return { 
-                            id: i.id || Math.random().toString(), // Fallback ID
+                            id: i.id || Math.random().toString(), 
                             calId: c.id, 
                             title: i.summary || '(Sin Título)', 
                             date: dRaw.includes('T') ? dRaw.split('T')[0] : dRaw, 
@@ -282,17 +284,16 @@ function App(){
                             quad: q, 
                             gCol: c.backgroundColor 
                         }
-                    }).filter(Boolean); // Eliminar nulos
+                    }).filter(Boolean); 
                 } catch(e) {
-                    console.warn(`Error en calendario ${c.summary}:`, e);
-                    return []; // Retorno seguro
+                    return []; 
                 }
             });
 
             const allResults = await Promise.all(allPromises);
             const flatEvents = allResults.flat();
             
-            // 3. Mezclar con eventos locales (evitando duplicados)
+            // 3. Mezclar con eventos locales
             SE(prev => {
                 const localEvents = (Array.isArray(prev) ? prev : []).filter(e => e.type !== 'google');
                 const merged = new Map();
@@ -302,22 +303,34 @@ function App(){
             });
 
         } catch(e){
-            console.error("Error Crítico de Sincronización:", e);
+            console.error("Error Sincronización:", e);
         } finally {
             SSy(false);
         };
     };
 
-    const days=useMemo(()=>{
-        const y=date.getFullYear(),m=date.getMonth(),d=[],last=new Date(y,m+1,0).getDate(),pad=(new Date(y,m,1).getDay()||7)-1;
-        for(let i=0;i<pad;i++)d.push({d:'',dt:null}); 
-        for(let i=1;i<=last;i++)d.push({d:i,dt:locDate(new Date(y,m,i))});
-        return d;
-    },[date]);
+    // FIX GRID: Generación segura de días
+    const days = useMemo(() => {
+        try {
+            if (!date || isNaN(date.getTime())) {
+                SD(new Date()); // Auto-corrección si fecha corrupta
+                return []; 
+            }
+            const y=date.getFullYear(), m=date.getMonth();
+            const d=[], last=new Date(y,m+1,0).getDate();
+            const pad=(new Date(y,m,1).getDay()||7)-1;
+            
+            for(let i=0;i<pad;i++) d.push({d:'', dt:null}); 
+            for(let i=1;i<=last;i++) d.push({d:i, dt:locDate(new Date(y,m,i))});
+            return d;
+        } catch(e) {
+            console.error("Error generando calendario:", e);
+            return [];
+        }
+    }, [date]);
 
     const {lk,mx,upGrouped}=useMemo(()=>{
         const l={},m=[],u=[],now=locDate(new Date()); 
-        // Verificación de seguridad: evs debe ser array
         const safeEvs = Array.isArray(evs) ? evs : [];
         
         safeEvs.forEach(e=>{
@@ -335,7 +348,6 @@ function App(){
         setTimeout(() => { SE(prev => prev.filter(e => e.id !== id)); setExitingIds(prev => { const n = new Set(prev); n.delete(id); return n; }); }, 500);
     };
     
-    // Función helper para dividir texto en bloques
     const getDescBlocks = (text) => {
         if(!text) return ["Sin descripción disponible."];
         return text.match(/[^.!?]+[.!?]+/g) || [text];
