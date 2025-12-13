@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V9.8: BioZen Ultimate</title>
+<title>CMD V9.9: BioZen Fix</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif'],mono:['JetBrains Mono','Courier New','monospace']},animation:{'pulse-fast':'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite','scan':'scan 2s linear infinite'}} }}</script>
@@ -166,21 +166,54 @@ function App(){
         return () => { window.removeEventListener('touchmove', move); window.removeEventListener('touchend', end); };
     }, [dTask]);
 
-    const initGapi=async()=>{if(gCfg.apiKey){await window.gapi.client.init({apiKey:gCfg.apiKey,discoveryDocs:["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"]});gI.current=true}};
-    const initGis=()=>{if(gCfg.clientId){tC.current=window.google.accounts.oauth2.initTokenClient({client_id:gCfg.clientId,scope:"https://www.googleapis.com/auth/calendar.readonly",callback:async(r)=>{if(!r.error){SGS(true);fM.current.clear();await fetchG(date)}}});gsI.current=true}};
-    const auth=async()=>{if(!gCfg.apiKey||!gCfg.clientId)return alert("Faltan Credenciales");if(!gI.current)await initGapi();if(!gsI.current)initGis();setTimeout(()=>tC.current.requestAccessToken({prompt:'select_account'}),500)};
+    const initGapi=async()=>{
+        if(gCfg.apiKey && window.gapi){
+            await window.gapi.client.init({apiKey:gCfg.apiKey,discoveryDocs:["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"]});
+            gI.current=true
+        }
+    };
     
-    // SOLUCIÓN 1: Fetch de Google Calendar optimizado
+    // FIX 2: Check window.google existence safely
+    const initGis=()=>{
+        if(gCfg.clientId && window.google && window.google.accounts){
+            tC.current=window.google.accounts.oauth2.initTokenClient({
+                client_id:gCfg.clientId,
+                scope:"https://www.googleapis.com/auth/calendar.readonly",
+                callback:async(r)=>{
+                    if(!r.error){
+                        SGS(true);
+                        fM.current.clear();
+                        await fetchG(date);
+                    }
+                }
+            });
+            gsI.current=true
+        }
+    };
+    
+    const auth=async()=>{
+        if(!gCfg.apiKey||!gCfg.clientId)return alert("Faltan Credenciales");
+        try {
+            if(!gI.current) await initGapi();
+            if(!gsI.current) initGis();
+            if(tC.current) setTimeout(()=>tC.current.requestAccessToken({prompt:'select_account'}),500);
+            else alert("Error: Google Identity Services no cargó. Verifica tu conexión o Adblock.");
+        } catch(e) { console.error(e); alert("Error de inicialización"); }
+    };
+    
+    // FIX 1: Robust Fetch & Filter to prevent Black Screen Crashes
     const fetchG=async(td=new Date())=>{
         SSy(true);try{
+            if(!window.gapi || !window.gapi.client) throw new Error("GAPI not loaded");
             if(!window.gapi.client.calendar) await window.gapi.client.load('calendar','v3');
+            
             const y=td.getFullYear(),m=td.getMonth();
             const minIso = new Date(y,m-1,1).toISOString();
             const maxIso = new Date(y,m+2,0,23,59,59).toISOString();
-            const cl=await window.gapi.client.calendar.calendarList.list();
-            const rC=cl.result.items;
             
-            // Computamos nextCals y lo usamos inmediatamente en la lógica de filtrado
+            const cl=await window.gapi.client.calendar.calendarList.list();
+            const rC=cl.result.items || []; // SAFETY CHECK: Ensure array
+            
             const nextCals = {}; 
             rC.forEach(c => { 
                 nextCals[c.id] = { 
@@ -193,25 +226,41 @@ function App(){
             SC(nextCals); 
 
             const all=await Promise.all(rC.map(async c=>{
-                // Usamos nextCals local para asegurar consistencia inmediata
                 if(nextCals[c.id] && !nextCals[c.id].visible) return [];
                 try{
                     const r=await window.gapi.client.calendar.events.list({calendarId:c.id, timeMin:minIso, timeMax:maxIso, singleEvents:true, maxResults:999, orderBy:'startTime'});
-                    return r.result.items.filter(i => i.status !== 'cancelled').map(i=>{
+                    const items = r.result.items || []; // SAFETY CHECK
+                    
+                    return items.filter(i => i.status !== 'cancelled').map(i=>{
                         const t=(i.summary||'').toLowerCase();
                         let cat='task',q='q2'; if(t.includes('clase')||t.includes('aula')){ cat='class'; q=null; }
-                        let dRaw = i.start.dateTime || i.start.date;
-                        return { id:i.id, calId:c.id, title:i.summary||'(No Title)', date:dRaw.includes('T')?dRaw.split('T')[0]:dRaw, time:i.start.dateTime?.split('T')[1].substring(0,5)||'', type:'google', notes:i.description||'', cat, quad:q, gCol:c.backgroundColor }
-                    })
-                }catch(e){return[]}
+                        // SAFETY CHECK: Valid date string
+                        let dRaw = i.start.dateTime || i.start.date || '';
+                        if(!dRaw) return null;
+                        
+                        return { 
+                            id:i.id, 
+                            calId:c.id, 
+                            title:i.summary||'(No Title)', 
+                            date:dRaw.includes('T')?dRaw.split('T')[0]:dRaw, 
+                            time:i.start.dateTime?.split('T')[1]?.substring(0,5)||'', 
+                            type:'google', 
+                            notes:i.description||'', 
+                            cat, 
+                            quad:q, 
+                            gCol:c.backgroundColor 
+                        }
+                    }).filter(Boolean); // Clean nulls
+                }catch(e){console.warn("Skipping cal", c.id, e); return[]}
             }));
+            
             const flat=all.flat();
             SE(p=>{
                 const loc=p.filter(e=>e.type!=='google'), merged=new Map(); 
                 loc.forEach(e=>merged.set(e.id,e)); flat.forEach(e=>merged.set(e.id,e));
                 return Array.from(merged.values())
             });
-        }catch(e){console.error(e)}finally{SSy(false)};
+        }catch(e){console.error("Critical Sync Error:", e)}finally{SSy(false)};
     };
 
     const days=useMemo(()=>{
@@ -241,7 +290,6 @@ function App(){
     // Función helper para dividir texto en bloques
     const getDescBlocks = (text) => {
         if(!text) return ["Sin descripción disponible."];
-        // Divide por punto seguido de espacio o salto de línea, filtrando vacíos
         return text.match(/[^.!?]+[.!?]+/g) || [text];
     };
 
