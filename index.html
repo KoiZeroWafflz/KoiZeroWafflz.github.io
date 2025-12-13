@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V15: iOS Projects</title>
+<title>CMD V16: Fluid Projects</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif'],mono:['JetBrains Mono','Courier New','monospace']},animation:{'pulse-fast':'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite','scan':'scan 2s linear infinite'}} }}</script>
@@ -37,23 +37,27 @@ body{background:#000;touch-action:none;overscroll-behavior:none;user-select:none
 }
 .tr-h { transition: height 0.5s cubic-bezier(0.32, 0.725, 0.25, 1); }
 
-/* --- IOS FOLDER ANIMATIONS --- */
-.folder-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; padding: 4px; }
-.zoom-enter { animation: zoomInFolder 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
-.zoom-exit { animation: zoomOutFolder 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+/* --- IOS ULTRA FLUID ANIMATIONS --- */
+/* Using iOS physics bezier for natural feel */
+.zoom-enter { animation: zoomInFolder 0.5s cubic-bezier(0.19, 1, 0.22, 1) forwards; }
+.zoom-exit { animation: zoomOutFolder 0.4s cubic-bezier(0.19, 1, 0.22, 1) forwards; }
 
 @keyframes zoomInFolder {
-    0% { opacity: 0; transform: scale(0.5); filter: blur(10px); }
+    0% { opacity: 0; transform: scale(0.85); filter: blur(10px); }
     100% { opacity: 1; transform: scale(1); filter: blur(0); }
 }
 @keyframes zoomOutFolder {
     0% { opacity: 1; transform: scale(1); filter: blur(0); }
-    100% { opacity: 0; transform: scale(1.5); filter: blur(10px); }
+    100% { opacity: 0; transform: scale(1.15); filter: blur(10px); }
 }
 
 /* Card Hover Effects */
-.card-hover { transition: transform 0.2s, box-shadow 0.2s; }
+.card-hover { transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s; }
 .card-hover:active { transform: scale(0.96); }
+
+/* Folder Icon Custom Path */
+.folder-flat-icon { transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.folder-container:active .folder-flat-icon { transform: scale(0.9); }
 
 </style>
 </head>
@@ -385,8 +389,6 @@ function App(){
     };
 
     // --- ENHANCED PROJECT MANAGER ---
-
-    // Youtube ID Extractor
     const getYouTubeId = (url) => {
         const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
         const match = url.match(regExp);
@@ -406,29 +408,22 @@ function App(){
         const content = resForm.content.trim();
         let type = 'note', icon = 'FileText', color = '#FBBC04', thumb = null, title = content;
         
-        // 1. YouTube Detection & Metadata Fetch
         const ytId = getYouTubeId(content);
         if (ytId) {
-            type = 'video';
-            icon = 'Youtube';
-            color = '#FF0000';
-            thumb = `https://img.youtube.com/vi/${ytId}/mqdefault.jpg`;
+            type = 'video'; icon = 'Youtube'; color = '#FF0000'; thumb = `https://img.youtube.com/vi/${ytId}/mqdefault.jpg`;
             try {
                 const res = await fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${ytId}`);
                 const data = await res.json();
                 if(data.title) title = data.title;
             } catch(e) { console.warn("NoEmbed failed", e); }
         } 
-        // 2. Drive / PDF / General Link Detection
         else if(content.includes('drive.google.com')) { type = 'drive'; icon = 'Cloud'; color = '#34A853'; }
         else if(content.includes('.pdf')) { type = 'pdf'; icon = 'File'; color = '#EA4335'; }
         else if(content.startsWith('http')) { type = 'link'; icon = 'ExternalLink'; color = '#3b82f6'; }
 
         const newRes = { id: Date.now(), type, icon, color, content, title, thumb, date: new Date().toISOString() };
-        
         SProjs(projs.map(p => p.id === curProjId ? { ...p, resources: [...p.resources, newRes] } : p));
-        SAddingRes(false);
-        SM(null); SResForm({ content: '' });
+        SAddingRes(false); SM(null); SResForm({ content: '' });
     };
 
     const deleteResource = (rId) => {
@@ -442,84 +437,81 @@ function App(){
     const openProject = (pId) => {
         SProjAnim('entering');
         SCurProjId(pId);
-        // Wait for render then animate
-        setTimeout(() => SProjAnim('idle'), 400); 
+        setTimeout(() => SProjAnim('idle'), 550); // Match bezier duration
     };
 
     const closeProject = () => {
         SProjAnim('exiting');
-        setTimeout(() => {
-            SCurProjId(null);
-            SProjAnim('idle');
-        }, 300);
+        setTimeout(() => { SCurProjId(null); SProjAnim('idle'); }, 450);
     };
 
     const currentProject = projs.find(p => p.id === curProjId);
 
-    // --- RENDER HELPERS ---
-    
-    // iOS App Library Style Folder
+    // --- FLAT ICON FOLDER RENDERER ---
     const renderFolder = (p) => {
-        // Get first 4 items for preview
-        const previewItems = p.resources.slice(0, 4);
-        
         return h('div', {
             key: p.id,
             onClick: () => openProject(p.id),
-            className: "group flex flex-col items-center gap-2 cursor-pointer active:scale-95 transition-transform duration-200"
+            className: "group flex flex-col items-center gap-3 cursor-pointer folder-container"
         },
-            // Folder Container
+            // Flat Folder Icon
             h('div', { 
-                className: "w-[72px] h-[72px] md:w-[90px] md:h-[90px] rounded-[22px] bg-white/10 backdrop-blur-md border border-white/5 folder-grid overflow-hidden p-1.5 shadow-lg group-hover:bg-white/15 transition-colors"
+                className: "w-[80px] h-[80px] md:w-[100px] md:h-[100px] flex items-center justify-center relative folder-flat-icon drop-shadow-lg",
             },
-                previewItems.map((r, i) => h('div', { key: i, className: "w-full h-full rounded-[6px] overflow-hidden flex items-center justify-center bg-black/30 relative" },
-                    r.type === 'video' && r.thumb 
-                    ? h('img', { src: r.thumb, className: "w-full h-full object-cover opacity-80" }) 
-                    : Icon(r.icon, 12, `text-[${r.color}]`)
-                )),
-                previewItems.length === 0 && h('div', { className: "col-span-2 row-span-2 flex items-center justify-center" }, Icon('Folder', 24, "text-white/20"))
+                // Background Glow
+                h('div', {className: "absolute inset-4 rounded-full blur-xl opacity-20", style:{backgroundColor: p.color}}),
+                // Main Icon
+                Icon('Folder', 90, "", {style:{color: p.color, filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.3))'}})
             ),
-            // Title
-            h('span', { className: "text-[11px] md:text-xs font-medium text-white/90 text-center truncate w-full px-1" }, p.title),
+            
+            // Title & Counter
+            h('div', {className: "flex flex-col items-center"},
+                h('span', { className: "text-xs md:text-sm font-semibold text-white/90 text-center truncate max-w-[90px] leading-tight" }, p.title),
+                h('span', { className: "text-[10px] text-white/40 font-mono mt-0.5" }, `${p.resources.length} items`)
+            ),
             
             // Delete (hover only)
             h('button', {
                 onClick: (e) => { e.stopPropagation(); deleteProject(p.id); },
-                className: "absolute top-0 right-0 bg-neutral-800 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-20 -mr-2 -mt-2 shadow-lg border border-white/10"
-            }, Icon('X', 10, "text-white"))
+                className: "absolute top-0 right-2 bg-neutral-800 rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-20 shadow-lg border border-white/10"
+            }, Icon('X', 12, "text-white"))
         );
     };
 
-    // Card Renderer for Resource View
+    // GIANT ICON RESOURCE CARD
     const renderResourceCard = (r) => {
         const isVideo = r.type === 'video';
         return h('div', {
             key: r.id,
             onClick: () => r.type !== 'note' && window.open(r.content, '_blank'),
-            className: "relative aspect-square md:aspect-[4/3] rounded-2xl overflow-hidden bg-neutral-900/60 border border-white/5 shadow-xl flex flex-col card-hover cursor-pointer group"
+            className: "relative aspect-square rounded-[24px] overflow-hidden bg-neutral-900 border border-white/5 flex flex-col card-hover cursor-pointer group shadow-2xl"
         },
-            // Visual Header
-            h('div', { className: `flex-1 w-full relative overflow-hidden ${isVideo ? 'bg-black' : 'bg-gradient-to-br from-white/5 to-transparent flex items-center justify-center'}` },
+            // Giant Visual Area
+            h('div', { className: `flex-1 w-full relative overflow-hidden flex items-center justify-center ${isVideo ? 'bg-black' : 'bg-gradient-to-b from-white/5 to-transparent'}` },
                 isVideo && r.thumb 
                 ? h(F, null, 
-                    h('img', { src: r.thumb, className: "w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" }),
-                    h('div', { className: "absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-transparent transition-colors" }, 
-                        h('div', { className: "w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center shadow-lg" }, Icon('Play', 16, "text-white fill-current"))
+                    h('img', { src: r.thumb, className: "w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500" }),
+                    h('div', { className: "absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-transparent transition-colors" }, 
+                        h('div', { className: "w-14 h-14 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center shadow-2xl ring-1 ring-white/30" }, Icon('Play', 24, "text-white fill-white ml-1"))
                     )
                 )
-                : Icon(r.icon, 48, `text-[${r.color}] drop-shadow-[0_10px_20px_${r.color}40]`)
+                // Giant Icons for Non-Video
+                : Icon(r.icon, 72, "", { style:{ color: r.color, filter: `drop-shadow(0 10px 30px ${r.color}30)` } })
             ),
             
-            // Info Footer
-            h('div', { className: "h-[50px] shrink-0 bg-white/5 backdrop-blur-md p-3 flex items-center justify-between" },
-                h('div', { className: "flex-1 min-w-0 pr-2" },
-                    h('p', { className: "text-[11px] font-bold text-white truncate leading-tight" }, r.title || r.content),
-                    h('span', { className: "text-[9px] text-neutral-500 uppercase tracking-wider" }, r.type)
+            // Minimal Info Footer
+            h('div', { className: "h-auto min-h-[56px] shrink-0 bg-white/5 backdrop-blur-xl p-4 flex items-center justify-between border-t border-white/5" },
+                h('div', { className: "flex-1 min-w-0 pr-3" },
+                    h('p', { className: "text-xs font-bold text-white truncate leading-tight mb-1" }, r.title || r.content),
+                    h('span', { className: "text-[9px] text-white/40 font-mono uppercase tracking-widest flex items-center gap-1" }, 
+                        h('div', {className:"w-1.5 h-1.5 rounded-full", style:{backgroundColor: r.color}}),
+                        r.type
+                    )
                 ),
                 h('button', {
                     onClick: (e) => { e.stopPropagation(); deleteResource(r.id); },
-                    className: "text-neutral-600 hover:text-red-500 transition-colors"
-                }, Icon('Trash2', 14))
+                    className: "w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-neutral-500 hover:text-red-500 transition-colors"
+                }, Icon('Trash2', 16))
             )
         );
     }
@@ -566,41 +558,41 @@ function App(){
                 // --- PROJECT MANAGER ---
                 h('div', { className: "flex-1 overflow-hidden relative" },
                     
-                    // FOLDER GRID VIEW (App Library Style)
+                    // FOLDER GRID VIEW (Flat Icons)
                     !curProjId && h('div', { 
-                        className: `absolute inset-0 overflow-y-auto p-4 content-start grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-x-4 gap-y-8 ${projAnim === 'exiting' ? 'zoom-exit' : 'zoom-enter'}` 
+                        className: `absolute inset-0 overflow-y-auto p-6 content-start grid grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-8 ${projAnim === 'exiting' ? 'zoom-exit' : 'zoom-enter'}` 
                     },
                         projs.map(p => renderFolder(p)),
                         projs.length === 0 && h('div', { className: "col-span-full flex flex-col items-center justify-center opacity-30 mt-20" },
-                            Icon('Folder', 64, "mb-4 stroke-[1]"),
-                            h('span', { className: "text-sm font-mono" }, "Sin proyectos activos")
+                            Icon('Folder', 80, "mb-6 stroke-[0.5]"),
+                            h('span', { className: "text-sm font-mono tracking-widest" }, "VACÍO")
                         )
                     ),
                     
-                    // PROJECT DETAIL VIEW (Gallery Style)
+                    // PROJECT DETAIL VIEW (Giant Cards)
                     curProjId && currentProject && h('div', { 
-                        className: `absolute inset-0 bg-black/60 backdrop-blur-2xl flex flex-col z-20 ${projAnim === 'entering' ? 'zoom-enter' : projAnim === 'exiting' ? 'zoom-exit' : ''}` 
+                        className: `absolute inset-0 bg-black/80 backdrop-blur-3xl flex flex-col z-20 ${projAnim === 'entering' ? 'zoom-enter' : projAnim === 'exiting' ? 'zoom-exit' : ''}` 
                     },
                         // Nav Header
                         h('div', { className: "flex items-center gap-4 p-4 border-b border-white/5 bg-white/5 backdrop-blur-xl shrink-0" },
-                            h('button', { onClick: closeProject, className: "p-2 rounded-full hover:bg-white/10 text-white active:scale-90 transition-all flex items-center gap-1" }, 
-                                Icon('ArrowLeft', 20), h('span',{className:"text-sm font-bold"},"Atrás")
+                            h('button', { onClick: closeProject, className: "p-2 rounded-full hover:bg-white/10 text-white active:scale-90 transition-all flex items-center gap-2 pr-4" }, 
+                                Icon('ArrowLeft', 22), h('span',{className:"text-sm font-bold"},"Regresar")
                             ),
                             h('div', {},
-                                h('h2', { className: "text-lg font-black text-white tracking-tight" }, currentProject.title),
-                                h('span', { className: "text-[10px] font-mono text-neutral-400" }, `${currentProject.resources.length} ITEMS`)
+                                h('h2', { className: "text-xl font-black text-white tracking-tight" }, currentProject.title),
+                                h('span', { className: "text-[10px] font-mono text-neutral-400" }, `${currentProject.resources.length} RECURSOS`)
                             )
                         ),
                         
                         // Resource Grid
-                        h('div', { className: "flex-1 overflow-y-auto p-6" },
-                            h('div', { className: "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4" },
+                        h('div', { className: "flex-1 overflow-y-auto p-6 md:p-8" },
+                            h('div', { className: "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" },
                                 currentProject.resources.map(r => renderResourceCard(r)),
                                 // Empty State within Project
-                                currentProject.resources.length === 0 && h('div', { className: "col-span-full flex flex-col items-center justify-center py-20 text-neutral-600" },
-                                    Icon('Plus', 48, "mb-4 opacity-20"),
-                                    h('p', { className: "text-sm" }, "Carpeta vacía"),
-                                    h('p', { className: "text-xs opacity-50" }, "Añade un link, video o nota")
+                                currentProject.resources.length === 0 && h('div', { className: "col-span-full flex flex-col items-center justify-center py-20 text-neutral-700" },
+                                    Icon('Plus', 64, "mb-4 opacity-10"),
+                                    h('p', { className: "text-base font-bold" }, "Carpeta vacía"),
+                                    h('p', { className: "text-xs opacity-50 font-mono mt-2" }, "Usa el botón 'Añadir' arriba")
                                 )
                             )
                         )
@@ -677,7 +669,11 @@ function App(){
                 h('div',{className:"p-4 bg-white/5 border-b border-white/5 flex justify-between"},h('span',{className:"font-black text-white tracking-widest"},"NUEVO PROYECTO"),h('button',{onClick:()=>SM(null)},Icon('X'))),
                 h('div',{className:"p-5 space-y-4"},
                     h('input',{autoFocus:true,placeholder:"Nombre...",className:"w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white font-bold outline-none focus:border-[var(--theme-color)] transition-all",value:form.title,onChange:e=>SF({...form,title:e.target.value})}),
-                    h('button',{onClick:addProject,className:"w-full py-3 rounded-xl bg-[var(--theme-color)] text-black font-black hover:scale-[1.02] transition-transform shadow-[0_0_20px_var(--theme-color)]"},"CREAR")
+                    h('div',{className:"flex items-center justify-between mt-2"},
+                        h('span',{className:"text-xs font-bold text-neutral-400 uppercase"}, "Color"),
+                        h('input',{type:'color',value:form.color||'#22c55e',onChange:e=>SF({...form,color:e.target.value}),className:"w-8 h-8 rounded-full border-none bg-transparent cursor-pointer"})
+                    ),
+                    h('button',{onClick:addProject,className:"w-full py-3 rounded-xl bg-[var(--theme-color)] text-black font-black hover:scale-[1.02] transition-transform shadow-[0_0_20px_var(--theme-color)] mt-2"},"CREAR")
                 )
             ),
 
@@ -793,16 +789,6 @@ function App(){
                         )
                     )
                 )
-            ),
-            
-            confirmDel && h('div',{className:"w-full max-w-sm bg-zinc-900 border border-red-900 rounded-xl overflow-hidden flex flex-col p-6 items-center text-center space-y-4"},
-                h('div',{className:"bg-red-500/10 p-4 rounded-full text-red-500 mb-2"}, Icon(deleting ? 'RefreshCw' : 'Trash2', 32, deleting ? 'animate-spin' : '')),
-                h('h3',{className:"text-lg font-black text-white"}, deleting ? "Eliminando..." : "¿Purgar Registro?"),
-                !deleting && h('div',{className:"flex gap-3 w-full mt-4"},
-                    h('button',{onClick:()=>SConfirm(null),className:"flex-1 py-3 rounded border border-neutral-700 text-neutral-300 font-bold hover:bg-white/5"},"CANCELAR"),
-                    h('button',{onClick:confirmDelete,className:"flex-1 py-3 rounded bg-red-600 text-white font-bold hover:bg-red-500"},"ELIMINAR")
-                ),
-                confirmDel.type === 'google' && !deleting && h('span',{className:"text-xs text-red-400 mt-2 flex items-center gap-1"}, Icon('CloudOff',10), "Se eliminará de Google Calendar")
             ),
             
             (modal === 'e' || modal === 'c') && !confirmDel && !sets && !bioShow && !guideShow && h('div',{className:"w-full max-w-md bg-zinc-900 border border-neutral-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col"},
