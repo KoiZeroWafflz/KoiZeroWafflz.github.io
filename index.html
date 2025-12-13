@@ -51,10 +51,9 @@ const TABS=[{id:'t1',l:'EVENTOS',i:'Calendar',c:'#3b82f6'},{id:'t2',l:'TAREAS',i
 const Q={q1:{t:'HACER YA',s:'Urgente+Imp',c:'#ef4444'},q2:{t:'PLANIFICAR',s:'NoUrg+Imp',c:'#3b82f6'},q3:{t:'DELEGAR',s:'Urg+NoImp',c:'#eab308'},q4:{t:'ELIMINAR',s:'NiUrg+NiImp',c:'#64748b'}};
 
 const locDate = (d) => {
-    try {
-        const z = d.getTimezoneOffset() * 60000;
-        return new Date(d.getTime() - z).toISOString().split('T')[0];
-    } catch(e) { return new Date().toISOString().split('T')[0]; } // Fail-safe
+    if(!d || isNaN(d)) return new Date().toISOString().split('T')[0];
+    const z = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - z).toISOString().split('T')[0];
 };
 
 function App(){
@@ -75,7 +74,15 @@ function App(){
     const [exitingIds, setExitingIds] = useState(new Set());
 
     const fM=useRef(new Set()),tC=useRef(null),gI=useRef(false),gsI=useRef(false),tS=useRef(null),tE=useRef(null),dY=useRef(0),dH0=useRef(0);
-    const curTab=tabs.find(t=>t.id===act)||tabs[0], thStyle={'--theme-color':curTab.c};
+    
+    // --- FIX CRITICO: Fallback para curTab ---
+    // Si tabs está vacío o corrupto, esto previene que la app explote al buscar .c (color)
+    const curTab = useMemo(() => {
+        const found = tabs.find(t=>t.id===act);
+        return found || tabs[0] || TABS[0];
+    }, [tabs, act]);
+
+    const thStyle={'--theme-color':curTab.c};
 
     const ls=(k,v)=>v?localStorage.setItem(k,JSON.stringify(v)):JSON.parse(localStorage.getItem(k));
     const reqNotif = async () => { if('Notification' in window) await Notification.requestPermission(); };
@@ -128,10 +135,23 @@ function App(){
     }, [evs]);
 
     useEffect(()=>{
-        const e=ls('ev_v9'),t=ls('tb_v9'),g=ls('gc_v9'),c=ls('cm_v9');
-        if(e)try{SE(e)}catch(x){}else SE([]); 
-        if(t)ST(t);if(g)SG(g);if(c)SC(c);
-        if(window.gapi)window.gapi.load('client',initGapi);
+        // --- SAFE LOADING ---
+        const e=ls('ev_v9');
+        const t=ls('tb_v9');
+        const g=ls('gc_v9');
+        const c=ls('cm_v9');
+        
+        // Validación estricta al cargar
+        if(Array.isArray(e)) SE(e); 
+        else SE([]);
+
+        if(Array.isArray(t) && t.length > 0) ST(t);
+        // Si t es null o array vacío, se mantiene el TABS por defecto (estado inicial)
+        
+        if(g) SG(g);
+        if(c) SC(c);
+
+        if(window.gapi) window.gapi.load('client', initGapi);
     },[]);
     
     useEffect(()=>{ls('ev_v9',evs);ls('tb_v9',tabs);ls('gc_v9',gCfg);ls('cm_v9',cals)},[evs,tabs,gCfg,cals]);
@@ -186,9 +206,8 @@ function App(){
                         alert("Error de autenticación");
                         return;
                     }
-                    // FIX CRÍTICO: Asignación explícita del token para GAPI
-                    if (window.gapi && window.gapi.client && r.access_token) {
-                        window.gapi.client.setToken({ access_token: r.access_token });
+                    if (window.gapi && window.gapi.client) {
+                        window.gapi.client.setToken(r);
                     }
                     SGS(true);
                     fM.current.clear();
@@ -213,11 +232,7 @@ function App(){
     };
     
     const fetchG=async(td=new Date())=>{
-        // Si no tenemos GAPI cargado, salimos sin error
-        if(!window.gapi || !window.gapi.client) return;
-        
-        // NOTA: No hacemos return si no hay token aún para no bloquear eventos locales
-        // Simplemente intentamos, y si falla, el catch lo maneja
+        if(!window.gapi || !window.gapi.client || !window.gapi.client.getToken()) return;
 
         SSy(true);
         try{
@@ -227,15 +242,13 @@ function App(){
             const minIso = new Date(y,m-1,1).toISOString();
             const maxIso = new Date(y,m+2,0,23,59,59).toISOString();
             
-            // 1. Obtener lista de calendarios de forma segura
             let rC = [];
             try {
                 const cl = await window.gapi.client.calendar.calendarList.list();
                 rC = cl.result.items || [];
             } catch (err) {
-                console.warn("No se pudieron obtener calendarios (quizás falta login):", err);
-                // Si falla esto, no podemos seguir con Google, pero no rompemos la app
-                return; 
+                console.warn("Error listando calendarios:", err);
+                rC = [];
             }
             
             const nextCals = {}; 
@@ -249,7 +262,6 @@ function App(){
             });
             SC(nextCals); 
 
-            // 2. Obtener eventos en paralelo
             const allPromises = rC.map(async c => {
                 if(nextCals[c.id] && !nextCals[c.id].visible) return [];
                 try {
@@ -284,16 +296,16 @@ function App(){
                             quad: q, 
                             gCol: c.backgroundColor 
                         }
-                    }).filter(Boolean); 
+                    }).filter(Boolean);
                 } catch(e) {
-                    return []; 
+                    console.warn(`Error en calendario ${c.summary}:`, e);
+                    return [];
                 }
             });
 
             const allResults = await Promise.all(allPromises);
             const flatEvents = allResults.flat();
             
-            // 3. Mezclar con eventos locales
             SE(prev => {
                 const localEvents = (Array.isArray(prev) ? prev : []).filter(e => e.type !== 'google');
                 const merged = new Map();
@@ -303,31 +315,27 @@ function App(){
             });
 
         } catch(e){
-            console.error("Error Sincronización:", e);
+            console.error("Error Crítico de Sincronización:", e);
         } finally {
             SSy(false);
         };
     };
 
-    // FIX GRID: Generación segura de días
-    const days = useMemo(() => {
+    const days=useMemo(()=>{
         try {
-            if (!date || isNaN(date.getTime())) {
-                SD(new Date()); // Auto-corrección si fecha corrupta
-                return []; 
-            }
-            const y=date.getFullYear(), m=date.getMonth();
-            const d=[], last=new Date(y,m+1,0).getDate();
+            const y=date.getFullYear(),m=date.getMonth();
+            const d=[];
+            const last=new Date(y,m+1,0).getDate();
             const pad=(new Date(y,m,1).getDay()||7)-1;
             
-            for(let i=0;i<pad;i++) d.push({d:'', dt:null}); 
-            for(let i=1;i<=last;i++) d.push({d:i, dt:locDate(new Date(y,m,i))});
+            for(let i=0;i<pad;i++)d.push({d:'',dt:null}); 
+            for(let i=1;i<=last;i++)d.push({d:i,dt:locDate(new Date(y,m,i))});
             return d;
         } catch(e) {
-            console.error("Error generando calendario:", e);
-            return [];
+            console.error("Error generating days:", e);
+            return []; // Fallback seguro
         }
-    }, [date]);
+    },[date]);
 
     const {lk,mx,upGrouped}=useMemo(()=>{
         const l={},m=[],u=[],now=locDate(new Date()); 
@@ -348,6 +356,7 @@ function App(){
         setTimeout(() => { SE(prev => prev.filter(e => e.id !== id)); setExitingIds(prev => { const n = new Set(prev); n.delete(id); return n; }); }, 500);
     };
     
+    // Función helper para dividir texto en bloques
     const getDescBlocks = (text) => {
         if(!text) return ["Sin descripción disponible."];
         return text.match(/[^.!?]+[.!?]+/g) || [text];
