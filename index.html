@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V11: Clean</title>
+<title>CMD V12: Infinite</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif'],mono:['JetBrains Mono','Courier New','monospace']},animation:{'pulse-fast':'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite','scan':'scan 2s linear infinite'}} }}</script>
@@ -19,24 +19,26 @@ body{background:#050505;touch-action:none;overscroll-behavior:none;user-select:n
 .safe-hover:hover { filter: brightness(1.2); }
 #modal-root { position: fixed; inset: 0; z-index: 9999; pointer-events: auto; }
 
-/* Animations */
-.anim-n { animation: slideN 0.3s ease-out; }
-.anim-p { animation: slideP 0.3s ease-out; }
-@keyframes slideN { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-@keyframes slideP { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+/* Smooth Month Animations */
+.anim-n { animation: slideNext 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.anim-p { animation: slidePrev 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes slideNext { 
+    from { transform: translateX(20%); opacity: 0; filter: blur(5px); } 
+    to { transform: translateX(0); opacity: 1; filter: blur(0); } 
+}
+@keyframes slidePrev { 
+    from { transform: translateX(-20%); opacity: 0; filter: blur(5px); } 
+    to { transform: translateX(0); opacity: 1; filter: blur(0); } 
+}
 
-/* Improved Exit Animation */
+/* Deletion Animation */
 .anim-exit { animation: scaleFadeOut 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; pointer-events: none; }
 @keyframes scaleFadeOut { 
     0% { opacity: 1; transform: scale(1); max-height: 100px; margin-bottom: 0.75rem; } 
     100% { opacity: 0; transform: scale(0.9); max-height: 0; margin-bottom: 0; padding: 0; border: none; } 
 }
 
-/* Smooth Drawer Transition */
 .tr-h { transition: height 0.5s cubic-bezier(0.32, 0.725, 0.25, 1); }
-
-/* Dragging visual feedback */
-.dragging { opacity: 0.5; transform: scale(1.05); box-shadow: 0 10px 20px rgba(0,0,0,0.5); z-index: 50; }
 </style>
 </head>
 <body><div id="root"></div>
@@ -63,17 +65,14 @@ const SPECIES_LIST = Object.keys(TAXONOMY_DB);
 const TABS=[{id:'t1',l:'EVENTOS',i:'Calendar',c:'#3b82f6'},{id:'t2',l:'TAREAS',i:'CheckSquare',c:'#ef4444'},{id:'t3',l:'NOTAS',i:'BookOpen',c:'#eab308'},{id:'t4',l:'PROY',i:'Folder',c:'#22c55e'}];
 const Q={q1:{t:'HACER YA',s:'Urgente+Imp',c:'#ef4444'},q2:{t:'PLANIFICAR',s:'NoUrg+Imp',c:'#3b82f6'},q3:{t:'DELEGAR',s:'Urg+NoImp',c:'#eab308'},q4:{t:'ELIMINAR',s:'NiUrg+NiImp',c:'#64748b'}};
 
-// --- UTILS ---
 const locDate = (d) => {
     if(!(d instanceof Date) || isNaN(d)) return new Date().toISOString().split('T')[0];
     const z = d.getTimezoneOffset() * 60000;
     return new Date(d.getTime() - z).toISOString().split('T')[0];
 };
-
 const Icon=(n,s=18,c)=>h(ICONS[n]||L.Circle,{size:s,className:c});
 const fmtD=(ds)=>{ const d=new Date(ds+'T12:00:00'); return d.toLocaleDateString('es',{weekday:'short',day:'numeric'}).toUpperCase(); }
 
-// --- ERROR BOUNDARY ---
 class ErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { hasError: false, error: null }; }
   static getDerivedStateFromError(error) { return { hasError: true, error }; }
@@ -90,7 +89,6 @@ class ErrorBoundary extends Component {
   }
 }
 
-// --- MAIN APP COMPONENT ---
 function App(){
     const [tabs,ST]=useState(TABS);
     const [act,SA]=useState('t1');
@@ -115,7 +113,7 @@ function App(){
     const [dragOverQ, SDQ] = useState(null); 
     const [confirmDel, SConfirm] = useState(null);
     const [exitingIds, setExitingIds] = useState(new Set());
-    const [deleting, setDeleting] = useState(false); // New deletion loading state
+    const [deleting, setDeleting] = useState(false);
 
     const [wikiData, setWikiData] = useState(null);
     const [loadingBio, setLoadingBio] = useState(false);
@@ -133,9 +131,8 @@ function App(){
     const curTab=tabs.find(t=>t.id===act)||tabs[0];
     const thStyle={'--theme-color':curTab.c};
 
-    // --- INIT ---
     useEffect(()=>{
-        const e=localStorage.getItem('ev_v11');
+        const e=localStorage.getItem('ev_v12');
         const t=localStorage.getItem('tb_v9');
         const g=localStorage.getItem('gc_v9');
         const c=localStorage.getItem('cm_v9');
@@ -153,10 +150,21 @@ function App(){
         }
     },[]);
     
-    useEffect(()=>{ localStorage.setItem('ev_v11',JSON.stringify(evs)) },[evs]);
+    useEffect(()=>{ localStorage.setItem('ev_v12',JSON.stringify(evs)) },[evs]);
     useEffect(()=>{ localStorage.setItem('tb_v9',JSON.stringify(tabs)) },[tabs]);
     useEffect(()=>{ localStorage.setItem('gc_v9',JSON.stringify(gCfg)) },[gCfg]);
     useEffect(()=>{ localStorage.setItem('cm_v9',JSON.stringify(cals)) },[cals]);
+
+    // --- LAZY LOADING TRIGGER ---
+    useEffect(() => {
+        if(gSign && gCfg.apiKey) {
+            const k = `${date.getFullYear()}-${date.getMonth()}`;
+            // If we haven't fetched this month yet, do it now.
+            if(!fM.current.has(k)) {
+                fetchG(date);
+            }
+        }
+    }, [date, gSign]);
 
     const initGapi = async () => {
         if(gCfg.apiKey && window.gapi && !gI.current){
@@ -172,11 +180,13 @@ function App(){
             try {
                 tC.current = window.google.accounts.oauth2.initTokenClient({
                     client_id: gCfg.clientId,
-                    scope: "https://www.googleapis.com/auth/calendar.events", // Added .events scope for write access
+                    scope: "https://www.googleapis.com/auth/calendar.events",
                     callback: (r) => {
                         if(r.error) { alert("Error Auth: " + r.error); return; }
                         if(window.gapi && window.gapi.client) window.gapi.client.setToken(r);
                         SGS(true);
+                        // Reset fetch history on new login to force refresh
+                        fM.current.clear();
                         fetchG(date); 
                     }
                 });
@@ -197,9 +207,16 @@ function App(){
         SSy(true);
         try {
             if(!window.gapi.client.calendar) await window.gapi.client.load('calendar','v3');
+            
+            // LAZY LOADING RANGE: Month -1 to Month +1
             const y = td.getFullYear(), m = td.getMonth();
             const minIso = new Date(y, m-1, 1).toISOString();
             const maxIso = new Date(y, m+2, 0, 23, 59, 59).toISOString();
+
+            // Mark this period as fetched
+            fM.current.add(`${y}-${m}`);
+            fM.current.add(`${y}-${m-1}`); // Mark prev
+            fM.current.add(`${y}-${m+1}`); // Mark next
 
             const calListReq = await window.gapi.client.calendar.calendarList.list();
             const calItems = calListReq.result.items || [];
@@ -212,7 +229,14 @@ function App(){
 
             const promises = calItems.map(c => {
                 if(nextCals[c.id] && !nextCals[c.id].visible) return Promise.resolve([]);
-                return window.gapi.client.calendar.events.list({ calendarId: c.id, timeMin: minIso, timeMax: maxIso, singleEvents: true, maxResults: 250, orderBy: 'startTime' })
+                return window.gapi.client.calendar.events.list({ 
+                    calendarId: c.id, 
+                    timeMin: minIso, 
+                    timeMax: maxIso, 
+                    singleEvents: true, // Expands recurring events automatically
+                    maxResults: 250, 
+                    orderBy: 'startTime' 
+                })
                   .then(res => ({ id: c.id, items: res.result.items || [], color: c.backgroundColor }))
                   .catch(err => ({ id: c.id, items: [], error: err }));
             });
@@ -230,18 +254,17 @@ function App(){
                         const dateStr = dRaw.includes('T') ? dRaw.split('T')[0] : dRaw;
                         const timeStr = start.dateTime ? start.dateTime.split('T')[1].substring(0,5) : '';
                         
-                        // --- SOLUCIÓN 1: MEJORA EN DETECCIÓN DE CLASES ---
-                        // Si tiene recurrencia (recurringEventId o recurrence), ES UNA CLASE/EVENTO FIJO.
                         let cat = 'task', q = 'q2';
                         const titleLower = (i.summary || '').toLowerCase();
                         
+                        // Class detection logic
                         if (i.recurringEventId || i.recurrence || titleLower.includes('clase') || titleLower.includes('aula') || titleLower.includes('reunión')) {
                             cat = 'class';
-                            q = null; // Quitar de cuadrantes de tareas
+                            q = null; 
                         }
 
                         newGoogleEvents.push({ 
-                            id: i.id, // ID real de Google
+                            id: i.id,
                             calId: res.value.id, 
                             title: i.summary || '(Sin título)', 
                             date: dateStr, 
@@ -257,8 +280,23 @@ function App(){
             });
 
             SE(prev => {
+                // Keep non-google events
                 const local = prev.filter(e => e.type !== 'google');
                 const mergedMap = new Map();
+                
+                // Keep existing Google events ONLY if they are OUTSIDE the current fetch range
+                // (To allow infinite scrolling without losing past/future data)
+                const minTime = new Date(minIso).getTime();
+                const maxTime = new Date(maxIso).getTime();
+                
+                prev.filter(e => e.type === 'google').forEach(e => {
+                    const eTime = new Date(e.date).getTime();
+                    // If event is outside the current fetch window, keep it.
+                    if (eTime < minTime || eTime > maxTime) {
+                        mergedMap.set(e.id, e);
+                    }
+                });
+
                 local.forEach(e => mergedMap.set(e.id, e));
                 newGoogleEvents.forEach(e => mergedMap.set(e.id, e));
                 return Array.from(mergedMap.values());
@@ -326,12 +364,10 @@ function App(){
         return text.match(/[^.!?]+[.!?]+/g) || [text];
     };
     
-    // --- DRAG LOGIC ---
     useEffect(() => {
         if (!dTask) return;
         const move = (e) => {
             const t = e.touches ? e.touches[0] : e;
-            // Prevent scrolling while dragging task
             e.preventDefault(); 
             SDT(p => ({ ...p, x: t.clientX, y: t.clientY }));
             const el = document.elementFromPoint(t.clientX, t.clientY);
@@ -344,7 +380,7 @@ function App(){
             const qD = el?.closest('[data-quad]');
             if (qD) {
                 const nQ = qD.getAttribute('data-quad');
-                if (nQ === 'q4') SConfirm({id: dTask.id, title: dTask.title, type: dTask.type, calId: dTask.calId}); // Pass type and calId
+                if (nQ === 'q4') SConfirm({id: dTask.id, title: dTask.title, type: dTask.type, calId: dTask.calId}); 
                 else if (nQ !== dTask.startQuad) SE(p => p.map(x => x.id === dTask.id ? { ...x, quad: nQ } : x));
             }
             SDT(null); SDQ(null);
@@ -354,39 +390,27 @@ function App(){
         return () => { window.removeEventListener('touchmove', move); window.removeEventListener('touchend', end); };
     }, [dTask]);
 
-    // --- SOLUCIÓN 2: ELIMINACIÓN BIDIRECCIONAL (API + LOCAL) ---
     const confirmDelete = async () => { 
         if(!confirmDel) return;
         const { id, type, calId } = confirmDel;
-        
-        setDeleting(true); // Loading state
-
-        // 1. Delete from Google if applicable
+        setDeleting(true); 
         if (type === 'google' && window.gapi && window.gapi.client) {
             try {
-                await window.gapi.client.calendar.events.delete({
-                    calendarId: calId,
-                    eventId: id
-                });
-                console.log("Deleted from Google");
+                await window.gapi.client.calendar.events.delete({ calendarId: calId, eventId: id });
             } catch (err) {
                 console.error("Error deleting from Google:", err);
                 alert("No se pudo eliminar de Google Calendar. Revisa permisos.");
                 setDeleting(false);
-                return; // Stop if sync fails
+                return;
             }
         }
-
-        // 2. Animate Local Deletion
         setDeleting(false);
         SConfirm(null); 
         setExitingIds(prev => new Set(prev).add(id));
-        
-        // 3. Remove from State after Animation
         setTimeout(() => { 
             SE(prev => prev.filter(e => e.id !== id)); 
             setExitingIds(prev => { const n = new Set(prev); n.delete(id); return n; }); 
-        }, 400); // Matches CSS animation duration
+        }, 400); 
     };
 
     return h('div',{className:"h-screen w-screen bg-[#050505] text-slate-200 font-sans overflow-hidden flex flex-col relative selection:bg-[var(--theme-color)] selection:text-black",style:thStyle},
@@ -416,9 +440,19 @@ function App(){
             
             act==='t2' 
             ? h('div',{className:"flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-2 grid-rows-2 gap-3 pb-20 md:pb-0 relative"}, 
-                // DRAGGING GHOST (Visual Feedback)
-                dTask && h('div',{className:"fixed pointer-events-none z-[999] bg-zinc-800 border border-white/20 p-3 rounded shadow-2xl flex gap-3 w-64 backdrop-blur-md", style:{left:dTask.x, top:dTask.y, transform:'translate(-50%, -50%) rotate(3deg)'}},
-                    Icon('GripHorizontal',14,'text-white'), h('span',{className:"text-xs font-bold text-white truncate"}, dTask.title)
+                // DRAG GHOST (Exact Replica)
+                dTask && h('div',{
+                    className:"fixed pointer-events-none z-[999] bg-black/90 border p-3 rounded hover:border-white/20 flex gap-3 w-64 backdrop-blur-md shadow-2xl", 
+                    style:{
+                        left:dTask.x, 
+                        top:dTask.y, 
+                        transform:'translate(-50%, -50%) rotate(3deg)',
+                        borderColor: Q[dTask.startQuad]?.c || 'white'
+                    }
+                },
+                    h('div',{className:"mt-0.5"},Icon('CheckCircle',14,`text-[${Q[dTask.startQuad]?.c}]`)),
+                    h('p',{className:"flex-1 text-xs font-bold text-slate-200 truncate"}, dTask.title),
+                    Icon('GripHorizontal',14, "text-neutral-600")
                 ),
                 Object.keys(Q).map(k=>{
                     const isOver=dragOverQ===k, isDel=k==='q4';
@@ -430,7 +464,6 @@ function App(){
                                 h('div',{className:"mt-0.5"},Icon('CheckCircle',14,`text-[${Q[k].c}]`)),
                                 h('p',{className:"flex-1 text-xs font-bold text-slate-200 truncate"},e.title),
                                 h('div',{className:"text-neutral-600 cursor-grab active:cursor-grabbing p-1 -m-1", onTouchStart:(ev)=>{
-                                    // ev.preventDefault(); // Sometimes helps on mobile but can block scroll. Handled in useEffect
                                     SDT({...e, x:ev.touches[0].clientX, y:ev.touches[0].clientY, startQuad:k, type: e.type, calId: e.calId})
                                 }}, Icon('GripHorizontal',14))
                             )
@@ -440,7 +473,8 @@ function App(){
             ) 
             : h('div',{onTouchStart:e=>{tE.current=null;tS.current=e.targetTouches[0].clientX},onTouchMove:e=>tE.current=e.targetTouches[0].clientX,onTouchEnd:()=>{if(!tS.current||!tE.current)return; const d=tS.current-tE.current; if(Math.abs(d)>50){SDir(d>0?'n':'p');SD(new Date(date.getFullYear(),date.getMonth()+(d>0?1:-1),1));}},className:"flex-1 bg-black/40 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden flex flex-col relative shadow-2xl"}, 
                 h('div',{className:"grid grid-cols-7 bg-white/5 border-b border-white/5"},['L','M','X','J','V','S','D'].map(d=>h('div',{key:d,className:"py-3 text-center text-[10px] font-black tracking-widest text-neutral-500"},d))),
-                h('div',{key:date.toISOString(),className:`grid grid-cols-7 flex-1 auto-rows-fr ${dir==='n'?'anim-n':'anim-p'}`, style:{willChange:'transform'}}, days.map((d,i)=>{ 
+                // KEY CHANGED TO FORCE RE-RENDER FOR ANIMATION
+                h('div',{key:date.toISOString(),className:`grid grid-cols-7 flex-1 auto-rows-fr ${dir==='n'?'anim-n':'anim-p'}`, style:{willChange:'transform, opacity'}}, days.map((d,i)=>{ 
                     const isToday = d.dt === locDate(new Date()); 
                     return h('div',{key:d.dt||i,onClick:()=>{if(d.dt){SF({title:'',date:d.dt,time:'09:00',type:'gen',notes:'',cat:'task',quad:'q2',notify:0});SM('c')}},className:`relative border-r border-b border-white/5 p-1 transition-colors hover:bg-white/5 cursor-pointer outline-none ${isToday?'bg-[var(--theme-color)]/5':''}`},
                         d.d&&h('span',{className:`text-xs font-bold flex items-center justify-center w-6 h-6 rounded ${isToday?'bg-[var(--theme-color)] text-black shadow-[0_0_10px_var(--theme-color)]':'text-neutral-500'}`},d.d),
@@ -458,7 +492,14 @@ function App(){
                 h('div',{key:dStr,className:"flex flex-col gap-2 min-w-[220px]"},
                     h('div',{className:"sticky top-0 z-10"},h('span',{className:"text-[9px] font-black tracking-widest text-[var(--theme-color)] bg-black/80 px-2 py-1 rounded border border-[var(--theme-color)]/30"},fmtD(dStr))),
                     evs.map(e=>h('div',{key:e.id,onClick:()=>{SF({...e});SSI(e.id);SM('e')},className:"w-full bg-neutral-900/80 border border-white/10 border-l-4 p-3 rounded hover:bg-neutral-800 cursor-pointer",style:{borderLeftColor:e.gCol||'white'}},
-                        h('div',{className:"flex justify-between items-start mb-1"},h('span',{className:"text-xs font-bold text-white truncate"},e.title),h('span',{className:"text-[9px] text-neutral-500 font-mono"},e.time))
+                        h('div',{className:"flex justify-between items-start mb-1"},
+                            h('div',{className:"flex flex-col overflow-hidden"},
+                                // CALENDAR NAME LABEL
+                                h('span',{className:"text-[8px] font-bold uppercase tracking-wider opacity-60 truncate mb-0.5", style:{color: e.gCol}}, cals[e.calId]?.summary || 'BioZen'),
+                                h('span',{className:"text-xs font-bold text-white truncate"},e.title)
+                            ),
+                            h('span',{className:"text-[9px] text-neutral-500 font-mono whitespace-nowrap ml-2"},e.time)
+                        )
                     ))
                 )
             ):h('div',{className:"w-full text-center text-neutral-600 text-xs italic mt-10"},"Sin eventos próximos"))
