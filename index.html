@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V12: Infinite</title>
+<title>CMD V13: Creative</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif'],mono:['JetBrains Mono','Courier New','monospace']},animation:{'pulse-fast':'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite','scan':'scan 2s linear infinite'}} }}</script>
@@ -31,11 +31,12 @@ body{background:#050505;touch-action:none;overscroll-behavior:none;user-select:n
     to { transform: translateX(0); opacity: 1; filter: blur(0); } 
 }
 
-/* Deletion Animation */
-.anim-exit { animation: scaleFadeOut 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; pointer-events: none; }
-@keyframes scaleFadeOut { 
-    0% { opacity: 1; transform: scale(1); max-height: 100px; margin-bottom: 0.75rem; } 
-    100% { opacity: 0; transform: scale(0.9); max-height: 0; margin-bottom: 0; padding: 0; border: none; } 
+/* CREATIVE DELETE ANIMATION: QUANTUM VORTEX */
+.anim-exit { animation: quantumVortex 0.6s cubic-bezier(0.6, -0.28, 0.735, 0.045) forwards; pointer-events: none; z-index: 50; }
+@keyframes quantumVortex { 
+    0% { transform: scale(1) rotate(0deg); opacity: 1; filter: hue-rotate(0deg) blur(0px); }
+    40% { transform: scale(1.1) rotate(-5deg); opacity: 1; filter: hue-rotate(90deg) brightness(1.5); } 
+    100% { transform: scale(0) rotate(720deg); opacity: 0; filter: hue-rotate(180deg) blur(20px); margin: 0; padding: 0; height: 0; border-width: 0; } 
 }
 
 .tr-h { transition: height 0.5s cubic-bezier(0.32, 0.725, 0.25, 1); }
@@ -48,9 +49,8 @@ import{createRoot}from'https://esm.sh/react-dom@18.2.0/client';
 import*as L from'https://esm.sh/lucide-react@0.292.0';
 
 const h=React.createElement, F=React.Fragment;
-const ICONS={Calendar:L.Calendar,CheckSquare:L.CheckSquare,BookOpen:L.BookOpen,Folder:L.Folder,Settings:L.Settings,Dna:L.Dna,Activity:L.Activity,Zap:L.Zap,GraduationCap:L.GraduationCap,Dumbbell:L.Dumbbell,X:L.X,RefreshCw:L.RefreshCw,Trash2:L.Trash2,GripHorizontal:L.GripHorizontal,CheckCircle:L.CheckCircle,Eye:L.Eye,EyeOff:L.EyeOff,Bell:L.Bell,Search:L.Search,Wifi:L.Wifi,WifiOff:L.WifiOff,Globe:L.Globe,Database:L.Database,Key:L.Key, AlertTriangle:L.AlertTriangle, CloudOff:L.CloudOff};
+const ICONS={Calendar:L.Calendar,CheckSquare:L.CheckSquare,BookOpen:L.BookOpen,Folder:L.Folder,Settings:L.Settings,Dna:L.Dna,Activity:L.Activity,Zap:L.Zap,GraduationCap:L.GraduationCap,Dumbbell:L.Dumbbell,X:L.X,RefreshCw:L.RefreshCw,Trash2:L.Trash2,GripHorizontal:L.GripHorizontal,CheckCircle:L.CheckCircle,Eye:L.Eye,EyeOff:L.EyeOff,Bell:L.Bell,Search:L.Search,Wifi:L.Wifi,WifiOff:L.WifiOff,Globe:L.Globe,Database:L.Database,Key:L.Key, AlertTriangle:L.AlertTriangle, CloudOff:L.CloudOff, Info:L.Info, CloudLightning:L.CloudLightning, Loader2:L.Loader2};
 
-// --- DATA & CONFIG ---
 const TAXONOMY_DB = {
     "Corvus corax": { k: "Animalia", p: "Chordata", c: "Aves", o: "Passeriformes", f: "Corvidae", g: "Corvus" },
     "Ambystoma mexicanum": { k: "Animalia", p: "Chordata", c: "Amphibia", o: "Caudata", f: "Ambystomatidae", g: "Ambystoma" },
@@ -63,7 +63,12 @@ const TAXONOMY_DB = {
 };
 const SPECIES_LIST = Object.keys(TAXONOMY_DB);
 const TABS=[{id:'t1',l:'EVENTOS',i:'Calendar',c:'#3b82f6'},{id:'t2',l:'TAREAS',i:'CheckSquare',c:'#ef4444'},{id:'t3',l:'NOTAS',i:'BookOpen',c:'#eab308'},{id:'t4',l:'PROY',i:'Folder',c:'#22c55e'}];
-const Q={q1:{t:'HACER YA',s:'Urgente+Imp',c:'#ef4444'},q2:{t:'PLANIFICAR',s:'NoUrg+Imp',c:'#3b82f6'},q3:{t:'DELEGAR',s:'Urg+NoImp',c:'#eab308'},q4:{t:'ELIMINAR',s:'NiUrg+NiImp',c:'#64748b'}};
+const Q={
+    q1:{t:'HACER YA',s:'Urgente+Imp',c:'#ef4444', d:'Tareas críticas que requieren atención inmediata.'},
+    q2:{t:'PLANIFICAR',s:'NoUrg+Imp',c:'#3b82f6', d:'Metas a largo plazo. Aquí es donde debes pasar más tiempo.'},
+    q3:{t:'DELEGAR',s:'Urg+NoImp',c:'#eab308', d:'Interrupciones o tareas menores que puede hacer otro.'},
+    q4:{t:'ELIMINAR',s:'NiUrg+NiImp',c:'#64748b', d:'Distracciones. Elimínalas para ganar tiempo.'}
+};
 
 const locDate = (d) => {
     if(!(d instanceof Date) || isNaN(d)) return new Date().toISOString().split('T')[0];
@@ -101,6 +106,7 @@ function App(){
     const [form,SF]=useState({title:'',date:'',time:'',type:'gen',notes:'',cat:'task',quad:'q2',notify:0});
     const [sets,SS]=useState(false);
     const [bioShow,SBS]=useState(false);
+    const [infoShow, SIS]=useState(false); // Eisenhower Info Modal
     
     const [sync,SSy]=useState(false);
     const [gCfg,SG]=useState({apiKey:'',clientId:''});
@@ -114,6 +120,7 @@ function App(){
     const [confirmDel, SConfirm] = useState(null);
     const [exitingIds, setExitingIds] = useState(new Set());
     const [deleting, setDeleting] = useState(false);
+    const [saving, setSaving] = useState(false); // Creating/Saving state
 
     const [wikiData, setWikiData] = useState(null);
     const [loadingBio, setLoadingBio] = useState(false);
@@ -132,7 +139,7 @@ function App(){
     const thStyle={'--theme-color':curTab.c};
 
     useEffect(()=>{
-        const e=localStorage.getItem('ev_v12');
+        const e=localStorage.getItem('ev_v13');
         const t=localStorage.getItem('tb_v9');
         const g=localStorage.getItem('gc_v9');
         const c=localStorage.getItem('cm_v9');
@@ -150,19 +157,15 @@ function App(){
         }
     },[]);
     
-    useEffect(()=>{ localStorage.setItem('ev_v12',JSON.stringify(evs)) },[evs]);
+    useEffect(()=>{ localStorage.setItem('ev_v13',JSON.stringify(evs)) },[evs]);
     useEffect(()=>{ localStorage.setItem('tb_v9',JSON.stringify(tabs)) },[tabs]);
     useEffect(()=>{ localStorage.setItem('gc_v9',JSON.stringify(gCfg)) },[gCfg]);
     useEffect(()=>{ localStorage.setItem('cm_v9',JSON.stringify(cals)) },[cals]);
 
-    // --- LAZY LOADING TRIGGER ---
     useEffect(() => {
         if(gSign && gCfg.apiKey) {
             const k = `${date.getFullYear()}-${date.getMonth()}`;
-            // If we haven't fetched this month yet, do it now.
-            if(!fM.current.has(k)) {
-                fetchG(date);
-            }
+            if(!fM.current.has(k)) { fetchG(date); }
         }
     }, [date, gSign]);
 
@@ -185,7 +188,6 @@ function App(){
                         if(r.error) { alert("Error Auth: " + r.error); return; }
                         if(window.gapi && window.gapi.client) window.gapi.client.setToken(r);
                         SGS(true);
-                        // Reset fetch history on new login to force refresh
                         fM.current.clear();
                         fetchG(date); 
                     }
@@ -202,21 +204,20 @@ function App(){
         if(tC.current) tC.current.requestAccessToken({prompt: 'select_account'});
     };
 
+    // --- FETCH EVENTS ---
     const fetchG = async (td = new Date()) => {
         if(!gSign || !window.gapi || !window.gapi.client) return;
         SSy(true);
         try {
             if(!window.gapi.client.calendar) await window.gapi.client.load('calendar','v3');
             
-            // LAZY LOADING RANGE: Month -1 to Month +1
             const y = td.getFullYear(), m = td.getMonth();
             const minIso = new Date(y, m-1, 1).toISOString();
             const maxIso = new Date(y, m+2, 0, 23, 59, 59).toISOString();
 
-            // Mark this period as fetched
             fM.current.add(`${y}-${m}`);
-            fM.current.add(`${y}-${m-1}`); // Mark prev
-            fM.current.add(`${y}-${m+1}`); // Mark next
+            fM.current.add(`${y}-${m-1}`); 
+            fM.current.add(`${y}-${m+1}`); 
 
             const calListReq = await window.gapi.client.calendar.calendarList.list();
             const calItems = calListReq.result.items || [];
@@ -229,14 +230,7 @@ function App(){
 
             const promises = calItems.map(c => {
                 if(nextCals[c.id] && !nextCals[c.id].visible) return Promise.resolve([]);
-                return window.gapi.client.calendar.events.list({ 
-                    calendarId: c.id, 
-                    timeMin: minIso, 
-                    timeMax: maxIso, 
-                    singleEvents: true, // Expands recurring events automatically
-                    maxResults: 250, 
-                    orderBy: 'startTime' 
-                })
+                return window.gapi.client.calendar.events.list({ calendarId: c.id, timeMin: minIso, timeMax: maxIso, singleEvents: true, maxResults: 250, orderBy: 'startTime' })
                   .then(res => ({ id: c.id, items: res.result.items || [], color: c.backgroundColor }))
                   .catch(err => ({ id: c.id, items: [], error: err }));
             });
@@ -256,8 +250,6 @@ function App(){
                         
                         let cat = 'task', q = 'q2';
                         const titleLower = (i.summary || '').toLowerCase();
-                        
-                        // Class detection logic
                         if (i.recurringEventId || i.recurrence || titleLower.includes('clase') || titleLower.includes('aula') || titleLower.includes('reunión')) {
                             cat = 'class';
                             q = null; 
@@ -280,29 +272,86 @@ function App(){
             });
 
             SE(prev => {
-                // Keep non-google events
                 const local = prev.filter(e => e.type !== 'google');
                 const mergedMap = new Map();
-                
-                // Keep existing Google events ONLY if they are OUTSIDE the current fetch range
-                // (To allow infinite scrolling without losing past/future data)
                 const minTime = new Date(minIso).getTime();
                 const maxTime = new Date(maxIso).getTime();
-                
                 prev.filter(e => e.type === 'google').forEach(e => {
                     const eTime = new Date(e.date).getTime();
-                    // If event is outside the current fetch window, keep it.
-                    if (eTime < minTime || eTime > maxTime) {
-                        mergedMap.set(e.id, e);
-                    }
+                    if (eTime < minTime || eTime > maxTime) mergedMap.set(e.id, e);
                 });
-
                 local.forEach(e => mergedMap.set(e.id, e));
                 newGoogleEvents.forEach(e => mergedMap.set(e.id, e));
                 return Array.from(mergedMap.values());
             });
 
         } catch(e) { console.error("Sync Error", e); } finally { SSy(false); }
+    };
+
+    // --- CREATE / SAVE LOGIC (WITH SYNC) ---
+    const handleSave = async () => {
+        setSaving(true);
+        const isNew = modal === 'c';
+        const currentId = isNew ? Date.now() : selId;
+        
+        let newEvent = { ...form, id: currentId };
+        
+        // 1. Google Sync Logic
+        if (gSign && window.gapi && window.gapi.client) {
+            try {
+                const resource = {
+                    summary: form.title,
+                    description: form.notes,
+                    start: {},
+                    end: {}
+                };
+
+                if (form.time) {
+                    const startDateTime = new Date(`${form.date}T${form.time}:00`);
+                    const endDateTime = new Date(startDateTime.getTime() + 60 * 60 * 1000); // 1 hour default
+                    resource.start.dateTime = startDateTime.toISOString();
+                    resource.end.dateTime = endDateTime.toISOString();
+                } else {
+                    resource.start.date = form.date; // All day
+                    resource.end.date = form.date;
+                }
+
+                // If Editing existing Google event
+                if (!isNew && form.type === 'google' && form.calId) {
+                     await window.gapi.client.calendar.events.update({
+                        calendarId: form.calId,
+                        eventId: form.id,
+                        resource: resource
+                    });
+                } 
+                // If Creating new event and sync is active (Defaults to 'primary')
+                else if (isNew) {
+                    const res = await window.gapi.client.calendar.events.insert({
+                        calendarId: 'primary',
+                        resource: resource
+                    });
+                    // Update ID and details from Google response
+                    if (res.result) {
+                        newEvent.id = res.result.id;
+                        newEvent.type = 'google';
+                        newEvent.calId = 'primary'; // Or result calendar id
+                        newEvent.gCol = '#4285F4'; // Default blueish
+                    }
+                }
+            } catch (err) {
+                console.error("Google Sync Failed", err);
+                alert("Guardado localmente. Error sincronizando con Google.");
+            }
+        }
+
+        // 2. Local State Update
+        SE(prev => {
+            if (isNew) return [...prev, newEvent];
+            return prev.map(e => e.id === selId ? newEvent : e);
+        });
+        
+        setSaving(false);
+        SM(null);
     };
 
     const days = useMemo(() => {
@@ -395,14 +444,8 @@ function App(){
         const { id, type, calId } = confirmDel;
         setDeleting(true); 
         if (type === 'google' && window.gapi && window.gapi.client) {
-            try {
-                await window.gapi.client.calendar.events.delete({ calendarId: calId, eventId: id });
-            } catch (err) {
-                console.error("Error deleting from Google:", err);
-                alert("No se pudo eliminar de Google Calendar. Revisa permisos.");
-                setDeleting(false);
-                return;
-            }
+            try { await window.gapi.client.calendar.events.delete({ calendarId: calId, eventId: id }); } 
+            catch (err) { alert("No se pudo eliminar de Google Calendar."); setDeleting(false); return; }
         }
         setDeleting(false);
         SConfirm(null); 
@@ -410,7 +453,7 @@ function App(){
         setTimeout(() => { 
             SE(prev => prev.filter(e => e.id !== id)); 
             setExitingIds(prev => { const n = new Set(prev); n.delete(id); return n; }); 
-        }, 400); 
+        }, 600); 
     };
 
     return h('div',{className:"h-screen w-screen bg-[#050505] text-slate-200 font-sans overflow-hidden flex flex-col relative selection:bg-[var(--theme-color)] selection:text-black",style:thStyle},
@@ -429,7 +472,8 @@ function App(){
             h('div',{className:"py-4 flex justify-between shrink-0"},
                 h('div',{className:"flex items-baseline gap-2"},
                     h('h1',{className:"text-4xl md:text-5xl font-black text-white tracking-tighter leading-none drop-shadow-lg"}, act==='t2'?"MATRIZ":date.toLocaleString('es-ES',{month:'long'}).toUpperCase()),
-                    act==='t1'&&h('span',{className:"text-neutral-600 font-bold text-2xl"},date.getFullYear())
+                    act==='t1' && h('span',{className:"text-neutral-600 font-bold text-2xl"},date.getFullYear()),
+                    act==='t2' && h('button', {onClick:()=>SIS(true), className: "ml-2 p-1 text-neutral-500 hover:text-white transition-colors"}, Icon('Info', 20)) // INFO BUTTON
                 ),
                 h('div',{className:"flex gap-3"},
                     act==='t1'&&h('button',{onClick:()=>SD(new Date()),className:"hidden md:block px-4 py-1 text-xs font-bold text-neutral-400 border border-neutral-800 rounded bg-neutral-900 safe-hover"},"HOY"),
@@ -440,15 +484,9 @@ function App(){
             
             act==='t2' 
             ? h('div',{className:"flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-2 grid-rows-2 gap-3 pb-20 md:pb-0 relative"}, 
-                // DRAG GHOST (Exact Replica)
                 dTask && h('div',{
                     className:"fixed pointer-events-none z-[999] bg-black/90 border p-3 rounded hover:border-white/20 flex gap-3 w-64 backdrop-blur-md shadow-2xl", 
-                    style:{
-                        left:dTask.x, 
-                        top:dTask.y, 
-                        transform:'translate(-50%, -50%) rotate(3deg)',
-                        borderColor: Q[dTask.startQuad]?.c || 'white'
-                    }
+                    style:{left:dTask.x, top:dTask.y, transform:'translate(-50%, -50%) rotate(3deg)', borderColor: Q[dTask.startQuad]?.c || 'white'}
                 },
                     h('div',{className:"mt-0.5"},Icon('CheckCircle',14,`text-[${Q[dTask.startQuad]?.c}]`)),
                     h('p',{className:"flex-1 text-xs font-bold text-slate-200 truncate"}, dTask.title),
@@ -473,7 +511,6 @@ function App(){
             ) 
             : h('div',{onTouchStart:e=>{tE.current=null;tS.current=e.targetTouches[0].clientX},onTouchMove:e=>tE.current=e.targetTouches[0].clientX,onTouchEnd:()=>{if(!tS.current||!tE.current)return; const d=tS.current-tE.current; if(Math.abs(d)>50){SDir(d>0?'n':'p');SD(new Date(date.getFullYear(),date.getMonth()+(d>0?1:-1),1));}},className:"flex-1 bg-black/40 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden flex flex-col relative shadow-2xl"}, 
                 h('div',{className:"grid grid-cols-7 bg-white/5 border-b border-white/5"},['L','M','X','J','V','S','D'].map(d=>h('div',{key:d,className:"py-3 text-center text-[10px] font-black tracking-widest text-neutral-500"},d))),
-                // KEY CHANGED TO FORCE RE-RENDER FOR ANIMATION
                 h('div',{key:date.toISOString(),className:`grid grid-cols-7 flex-1 auto-rows-fr ${dir==='n'?'anim-n':'anim-p'}`, style:{willChange:'transform, opacity'}}, days.map((d,i)=>{ 
                     const isToday = d.dt === locDate(new Date()); 
                     return h('div',{key:d.dt||i,onClick:()=>{if(d.dt){SF({title:'',date:d.dt,time:'09:00',type:'gen',notes:'',cat:'task',quad:'q2',notify:0});SM('c')}},className:`relative border-r border-b border-white/5 p-1 transition-colors hover:bg-white/5 cursor-pointer outline-none ${isToday?'bg-[var(--theme-color)]/5':''}`},
@@ -494,7 +531,6 @@ function App(){
                     evs.map(e=>h('div',{key:e.id,onClick:()=>{SF({...e});SSI(e.id);SM('e')},className:"w-full bg-neutral-900/80 border border-white/10 border-l-4 p-3 rounded hover:bg-neutral-800 cursor-pointer",style:{borderLeftColor:e.gCol||'white'}},
                         h('div',{className:"flex justify-between items-start mb-1"},
                             h('div',{className:"flex flex-col overflow-hidden"},
-                                // CALENDAR NAME LABEL
                                 h('span',{className:"text-[8px] font-bold uppercase tracking-wider opacity-60 truncate mb-0.5", style:{color: e.gCol}}, cals[e.calId]?.summary || 'BioZen'),
                                 h('span',{className:"text-xs font-bold text-white truncate"},e.title)
                             ),
@@ -509,8 +545,23 @@ function App(){
             Icon('Dna',24,`group-active:animate-spin text-[${curTab.c}] drop-shadow-[0_0_8px_${curTab.c}]`)
         ),
 
-        (modal || confirmDel || sets || bioShow) && h('div',{id:'modal-root',className:"bg-black/90 backdrop-blur-md flex items-center justify-center p-4"},
+        (modal || confirmDel || sets || bioShow || infoShow) && h('div',{id:'modal-root',className:"bg-black/90 backdrop-blur-md flex items-center justify-center p-4"},
             
+            // EISENHOWER INFO MODAL
+            infoShow && h('div',{className:"w-full max-w-lg bg-zinc-900 border border-neutral-700 rounded-2xl overflow-hidden shadow-2xl flex flex-col p-6 animate-[scaleIn_0.3s_ease-out]"},
+                h('div',{className:"flex justify-between items-center mb-4"}, h('h3',{className:"text-xl font-black text-white"}, "LA MATRIZ EISENHOWER"), h('button',{onClick:()=>SIS(false)}, Icon('X'))),
+                h('div',{className:"space-y-3"},
+                    Object.values(Q).map(q => 
+                        h('div',{key:q.t, className:"p-3 rounded border border-white/5 bg-black/40"},
+                            h('h4',{className:"text-sm font-bold mb-1", style:{color:q.c}}, q.t),
+                            h('span',{className:"text-[10px] text-neutral-400 font-mono bg-white/5 px-2 py-0.5 rounded mb-2 inline-block"}, q.s),
+                            h('p',{className:"text-xs text-neutral-300"}, q.d)
+                        )
+                    )
+                ),
+                h('p',{className:"mt-4 text-[10px] text-neutral-500 text-center"}, "Arrastra las tareas entre los cuadrantes para reorganizar tu flujo de trabajo.")
+            ),
+
             sets && h('div',{className:"w-full max-w-2xl max-h-[85vh] bg-zinc-900 border border-neutral-700 rounded-2xl overflow-hidden shadow-2xl flex flex-col relative"},
                 h('div',{className:"p-4 border-b border-neutral-700 flex justify-between bg-zinc-950"}, h('h3',{className:"font-bold text-white"},"CONFIGURACIÓN"), h('button',{onClick:()=>SS(false)},Icon('X',20,"text-white"))),
                 h('div',{className:"p-6 space-y-8 overflow-y-auto bg-zinc-900"},
@@ -596,7 +647,7 @@ function App(){
             
             confirmDel && h('div',{className:"w-full max-w-sm bg-zinc-900 border border-red-900 rounded-xl overflow-hidden flex flex-col p-6 items-center text-center space-y-4"},
                 h('div',{className:"bg-red-500/10 p-4 rounded-full text-red-500 mb-2"}, Icon(deleting ? 'RefreshCw' : 'Trash2', 32, deleting ? 'animate-spin' : '')),
-                h('h3',{className:"text-lg font-black text-white"}, deleting ? "Eliminando..." : "¿Purgar Registro?"),
+                h('h3',{className:"text-lg font-black text-white"}, deleting ? "Colapsando Materia..." : "¿Purgar Registro?"),
                 !deleting && h('div',{className:"flex gap-3 w-full mt-4"},
                     h('button',{onClick:()=>SConfirm(null),className:"flex-1 py-3 rounded border border-neutral-700 text-neutral-300 font-bold hover:bg-white/5"},"CANCELAR"),
                     h('button',{onClick:confirmDelete,className:"flex-1 py-3 rounded bg-red-600 text-white font-bold hover:bg-red-500"},"ELIMINAR")
@@ -604,14 +655,16 @@ function App(){
                 confirmDel.type === 'google' && !deleting && h('span',{className:"text-xs text-red-400 mt-2 flex items-center gap-1"}, Icon('CloudOff',10), "Se eliminará de Google Calendar")
             ),
             
-            modal && !confirmDel && !sets && !bioShow && h('div',{className:"w-full max-w-md bg-zinc-900 border border-neutral-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col"},
+            modal && !confirmDel && !sets && !bioShow && !infoShow && h('div',{className:"w-full max-w-md bg-zinc-900 border border-neutral-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col"},
                 h('div',{className:"p-4 bg-black/50 border-b border-neutral-800 flex justify-between"},h('span',{className:"font-black text-white tracking-widest"},modal==='e'?'EDITAR':'NUEVO'),h('button',{onClick:()=>SM(null)},Icon('X'))),
                 h('div',{className:"p-5 space-y-4"},
                     h('input',{autoFocus:true,placeholder:"Título...",className:"w-full bg-black/50 border border-neutral-700 rounded p-3 text-white font-bold outline-none focus:border-[var(--theme-color)]",value:form.title,onChange:e=>SF({...form,title:e.target.value})}),
                     h('div',{className:"grid grid-cols-2 gap-3"},h('input',{type:'date',className:"bg-black/50 border border-neutral-700 rounded p-2 text-white",value:form.date,onChange:e=>SF({...form,date:e.target.value})}),h('input',{type:'time',className:"bg-black/50 border border-neutral-700 rounded p-2 text-white",value:form.time,onChange:e=>SF({...form,time:e.target.value})})),
                     h('div',{className:"flex gap-2"},[{id:'task',l:'TAREA'},{id:'class',l:'CLASE'},{id:'fitness',l:'FIT'}].map(c=>h('button',{key:c.id,onClick:()=>SF({...form,cat:c.id}),className:`flex-1 py-2 rounded text-[10px] font-black tracking-widest ${form.cat===c.id?'bg-[var(--theme-color)] text-black':'bg-neutral-800 text-neutral-400'}`},c.l))),
                     h('textarea',{rows:3,className:"w-full bg-black/50 border border-neutral-700 rounded p-3 text-sm text-neutral-300 outline-none focus:border-[var(--theme-color)]",placeholder:"Notas...",value:form.notes,onChange:e=>SF({...form,notes:e.target.value})}),
-                    h('button',{onClick:()=>{const pl={...form,id:modal==='c'?Date.now():selId};SE(modal==='c'?[...evs,pl]:evs.map(e=>e.id===selId?pl:e));SM(null)},className:"w-full py-3 rounded bg-[var(--theme-color)] text-black font-black hover:brightness-110"},"CONFIRMAR")
+                    h('button',{onClick:handleSave, disabled: saving, className:`w-full py-3 rounded text-black font-black hover:brightness-110 flex justify-center items-center gap-2 ${saving ? 'bg-neutral-700 cursor-not-allowed' : 'bg-[var(--theme-color)]'}`}, 
+                        saving ? h(F, null, Icon('Loader2', 18, 'animate-spin'), "SINCRONIZANDO...") : (gSign ? h(F, null, Icon('CloudLightning', 16), "GUARDAR EN NUBE") : "GUARDAR LOCAL")
+                    )
                 )
             )
         )
