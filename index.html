@@ -28,12 +28,33 @@ body{background:#050505;touch-action:none;overscroll-behavior:none;user-select:n
 </head>
 <body><div id="root"></div>
 <script type="module">
-import React,{useState,useEffect,useRef,useMemo}from'https://esm.sh/react@18.2.0';
+import React,{useState,useEffect,useRef,useMemo,Component}from'https://esm.sh/react@18.2.0';
 import{createRoot}from'https://esm.sh/react-dom@18.2.0/client';
 import*as L from'https://esm.sh/lucide-react@0.292.0';
 
 const h=React.createElement, F=React.Fragment;
-const ICONS={Calendar:L.Calendar,CheckSquare:L.CheckSquare,BookOpen:L.BookOpen,Folder:L.Folder,Settings:L.Settings,Dna:L.Dna,Activity:L.Activity,Zap:L.Zap,GraduationCap:L.GraduationCap,Dumbbell:L.Dumbbell,X:L.X,RefreshCw:L.RefreshCw,Trash2:L.Trash2,GripHorizontal:L.GripHorizontal,CheckCircle:L.CheckCircle,Eye:L.Eye,EyeOff:L.EyeOff,Bell:L.Bell,Search:L.Search,Wifi:L.Wifi,WifiOff:L.WifiOff,Globe:L.Globe,Database:L.Database,Key:L.Key};
+const ICONS={Calendar:L.Calendar,CheckSquare:L.CheckSquare,BookOpen:L.BookOpen,Folder:L.Folder,Settings:L.Settings,Dna:L.Dna,Activity:L.Activity,Zap:L.Zap,GraduationCap:L.GraduationCap,Dumbbell:L.Dumbbell,X:L.X,RefreshCw:L.RefreshCw,Trash2:L.Trash2,GripHorizontal:L.GripHorizontal,CheckCircle:L.CheckCircle,Eye:L.Eye,EyeOff:L.EyeOff,Bell:L.Bell,Search:L.Search,Wifi:L.Wifi,WifiOff:L.WifiOff,Globe:L.Globe,Database:L.Database,Key:L.Key,AlertTriangle:L.AlertTriangle};
+
+// --- ERROR BOUNDARY PARA EVITAR PANTALLA NEGRA ---
+class ErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+  static getDerivedStateFromError(error) { return { hasError: true, error }; }
+  componentDidCatch(error, errorInfo) { console.error("CRASH:", error, errorInfo); }
+  render() {
+    if (this.state.hasError) {
+      return h('div', {className: "h-screen w-screen flex flex-col items-center justify-center bg-black text-red-500 p-8 text-center"},
+        Icon('AlertTriangle', 48, "mb-4"),
+        h('h1', {className: "text-2xl font-bold mb-2"}, "Error Crítico de Renderizado"),
+        h('p', {className: "text-sm text-neutral-400 mb-6 max-w-md"}, "La aplicación encontró datos corruptos y se detuvo para proteger tu sesión. " + this.state.error?.message),
+        h('button', {
+            onClick: () => { localStorage.removeItem('ev_v9'); window.location.reload(); },
+            className: "px-6 py-3 bg-red-600 text-white font-bold rounded hover:bg-red-700"
+        }, "RESTABLECER DATOS DE EMERGENCIA")
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const TAXONOMY_DB = {
     "Corvus corax": { k: "Animalia", p: "Chordata", c: "Aves", o: "Passeriformes", f: "Corvidae", g: "Corvus" },
@@ -51,10 +72,14 @@ const TABS=[{id:'t1',l:'EVENTOS',i:'Calendar',c:'#3b82f6'},{id:'t2',l:'TAREAS',i
 const Q={q1:{t:'HACER YA',s:'Urgente+Imp',c:'#ef4444'},q2:{t:'PLANIFICAR',s:'NoUrg+Imp',c:'#3b82f6'},q3:{t:'DELEGAR',s:'Urg+NoImp',c:'#eab308'},q4:{t:'ELIMINAR',s:'NiUrg+NiImp',c:'#64748b'}};
 
 const locDate = (d) => {
-    if(!d || isNaN(d)) return new Date().toISOString().split('T')[0];
-    const z = d.getTimezoneOffset() * 60000;
-    return new Date(d.getTime() - z).toISOString().split('T')[0];
+    try {
+        const z = d.getTimezoneOffset() * 60000;
+        return new Date(d.getTime() - z).toISOString().split('T')[0];
+    } catch(e) { return new Date().toISOString().split('T')[0]; }
 };
+
+const Icon=(n,s=18,c)=>h(ICONS[n]||L.Circle,{size:s,className:c});
+const fmtD=(ds)=>{ try{const d=new Date(ds+'T12:00:00'); return d.toLocaleDateString('es',{weekday:'short',day:'numeric'}).toUpperCase();}catch(e){return ds} }
 
 function App(){
     const [tabs,ST]=useState(TABS),[act,SA]=useState('t1'),[date,SD]=useState(new Date()),[evs,SE]=useState([]);
@@ -74,15 +99,7 @@ function App(){
     const [exitingIds, setExitingIds] = useState(new Set());
 
     const fM=useRef(new Set()),tC=useRef(null),gI=useRef(false),gsI=useRef(false),tS=useRef(null),tE=useRef(null),dY=useRef(0),dH0=useRef(0);
-    
-    // --- FIX CRITICO: Fallback para curTab ---
-    // Si tabs está vacío o corrupto, esto previene que la app explote al buscar .c (color)
-    const curTab = useMemo(() => {
-        const found = tabs.find(t=>t.id===act);
-        return found || tabs[0] || TABS[0];
-    }, [tabs, act]);
-
-    const thStyle={'--theme-color':curTab.c};
+    const curTab=tabs.find(t=>t.id===act)||tabs[0], thStyle={'--theme-color':curTab.c};
 
     const ls=(k,v)=>v?localStorage.setItem(k,JSON.stringify(v)):JSON.parse(localStorage.getItem(k));
     const reqNotif = async () => { if('Notification' in window) await Notification.requestPermission(); };
@@ -124,7 +141,7 @@ function App(){
             if('Notification' in window && Notification.permission === 'granted'){
                 const now = new Date();
                 evs.forEach(e => {
-                    if(!e.notify || !e.date || !e.time || e.notified) return;
+                    if(!e || !e.notify || !e.date || !e.time || e.notified) return;
                     const evD = new Date(`${e.date}T${e.time}`);
                     const diff = (evD - now) / 60000; 
                     if (diff <= e.notify && diff > (e.notify - 1.5)) new Notification(`Recordatorio: ${e.title}`, { body: `${e.time}` });
@@ -135,23 +152,18 @@ function App(){
     }, [evs]);
 
     useEffect(()=>{
-        // --- SAFE LOADING ---
-        const e=ls('ev_v9');
-        const t=ls('tb_v9');
-        const g=ls('gc_v9');
-        const c=ls('cm_v9');
+        // CARGA SEGURA DE LOCALSTORAGE
+        const e=ls('ev_v9'),t=ls('tb_v9'),g=ls('gc_v9'),c=ls('cm_v9');
+        if(e && Array.isArray(e)) {
+            // Filtrar eventos corruptos (nulls o sin ID)
+            SE(e.filter(item => item && typeof item === 'object' && item.id)); 
+        } else SE([]); 
         
-        // Validación estricta al cargar
-        if(Array.isArray(e)) SE(e); 
-        else SE([]);
-
-        if(Array.isArray(t) && t.length > 0) ST(t);
-        // Si t es null o array vacío, se mantiene el TABS por defecto (estado inicial)
-        
+        if(t && Array.isArray(t)) ST(t);
         if(g) SG(g);
         if(c) SC(c);
-
-        if(window.gapi) window.gapi.load('client', initGapi);
+        
+        if(window.gapi) window.gapi.load('client',initGapi);
     },[]);
     
     useEffect(()=>{ls('ev_v9',evs);ls('tb_v9',tabs);ls('gc_v9',gCfg);ls('cm_v9',cals)},[evs,tabs,gCfg,cals]);
@@ -201,14 +213,8 @@ function App(){
                 client_id:gCfg.clientId,
                 scope:"https://www.googleapis.com/auth/calendar.readonly",
                 callback:async(r)=>{
-                    if(r.error) {
-                        console.error("Login Error:", r);
-                        alert("Error de autenticación");
-                        return;
-                    }
-                    if (window.gapi && window.gapi.client) {
-                        window.gapi.client.setToken(r);
-                    }
+                    if(r.error) { console.error("Login Error:", r); return; }
+                    if (window.gapi && window.gapi.client) window.gapi.client.setToken(r);
                     SGS(true);
                     fM.current.clear();
                     await fetchG(date);
@@ -223,12 +229,9 @@ function App(){
         try {
             if(!gI.current) await initGapi();
             if(!gsI.current) initGis();
-            if(tC.current) {
-                setTimeout(()=>tC.current.requestAccessToken({prompt:'select_account'}), 100);
-            } else {
-                alert("Error: Librerías de Google no cargadas. Recarga la página.");
-            }
-        } catch(e) { console.error(e); alert("Error inicializando Google API"); }
+            if(tC.current) setTimeout(()=>tC.current.requestAccessToken({prompt:'select_account'}), 100);
+            else alert("Error: Librerías no cargadas.");
+        } catch(e) { console.error(e); alert("Error init Google API"); }
     };
     
     const fetchG=async(td=new Date())=>{
@@ -246,32 +249,24 @@ function App(){
             try {
                 const cl = await window.gapi.client.calendar.calendarList.list();
                 rC = cl.result.items || [];
-            } catch (err) {
-                console.warn("Error listando calendarios:", err);
-                rC = [];
-            }
+            } catch (err) { console.warn("List Cal Error", err); }
             
             const nextCals = {}; 
             rC.forEach(c => { 
-                nextCals[c.id] = { 
+                if(c && c.id) nextCals[c.id] = { 
                     id: c.id, 
-                    summary: c.summary, 
-                    color: c.backgroundColor, 
+                    summary: String(c.summary || 'Sin Nombre'), 
+                    color: c.backgroundColor || '#888', 
                     visible: cals[c.id] ? cals[c.id].visible : true 
                 }; 
             });
             SC(nextCals); 
 
             const allPromises = rC.map(async c => {
-                if(nextCals[c.id] && !nextCals[c.id].visible) return [];
+                if(!c || (nextCals[c.id] && !nextCals[c.id].visible)) return [];
                 try {
                     const r = await window.gapi.client.calendar.events.list({
-                        calendarId: c.id, 
-                        timeMin: minIso, 
-                        timeMax: maxIso, 
-                        singleEvents: true, 
-                        maxResults: 999, 
-                        orderBy: 'startTime'
+                        calendarId: c.id, timeMin: minIso, timeMax: maxIso, singleEvents: true, maxResults: 999, orderBy: 'startTime'
                     });
                     const items = r.result.items || [];
                     
@@ -280,61 +275,48 @@ function App(){
                         let dRaw = start.dateTime || start.date;
                         if(typeof dRaw !== 'string') return null;
 
-                        const t = (i.summary || '').toLowerCase();
+                        const t = String(i.summary || '(Sin Título)');
                         let cat='task', q='q2'; 
-                        if(t.includes('clase')||t.includes('aula')){ cat='class'; q=null; }
+                        if(t.toLowerCase().includes('clase')||t.toLowerCase().includes('aula')){ cat='class'; q=null; }
                         
                         return { 
-                            id: i.id || Math.random().toString(), 
+                            id: i.id || Math.random().toString(),
                             calId: c.id, 
-                            title: i.summary || '(Sin Título)', 
+                            title: t, 
                             date: dRaw.includes('T') ? dRaw.split('T')[0] : dRaw, 
                             time: start.dateTime?.split('T')[1]?.substring(0,5) || '', 
                             type: 'google', 
-                            notes: i.description || '', 
-                            cat, 
-                            quad: q, 
+                            notes: String(i.description || ''), 
+                            cat, quad: q, 
                             gCol: c.backgroundColor 
                         }
                     }).filter(Boolean);
-                } catch(e) {
-                    console.warn(`Error en calendario ${c.summary}:`, e);
-                    return [];
-                }
+                } catch(e) { return []; }
             });
 
             const allResults = await Promise.all(allPromises);
             const flatEvents = allResults.flat();
             
             SE(prev => {
-                const localEvents = (Array.isArray(prev) ? prev : []).filter(e => e.type !== 'google');
+                // Fusión segura: asegurar que prev es array y filtrar basura
+                const safePrev = Array.isArray(prev) ? prev : [];
+                const localEvents = safePrev.filter(e => e && e.type !== 'google');
                 const merged = new Map();
-                localEvents.forEach(e => merged.set(e.id, e));
-                flatEvents.forEach(e => merged.set(e.id, e));
+                localEvents.forEach(e => { if(e.id) merged.set(e.id, e); });
+                flatEvents.forEach(e => { if(e.id) merged.set(e.id, e); });
                 return Array.from(merged.values());
             });
 
-        } catch(e){
-            console.error("Error Crítico de Sincronización:", e);
-        } finally {
-            SSy(false);
-        };
+        } catch(e){ console.error("Sync Fatal", e); } finally { SSy(false); };
     };
 
     const days=useMemo(()=>{
         try {
-            const y=date.getFullYear(),m=date.getMonth();
-            const d=[];
-            const last=new Date(y,m+1,0).getDate();
-            const pad=(new Date(y,m,1).getDay()||7)-1;
-            
+            const y=date.getFullYear(),m=date.getMonth(),d=[],last=new Date(y,m+1,0).getDate(),pad=(new Date(y,m,1).getDay()||7)-1;
             for(let i=0;i<pad;i++)d.push({d:'',dt:null}); 
             for(let i=1;i<=last;i++)d.push({d:i,dt:locDate(new Date(y,m,i))});
             return d;
-        } catch(e) {
-            console.error("Error generating days:", e);
-            return []; // Fallback seguro
-        }
+        } catch(e) { return []; }
     },[date]);
 
     const {lk,mx,upGrouped}=useMemo(()=>{
@@ -342,28 +324,29 @@ function App(){
         const safeEvs = Array.isArray(evs) ? evs : [];
         
         safeEvs.forEach(e=>{
-            if(e.type==='google'&&cals[e.calId]&&!cals[e.calId].visible)return;
-            if(e.date){if(!l[e.date])l[e.date]=[];l[e.date].push(e)}
+            if(!e || !e.id) return; // SKIP INVALID
+            if(e.type==='google'){
+                // Verificación segura de cals
+                if(cals && cals[e.calId] && !cals[e.calId].visible) return;
+            }
+            if(e.date){ if(!l[e.date])l[e.date]=[]; l[e.date].push(e); }
             if(e.cat!=='class' && e.cat!=='fitness') m.push(e);
             if(e.date>=now)u.push(e);
         });
         const gr={}; u.slice(0,60).forEach(e=>{ if(!gr[e.date])gr[e.date]=[]; gr[e.date].push(e); });
-        return {lk:l,mx:m,upGrouped:Object.entries(gr).sort((a,b)=>a[0].localeCompare(b[0]))};
+        return {lk:l,mx:m,upGrouped:Object.entries(gr).sort((a,b)=>String(a[0]).localeCompare(String(b[0])))};
     },[evs,cals]);
 
     const confirmDelete = () => { 
+        if(!confirmDel) return;
         const id = confirmDel.id; SConfirm(null); setExitingIds(prev => new Set(prev).add(id));
         setTimeout(() => { SE(prev => prev.filter(e => e.id !== id)); setExitingIds(prev => { const n = new Set(prev); n.delete(id); return n; }); }, 500);
     };
     
-    // Función helper para dividir texto en bloques
     const getDescBlocks = (text) => {
         if(!text) return ["Sin descripción disponible."];
         return text.match(/[^.!?]+[.!?]+/g) || [text];
     };
-
-    const Icon=(n,s=18,c)=>h(ICONS[n]||L.Circle,{size:s,className:c});
-    const fmtD=(ds)=>{ const d=new Date(ds+'T12:00:00'); return d.toLocaleDateString('es',{weekday:'short',day:'numeric'}).toUpperCase(); }
 
     return h('div',{className:"h-screen w-screen bg-[#050505] text-slate-200 font-sans overflow-hidden flex flex-col relative selection:bg-[var(--theme-color)] selection:text-black",style:thStyle},
         h('div',{className:"absolute inset-0 pointer-events-none"},
@@ -414,7 +397,7 @@ function App(){
                     return h('div',{key:d.dt||i,onClick:()=>{if(d.dt){SF({title:'',date:d.dt,time:'09:00',type:'gen',notes:'',cat:'task',quad:'q2',notify:0});SM('c')}},className:`relative border-r border-b border-white/5 p-1 transition-colors hover:bg-white/5 cursor-pointer outline-none ${isT?'bg-[var(--theme-color)]/5':''}`},
                         d.d&&h('span',{className:`text-xs font-bold flex items-center justify-center w-6 h-6 rounded ${isT?'bg-[var(--theme-color)] text-black shadow-[0_0_10px_var(--theme-color)]':'text-neutral-500'}`},d.d),
                         h('div',{className:"mt-1 flex flex-col gap-1"}, (lk[d.dt]||[]).map(e=>
-                            h('div',{key:e.id,onClick:ev=>{ev.stopPropagation();SF({...e});SSI(e.id);SM('e')},className:"text-[9px] font-bold truncate px-1.5 py-0.5 rounded-r border-l-2 bg-white/5 text-slate-300 hover:text-white hover:bg-white/10 transition-colors"},{style:{borderLeftColor:e.gCol||curTab.c}}, e.time+' '+e.title)
+                            h('div',{key:e.id,onClick:ev=>{ev.stopPropagation();SF({...e});SSI(e.id);SM('e')},className:"text-[9px] font-bold truncate px-1.5 py-0.5 rounded-r border-l-2 bg-white/5 text-slate-300 hover:text-white hover:bg-white/10 transition-colors"},{style:{borderLeftColor:e.gCol||curTab.c}}, (e.time||'')+' '+(e.title||''))
                         ))
                     )
                 }))
@@ -559,7 +542,8 @@ function App(){
         )
     );
 }
-const root=createRoot(document.getElementById('root'));root.render(h(App));
+const root=createRoot(document.getElementById('root'));
+root.render(h(ErrorBoundary, null, h(App)));
 </script>
 <script>if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js'));</script>
 </body>
