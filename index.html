@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V10: BioZen Ultimate</title>
+<title>CMD V10: Ultimate</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif'],mono:['JetBrains Mono','Courier New','monospace']},animation:{'pulse-fast':'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite','scan':'scan 2s linear infinite'}} }}</script>
@@ -60,7 +60,7 @@ const locDate = (d) => {
 const Icon=(n,s=18,c)=>h(ICONS[n]||L.Circle,{size:s,className:c});
 const fmtD=(ds)=>{ const d=new Date(ds+'T12:00:00'); return d.toLocaleDateString('es',{weekday:'short',day:'numeric'}).toUpperCase(); }
 
-// --- ERROR BOUNDARY (CRITICAL FIX) ---
+// --- ERROR BOUNDARY ---
 class ErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { hasError: false, error: null }; }
   static getDerivedStateFromError(error) { return { hasError: true, error }; }
@@ -69,10 +69,10 @@ class ErrorBoundary extends Component {
     if (this.state.hasError) {
       return h('div', {className: "h-screen w-screen flex flex-col items-center justify-center bg-black text-white p-4 text-center"},
         Icon('AlertTriangle', 48, "text-red-500 mb-4"),
-        h('h1', {className: "text-2xl font-bold mb-2"}, "Error Crítico de Renderizado"),
-        h('p', {className: "text-sm text-gray-400 mb-4"}, "La aplicación ha encontrado un problema inesperado."),
+        h('h1', {className: "text-2xl font-bold mb-2"}, "Error de Interfaz"),
+        h('p', {className: "text-sm text-gray-400 mb-4"}, "La aplicación ha encontrado un problema de renderizado."),
         h('pre', {className: "bg-red-900/20 p-4 rounded text-xs text-red-300 overflow-auto max-w-full mb-4"}, this.state.error?.toString()),
-        h('button', {onClick: () => { localStorage.clear(); window.location.reload(); }, className: "bg-red-600 px-6 py-2 rounded font-bold hover:bg-red-700"}, "Resetear Aplicación (Borrar Datos)")
+        h('button', {onClick: () => { localStorage.clear(); window.location.reload(); }, className: "bg-red-600 px-6 py-2 rounded font-bold hover:bg-red-700"}, "Reiniciar App (Borrar Datos)")
       );
     }
     return this.props.children;
@@ -81,26 +81,22 @@ class ErrorBoundary extends Component {
 
 // --- MAIN APP COMPONENT ---
 function App(){
-    // STATE
     const [tabs,ST]=useState(TABS);
     const [act,SA]=useState('t1');
     const [date,SD]=useState(new Date());
-    const [evs,SE]=useState([]); // Main events storage
-    const [cals,SC]=useState({}); // Google calendars config
+    const [evs,SE]=useState([]); 
+    const [cals,SC]=useState({}); 
     
-    // UI STATE
     const [modal,SM]=useState(null);
     const [selId,SSI]=useState(null);
     const [form,SF]=useState({title:'',date:'',time:'',type:'gen',notes:'',cat:'task',quad:'q2',notify:0});
     const [sets,SS]=useState(false);
     const [bioShow,SBS]=useState(false);
     
-    // GOOGLE API STATE
     const [sync,SSy]=useState(false);
     const [gCfg,SG]=useState({apiKey:'',clientId:''});
     const [gSign,SGS]=useState(false);
 
-    // DRAWER / INTERACTION STATE
     const [dH,SH]=useState(40);
     const [drag,SDr]=useState(false);
     const [dir,SDir]=useState('n');
@@ -109,16 +105,14 @@ function App(){
     const [confirmDel, SConfirm] = useState(null);
     const [exitingIds, setExitingIds] = useState(new Set());
 
-    // WIKI DATA
     const [wikiData, setWikiData] = useState(null);
     const [loadingBio, setLoadingBio] = useState(false);
     const [bioError, setBioError] = useState(false);
 
-    // REFS
     const fM=useRef(new Set());
     const tC=useRef(null);
-    const gI=useRef(false); // GAPI Init Ref
-    const gsI=useRef(false); // GIS Init Ref
+    const gI=useRef(false); 
+    const gsI=useRef(false); 
     const tS=useRef(null);
     const tE=useRef(null);
     const dY=useRef(0);
@@ -127,19 +121,15 @@ function App(){
     const curTab=tabs.find(t=>t.id===act)||tabs[0];
     const thStyle={'--theme-color':curTab.c};
 
-    // --- INITIALIZATION ---
     useEffect(()=>{
         const e=localStorage.getItem('ev_v9');
         const t=localStorage.getItem('tb_v9');
         const g=localStorage.getItem('gc_v9');
         const c=localStorage.getItem('cm_v9');
-        
         if(e) try{ SE(JSON.parse(e) || []) }catch(x){ SE([]) } 
         if(t) try{ ST(JSON.parse(t)) }catch(x){ ST(TABS) }
         if(g) try{ SG(JSON.parse(g)) }catch(x){ SG({apiKey:'',clientId:''}) }
         if(c) try{ SC(JSON.parse(c)) }catch(x){ SC({}) }
-
-        // Load GAPI script dynamically if not present
         if(!window.gapi) {
             const script = document.createElement('script');
             script.src = "https://apis.google.com/js/api.js";
@@ -150,13 +140,11 @@ function App(){
         }
     },[]);
     
-    // PERSISTENCE
     useEffect(()=>{ localStorage.setItem('ev_v9',JSON.stringify(evs)) },[evs]);
     useEffect(()=>{ localStorage.setItem('tb_v9',JSON.stringify(tabs)) },[tabs]);
     useEffect(()=>{ localStorage.setItem('gc_v9',JSON.stringify(gCfg)) },[gCfg]);
     useEffect(()=>{ localStorage.setItem('cm_v9',JSON.stringify(cals)) },[cals]);
 
-    // NOTIFICATIONS
     useEffect(()=>{
         const tick = setInterval(() => {
             if('Notification' in window && Notification.permission === 'granted'){
@@ -166,10 +154,7 @@ function App(){
                     try {
                         const evD = new Date(`${e.date}T${e.time}`);
                         const diff = (evD - now) / 60000; 
-                        if (diff <= e.notify && diff > (e.notify - 1.5)) {
-                            new Notification(`Recordatorio: ${e.title}`, { body: `${e.time}` });
-                            // Optional: mark notified in state to prevent double
-                        }
+                        if (diff <= e.notify && diff > (e.notify - 1.5)) new Notification(`Recordatorio: ${e.title}`, { body: `${e.time}` });
                     } catch(err){}
                 });
             }
@@ -177,7 +162,6 @@ function App(){
         return () => clearInterval(tick);
     }, [evs]);
 
-    // --- GOOGLE API LOGIC (REBUILT) ---
     const initGapi = async () => {
         if(gCfg.apiKey && window.gapi && !gI.current){
             try {
@@ -203,7 +187,7 @@ function App(){
                         }
                         if(window.gapi && window.gapi.client) window.gapi.client.setToken(r);
                         SGS(true);
-                        fetchG(date); // Initial Fetch
+                        fetchG(date); 
                     }
                 });
                 gsI.current = true;
@@ -215,7 +199,6 @@ function App(){
         if(!gCfg.apiKey || !gCfg.clientId) return alert("Configura API Key y Client ID primero.");
         if(!gI.current) await initGapi();
         if(!gsI.current) initGis();
-        
         if(tC.current) {
             tC.current.requestAccessToken({prompt: 'select_account'});
         } else {
@@ -225,58 +208,38 @@ function App(){
 
     const fetchG = async (td = new Date()) => {
         if(!gSign || !window.gapi || !window.gapi.client) return;
-        
         SSy(true);
         try {
             if(!window.gapi.client.calendar) await window.gapi.client.load('calendar','v3');
-            
             const y = td.getFullYear(), m = td.getMonth();
             const minIso = new Date(y, m-1, 1).toISOString();
             const maxIso = new Date(y, m+2, 0, 23, 59, 59).toISOString();
 
-            // 1. Get Calendars
             const calListReq = await window.gapi.client.calendar.calendarList.list();
             const calItems = calListReq.result.items || [];
             
-            // Update Cals Config (Preserving visibility)
             const nextCals = {};
             calItems.forEach(c => {
-                nextCals[c.id] = {
-                    id: c.id,
-                    summary: c.summary,
-                    color: c.backgroundColor,
-                    visible: cals[c.id]?.visible ?? true // Default true
-                };
+                nextCals[c.id] = { id: c.id, summary: c.summary, color: c.backgroundColor, visible: cals[c.id]?.visible ?? true };
             });
             SC(nextCals);
 
-            // 2. Fetch Events (Promise.allSettled for robustness)
             const promises = calItems.map(c => {
                 if(nextCals[c.id] && !nextCals[c.id].visible) return Promise.resolve([]);
-                return window.gapi.client.calendar.events.list({
-                    calendarId: c.id,
-                    timeMin: minIso,
-                    timeMax: maxIso,
-                    singleEvents: true,
-                    maxResults: 250, // Limit to prevent payload bloat
-                    orderBy: 'startTime'
-                }).then(res => ({ id: c.id, items: res.result.items || [], color: c.backgroundColor }))
+                return window.gapi.client.calendar.events.list({ calendarId: c.id, timeMin: minIso, timeMax: maxIso, singleEvents: true, maxResults: 250, orderBy: 'startTime' })
+                  .then(res => ({ id: c.id, items: res.result.items || [], color: c.backgroundColor }))
                   .catch(err => ({ id: c.id, items: [], error: err }));
             });
 
             const results = await Promise.allSettled(promises);
-            
             const newGoogleEvents = [];
-            
             results.forEach(res => {
                 if(res.status === 'fulfilled' && Array.isArray(res.value.items)) {
                     res.value.items.forEach(i => {
                         if(!i || i.status === 'cancelled') return;
-                        
-                        // SANITIZATION
                         const start = i.start || {};
                         const dRaw = start.dateTime || start.date;
-                        if(!dRaw) return; // Skip invalid dates
+                        if(!dRaw) return; 
                         
                         const dateStr = dRaw.includes('T') ? dRaw.split('T')[0] : dRaw;
                         const timeStr = start.dateTime ? start.dateTime.split('T')[1].substring(0,5) : '';
@@ -285,23 +248,11 @@ function App(){
                         const titleLower = (i.summary || '').toLowerCase();
                         if(titleLower.includes('clase') || titleLower.includes('aula')) { cat = 'class'; q = null; }
 
-                        newGoogleEvents.push({
-                            id: i.id || `g-${Math.random()}`,
-                            calId: res.value.id,
-                            title: i.summary || '(Sin título)',
-                            date: dateStr,
-                            time: timeStr,
-                            type: 'google',
-                            notes: i.description || '',
-                            cat,
-                            quad: q,
-                            gCol: res.value.color
-                        });
+                        newGoogleEvents.push({ id: i.id || `g-${Math.random()}`, calId: res.value.id, title: i.summary || '(Sin título)', date: dateStr, time: timeStr, type: 'google', notes: i.description || '', cat, quad: q, gCol: res.value.color });
                     });
                 }
             });
 
-            // 3. Merge safely
             SE(prev => {
                 const local = prev.filter(e => e.type !== 'google');
                 const mergedMap = new Map();
@@ -317,15 +268,13 @@ function App(){
         }
     };
 
-    // --- COMPUTED DATA ---
     const days = useMemo(() => {
         if(!date || isNaN(date.getTime())) return [];
         const y=date.getFullYear(),m=date.getMonth();
         const d=[];
         const last=new Date(y,m+1,0).getDate();
         const firstDay = new Date(y,m,1).getDay();
-        const pad = (firstDay === 0 ? 7 : firstDay) - 1; // Mon=1..Sun=7 adj
-        
+        const pad = (firstDay === 0 ? 7 : firstDay) - 1; 
         for(let i=0;i<pad;i++) d.push({d:'', dt:null});
         for(let i=1;i<=last;i++) d.push({d:i, dt:locDate(new Date(y,m,i))});
         return d;
@@ -333,12 +282,9 @@ function App(){
 
     const {lk, mx, upGrouped} = useMemo(() => {
         const l={}, m=[], u=[], now=locDate(new Date());
-        
         (evs || []).forEach(e => {
             if(!e) return;
-            // Filter by visibility map directly
             if(e.type === 'google' && cals[e.calId] && cals[e.calId].visible === false) return;
-            
             if(e.date) {
                 if(!l[e.date]) l[e.date] = [];
                 l[e.date].push(e);
@@ -346,25 +292,18 @@ function App(){
             if(e.cat !== 'class' && e.cat !== 'fitness') m.push(e);
             if(e.date >= now) u.push(e);
         });
-
-        // Group upcoming
         const gr={}; 
-        u.sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time))
-         .slice(0, 50)
-         .forEach(e => {
+        u.sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time)).slice(0, 50).forEach(e => {
             if(!gr[e.date]) gr[e.date] = [];
             gr[e.date].push(e);
         });
-
         return { lk: l, mx: m, upGrouped: Object.entries(gr) };
     }, [evs, cals]);
 
-    // --- WIKI FETCH ---
     const fetchWikiBio = async () => {
         SBS(true); setLoadingBio(true); setBioError(false); setWikiData(null);
         const query = SPECIES_LIST[Math.floor(Math.random() * SPECIES_LIST.length)];
         const taxonomy = TAXONOMY_DB[query];
-
         try {
             const url = `https://es.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=extracts|pageimages&piprop=original|thumbnail&pithumbsize=600&exintro&explaintext&titles=${query}`;
             const res = await fetch(url);
@@ -372,16 +311,9 @@ function App(){
             const pages = data.query.pages;
             const pageId = Object.keys(pages)[0];
             const pageData = pages[pageId];
-
             if (pageId === "-1") throw new Error("No encontrado");
             const imgUrl = pageData.original?.source || pageData.thumbnail?.source || null;
-
-            setWikiData({
-                title: pageData.title,
-                desc: pageData.extract,
-                img: imgUrl,
-                tax: taxonomy
-            });
+            setWikiData({ title: pageData.title, desc: pageData.extract, img: imgUrl, tax: taxonomy });
         } catch (e) {
             console.error(e);
             setBioError(true);
@@ -390,13 +322,11 @@ function App(){
         }
     };
     
-    // Helpers
     const getDescBlocks = (text) => {
         if(!text) return ["Sin descripción disponible."];
         return text.match(/[^.!?]+[.!?]+/g) || [text];
     };
     
-    // Drag Logic (Matrix)
     useEffect(() => {
         if (!dTask) return;
         const move = (e) => {
@@ -422,7 +352,6 @@ function App(){
         return () => { window.removeEventListener('touchmove', move); window.removeEventListener('touchend', end); };
     }, [dTask]);
 
-    // Delete
     const confirmDelete = () => { 
         if(!confirmDel) return;
         const id = confirmDel.id; 
@@ -434,25 +363,19 @@ function App(){
         }, 500);
     };
 
-    // --- RENDER ---
     return h('div',{className:"h-screen w-screen bg-[#050505] text-slate-200 font-sans overflow-hidden flex flex-col relative selection:bg-[var(--theme-color)] selection:text-black",style:thStyle},
-        
-        // BACKGROUND
         h('div',{className:"absolute inset-0 pointer-events-none"},
             h('div',{className:"absolute inset-0 opacity-10",style:{backgroundImage:`radial-gradient(circle at 50% 0%,var(--theme-color),transparent 80%)`}}),
             h('div',{className:"absolute inset-0 opacity-[0.03]",style:{backgroundImage:`linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)`,backgroundSize:'50px 50px'}})
         ),
         
-        // HEADER
         h('header',{className:"z-20 flex flex-col pt-2 bg-black/80 border-b border-white/5 shrink-0 backdrop-blur-md"},
             h('div',{className:"flex overflow-x-auto no-scrollbar px-4 gap-2"}, tabs.map(t=>
                 h('button',{key:t.id,onClick:()=>SA(t.id),style:{borderColor:act===t.id?t.c:'transparent',color:act===t.id?t.c:'#525252',backgroundColor:act===t.id?t.c+'08':'transparent'},className:"flex items-center gap-2 px-6 py-4 rounded-t-lg text-sm font-black tracking-widest transition-all border-b-2 safe-hover active:bg-white/5 uppercase shrink-0 outline-none"},Icon(t.i),t.l)
             ))
         ),
 
-        // MAIN CONTENT AREA
         h('main',{className:"flex-1 px-2 pb-2 md:px-6 md:pb-8 overflow-hidden flex flex-col z-10"},
-            // TOP BAR
             h('div',{className:"py-4 flex justify-between shrink-0"},
                 h('div',{className:"flex items-baseline gap-2"},
                     h('h1',{className:"text-4xl md:text-5xl font-black text-white tracking-tighter leading-none drop-shadow-lg"}, act==='t2'?"MATRIZ":date.toLocaleString('es-ES',{month:'long'}).toUpperCase()),
@@ -465,10 +388,8 @@ function App(){
                 )
             ),
             
-            // VIEWS
             act==='t2' 
-            ? // TASK MATRIX
-              h('div',{className:"flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-2 grid-rows-2 gap-3 pb-20 md:pb-0"}, Object.keys(Q).map(k=>{
+            ? h('div',{className:"flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-2 grid-rows-2 gap-3 pb-20 md:pb-0"}, Object.keys(Q).map(k=>{
                 const isOver=dragOverQ===k, isDel=k==='q4';
                 const quadrantEvents = mx.filter(e=>(e.quad||'q2')===k);
                 return h('div',{key:k,'data-quad':k, className:`${isOver?(isDel?'border-red-500 bg-red-900/10':'border-[var(--theme-color)] bg-[var(--theme-color)]/5'):'border-neutral-800 bg-neutral-900/40'} border rounded-xl p-3 flex flex-col relative overflow-hidden backdrop-blur-sm transition-colors duration-300`},
@@ -482,62 +403,53 @@ function App(){
                     ))
                 )
             })) 
-            : // CALENDAR GRID
-              h('div',{onTouchStart:e=>{tE.current=null;tS.current=e.targetTouches[0].clientX},onTouchMove:e=>tE.current=e.targetTouches[0].clientX,onTouchEnd:()=>{if(!tS.current||!tE.current)return; const d=tS.current-tE.current; if(Math.abs(d)>50){SDir(d>0?'n':'p');SD(new Date(date.getFullYear(),date.getMonth()+(d>0?1:-1),1));}},className:"flex-1 bg-black/40 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden flex flex-col relative shadow-2xl"}, 
+            : h('div',{onTouchStart:e=>{tE.current=null;tS.current=e.targetTouches[0].clientX},onTouchMove:e=>tE.current=e.targetTouches[0].clientX,onTouchEnd:()=>{if(!tS.current||!tE.current)return; const d=tS.current-tE.current; if(Math.abs(d)>50){SDir(d>0?'n':'p');SD(new Date(date.getFullYear(),date.getMonth()+(d>0?1:-1),1));}},className:"flex-1 bg-black/40 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden flex flex-col relative shadow-2xl"}, 
                 h('div',{className:"grid grid-cols-7 bg-white/5 border-b border-white/5"},['L','M','X','J','V','S','D'].map(d=>h('div',{key:d,className:"py-3 text-center text-[10px] font-black tracking-widest text-neutral-500"},d))),
                 h('div',{key:date.toISOString(),className:`grid grid-cols-7 flex-1 auto-rows-fr ${dir==='n'?'anim-n':'anim-p'}`, style:{willChange:'transform'}}, days.map((d,i)=>{ 
                     const isToday = d.dt === locDate(new Date()); 
                     return h('div',{key:d.dt||i,onClick:()=>{if(d.dt){SF({title:'',date:d.dt,time:'09:00',type:'gen',notes:'',cat:'task',quad:'q2',notify:0});SM('c')}},className:`relative border-r border-b border-white/5 p-1 transition-colors hover:bg-white/5 cursor-pointer outline-none ${isToday?'bg-[var(--theme-color)]/5':''}`},
                         d.d&&h('span',{className:`text-xs font-bold flex items-center justify-center w-6 h-6 rounded ${isToday?'bg-[var(--theme-color)] text-black shadow-[0_0_10px_var(--theme-color)]':'text-neutral-500'}`},d.d),
                         h('div',{className:"mt-1 flex flex-col gap-1"}, (lk[d.dt]||[]).map(e=>
-                            h('div',{key:e.id,onClick:ev=>{ev.stopPropagation();SF({...e});SSI(e.id);SM('e')},className:"text-[9px] font-bold truncate px-1.5 py-0.5 rounded-r border-l-2 bg-white/5 text-slate-300 hover:text-white hover:bg-white/10 transition-colors"},{style:{borderLeftColor:e.gCol||curTab.c}}, e.time+' '+e.title)
+                            h('div',{key:e.id,onClick:ev=>{ev.stopPropagation();SF({...e});SSI(e.id);SM('e')},className:"text-[9px] font-bold truncate px-1.5 py-0.5 rounded-r border-l-2 bg-white/5 text-slate-300 hover:text-white hover:bg-white/10 transition-colors",style:{borderLeftColor:e.gCol||curTab.c}}, e.time+' '+e.title)
                         ))
                     )
                 }))
             )
         ),
 
-        // DRAWER (UPCOMING)
         h('div',{className:`fixed bottom-0 left-0 right-[60px] z-50 rounded-tr-2xl glass flex flex-col ${!drag?'tr-h':''}`,style:{height:dH}},
             h('div',{className:"w-full h-6 flex justify-center items-center cursor-grab touch-none shrink-0",onTouchStart:e=>{SDr(true);dY.current=e.touches[0].clientY;dH0.current=dH},onTouchMove:e=>{if(drag)SH(Math.min(window.innerHeight-50,Math.max(40,dH0.current+(dY.current-e.touches[0].clientY))))},onTouchEnd:()=>{SDr(false);const h=window.innerHeight;SH(dH>h*.75?h-20:dH>h*.3?h*.5:40)}},h('div',{className:"w-12 h-1 bg-white/20 rounded-full"})),
             h('div',{className:`flex-1 overflow-x-auto p-4 flex gap-4 no-scrollbar fade-content ${dH<80?'opacity-0 pointer-events-none':'opacity-100'}`}, upGrouped.length?upGrouped.map(([dStr,evs])=>
                 h('div',{key:dStr,className:"flex flex-col gap-2 min-w-[220px]"},
                     h('div',{className:"sticky top-0 z-10"},h('span',{className:"text-[9px] font-black tracking-widest text-[var(--theme-color)] bg-black/80 px-2 py-1 rounded border border-[var(--theme-color)]/30"},fmtD(dStr))),
-                    evs.map(e=>h('div',{key:e.id,onClick:()=>{SF({...e});SSI(e.id);SM('e')},className:"w-full bg-neutral-900/80 border border-white/10 border-l-4 p-3 rounded hover:bg-neutral-800 cursor-pointer"},{style:{borderLeftColor:e.gCol||'white'}},
+                    evs.map(e=>h('div',{key:e.id,onClick:()=>{SF({...e});SSI(e.id);SM('e')},className:"w-full bg-neutral-900/80 border border-white/10 border-l-4 p-3 rounded hover:bg-neutral-800 cursor-pointer",style:{borderLeftColor:e.gCol||'white'}},
                         h('div',{className:"flex justify-between items-start mb-1"},h('span',{className:"text-xs font-bold text-white truncate"},e.title),h('span',{className:"text-[9px] text-neutral-500 font-mono"},e.time))
                     ))
                 )
             ):h('div',{className:"w-full text-center text-neutral-600 text-xs italic mt-10"},"Sin eventos próximos"))
         ),
 
-        // BIO BUTTON
         h('div',{onClick:fetchWikiBio,className:`fixed bottom-0 right-0 w-32 z-[60] flex items-center justify-center cursor-pointer active:bg-white/10 safe-hover overflow-hidden rounded-tl-[32px] group backdrop-blur-md ${!drag?'tr-h':''}`,style:{height:dH,background:'rgba(0,0,0,0.6)',borderLeft:`1px solid ${curTab.c}80`,borderTop:`1px solid ${curTab.c}80`,boxShadow:`inset 5px 5px 20px ${curTab.c}10`}},
             Icon('Dna',24,`group-active:animate-spin text-[${curTab.c}] drop-shadow-[0_0_8px_${curTab.c}]`)
         ),
 
-        // --- MODALS & OVERLAYS ---
         (modal || confirmDel || sets || bioShow) && h('div',{id:'modal-root',className:"bg-black/90 backdrop-blur-md flex items-center justify-center p-4"},
             
-            // SETTINGS
             sets && h('div',{className:"w-full max-w-2xl max-h-[85vh] bg-zinc-900 border border-neutral-700 rounded-2xl overflow-hidden shadow-2xl flex flex-col relative"},
                 h('div',{className:"p-4 border-b border-neutral-700 flex justify-between bg-zinc-950"}, h('h3',{className:"font-bold text-white"},"CONFIGURACIÓN"), h('button',{onClick:()=>SS(false)},Icon('X',20,"text-white"))),
                 h('div',{className:"p-6 space-y-8 overflow-y-auto bg-zinc-900"},
-                     // SISTEMA
                      h('div',{},h('h4',{className:"text-xs font-bold text-neutral-500 uppercase border-b border-neutral-800 pb-2"},"Sistema"),
                         h('button',{onClick:async()=>{if('Notification' in window) await Notification.requestPermission()},className:"mt-4 w-full flex items-center justify-between p-3 bg-neutral-800 rounded border border-neutral-700 hover:border-white/20 transition-all"},h('span',{className:"text-sm text-white font-bold"},"Activar Notificaciones"),Icon('Bell',16))
                      ),
-                     // CALENDARIOS
                      h('div',{},h('h4',{className:"text-xs font-bold text-neutral-500 uppercase border-b border-neutral-800 pb-2"},"Calendarios Google"),
                         Object.values(cals).length ? Object.values(cals).map(c=>h('div',{key:c.id,className:"flex justify-between items-center p-3 border-b border-neutral-800 hover:bg-white/5"},h('span',{className:"text-sm font-bold",style:{color:c.color}},c.summary),h('button',{onClick:()=>SC(p=>({...p,[c.id]:{...p[c.id],visible:!p[c.id].visible}}))},Icon(c.visible?'Eye':'EyeOff',16,'text-neutral-400')))) : h('div',{className:"text-xs text-neutral-600 mt-2 italic"},"No hay calendarios sincronizados")
                      ),
-                     // ESTÉTICA
                      h('div',{},h('h4',{className:"text-xs font-bold text-neutral-500 uppercase border-b border-neutral-800 pb-2"},"Estética"),
                         tabs.map(t=>h('div',{key:t.id,className:"flex items-center justify-between mt-3 p-2 rounded hover:bg-white/5"},
                             h('div',{className:"flex items-center gap-3"}, Icon(t.i,18,"text-neutral-400"), h('span',{className:"text-sm font-bold text-neutral-300"}, t.l)),
                             h('input',{type:'color',value:t.c,onChange:e=>ST(tabs.map(tb=>tb.id===t.id?{...tb,c:e.target.value}:tb)),className:"w-8 h-8 rounded border-none bg-transparent cursor-pointer"})
                         ))
                      ),
-                     // GOOGLE API
                      h('div',{},h('h4',{className:"text-xs font-bold text-neutral-500 uppercase border-b border-neutral-800 pb-2"},"Google API"),
                         h('div',{className:"space-y-3 mt-3"},
                             h('div',{className:"flex items-center gap-2 bg-black border border-neutral-700 rounded p-2"}, Icon('Database',14,'text-neutral-500'), h('input',{placeholder:"Client ID",value:gCfg.clientId,onChange:e=>SG({...gCfg,clientId:e.target.value}),className:"w-full bg-transparent text-xs text-white outline-none"})),
@@ -547,7 +459,6 @@ function App(){
                 )
             ),
 
-            // WIKI BIO
             bioShow && h('div',{className:"w-full max-w-5xl h-[85vh] md:h-[650px] bg-black border border-white/20 rounded-xl overflow-hidden flex flex-col md:flex-row relative shadow-[0_0_50px_rgba(0,0,0,1)]"},
                 h('button',{onClick:()=>SBS(false),className:"absolute top-4 right-4 z-50 p-2 bg-black/60 rounded-full text-white hover:text-red-400 border border-white/10 backdrop-blur safe-hover"},Icon('X', 18)),
                 
@@ -579,7 +490,6 @@ function App(){
                             h('div',{className:"flex items-center gap-2"}, Icon('Globe',14,"text-blue-500"), h('span',{className:"text-[10px] text-neutral-500 uppercase"}, "Wikipedia API"))
                         ),
                         h('div',{className:"flex-1 overflow-y-auto p-6 space-y-8 no-scrollbar"},
-                            // TAXONOMY GRID
                             h('div',{className:"space-y-3"},
                                 h('h4',{className:"text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] flex items-center gap-2"}, Icon('Activity',12), "Clasificación Taxonómica"),
                                 h('div',{className:"grid grid-cols-2 md:grid-cols-3 gap-[1px] bg-white/10 border border-white/10 rounded overflow-hidden"},
@@ -593,7 +503,6 @@ function App(){
                                     )
                                 )
                             ),
-                            // DESCRIPTION BLOCKS
                             h('div',{className:"space-y-4"},
                                 h('h4',{className:"text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] flex items-center gap-2"}, Icon('BookOpen',12), "Informe Descriptivo"),
                                 h('div',{className:"grid gap-3"},
@@ -609,7 +518,6 @@ function App(){
                 )
             ),
             
-            // DELETE CONFIRM
             confirmDel && h('div',{className:"w-full max-w-sm bg-zinc-900 border border-red-900 rounded-xl overflow-hidden flex flex-col p-6 items-center text-center space-y-4"},
                 h('div',{className:"bg-red-500/10 p-4 rounded-full text-red-500 mb-2"}, Icon('Trash2', 32)),
                 h('h3',{className:"text-lg font-black text-white"},"¿Purgar Registro?"),
@@ -619,7 +527,6 @@ function App(){
                 )
             ),
             
-            // EVENT MODAL
             modal && !confirmDel && !sets && !bioShow && h('div',{className:"w-full max-w-md bg-zinc-900 border border-neutral-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col"},
                 h('div',{className:"p-4 bg-black/50 border-b border-neutral-800 flex justify-between"},h('span',{className:"font-black text-white tracking-widest"},modal==='e'?'EDITAR':'NUEVO'),h('button',{onClick:()=>SM(null)},Icon('X'))),
                 h('div',{className:"p-5 space-y-4"},
