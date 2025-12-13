@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V10: Ultimate</title>
+<title>CMD V11: Clean</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif'],mono:['JetBrains Mono','Courier New','monospace']},animation:{'pulse-fast':'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite','scan':'scan 2s linear infinite'}} }}</script>
@@ -18,12 +18,25 @@ body{background:#050505;touch-action:none;overscroll-behavior:none;user-select:n
 .scan-line { position: absolute; left:0; right:0; height: 2px; background: var(--theme-color); box-shadow: 0 0 15px var(--theme-color); opacity: 0.8; animation: scan 3s ease-in-out infinite; }
 .safe-hover:hover { filter: brightness(1.2); }
 #modal-root { position: fixed; inset: 0; z-index: 9999; pointer-events: auto; }
+
+/* Animations */
 .anim-n { animation: slideN 0.3s ease-out; }
 .anim-p { animation: slideP 0.3s ease-out; }
 @keyframes slideN { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 @keyframes slideP { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-.anim-exit { animation: fadeOut 0.5s forwards; }
-@keyframes fadeOut { to { opacity: 0; height: 0; margin: 0; padding: 0; } }
+
+/* Improved Exit Animation */
+.anim-exit { animation: scaleFadeOut 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; pointer-events: none; }
+@keyframes scaleFadeOut { 
+    0% { opacity: 1; transform: scale(1); max-height: 100px; margin-bottom: 0.75rem; } 
+    100% { opacity: 0; transform: scale(0.9); max-height: 0; margin-bottom: 0; padding: 0; border: none; } 
+}
+
+/* Smooth Drawer Transition */
+.tr-h { transition: height 0.5s cubic-bezier(0.32, 0.725, 0.25, 1); }
+
+/* Dragging visual feedback */
+.dragging { opacity: 0.5; transform: scale(1.05); box-shadow: 0 10px 20px rgba(0,0,0,0.5); z-index: 50; }
 </style>
 </head>
 <body><div id="root"></div>
@@ -33,7 +46,7 @@ import{createRoot}from'https://esm.sh/react-dom@18.2.0/client';
 import*as L from'https://esm.sh/lucide-react@0.292.0';
 
 const h=React.createElement, F=React.Fragment;
-const ICONS={Calendar:L.Calendar,CheckSquare:L.CheckSquare,BookOpen:L.BookOpen,Folder:L.Folder,Settings:L.Settings,Dna:L.Dna,Activity:L.Activity,Zap:L.Zap,GraduationCap:L.GraduationCap,Dumbbell:L.Dumbbell,X:L.X,RefreshCw:L.RefreshCw,Trash2:L.Trash2,GripHorizontal:L.GripHorizontal,CheckCircle:L.CheckCircle,Eye:L.Eye,EyeOff:L.EyeOff,Bell:L.Bell,Search:L.Search,Wifi:L.Wifi,WifiOff:L.WifiOff,Globe:L.Globe,Database:L.Database,Key:L.Key, AlertTriangle:L.AlertTriangle};
+const ICONS={Calendar:L.Calendar,CheckSquare:L.CheckSquare,BookOpen:L.BookOpen,Folder:L.Folder,Settings:L.Settings,Dna:L.Dna,Activity:L.Activity,Zap:L.Zap,GraduationCap:L.GraduationCap,Dumbbell:L.Dumbbell,X:L.X,RefreshCw:L.RefreshCw,Trash2:L.Trash2,GripHorizontal:L.GripHorizontal,CheckCircle:L.CheckCircle,Eye:L.Eye,EyeOff:L.EyeOff,Bell:L.Bell,Search:L.Search,Wifi:L.Wifi,WifiOff:L.WifiOff,Globe:L.Globe,Database:L.Database,Key:L.Key, AlertTriangle:L.AlertTriangle, CloudOff:L.CloudOff};
 
 // --- DATA & CONFIG ---
 const TAXONOMY_DB = {
@@ -70,8 +83,6 @@ class ErrorBoundary extends Component {
       return h('div', {className: "h-screen w-screen flex flex-col items-center justify-center bg-black text-white p-4 text-center"},
         Icon('AlertTriangle', 48, "text-red-500 mb-4"),
         h('h1', {className: "text-2xl font-bold mb-2"}, "Error de Interfaz"),
-        h('p', {className: "text-sm text-gray-400 mb-4"}, "La aplicación ha encontrado un problema de renderizado."),
-        h('pre', {className: "bg-red-900/20 p-4 rounded text-xs text-red-300 overflow-auto max-w-full mb-4"}, this.state.error?.toString()),
         h('button', {onClick: () => { localStorage.clear(); window.location.reload(); }, className: "bg-red-600 px-6 py-2 rounded font-bold hover:bg-red-700"}, "Reiniciar App (Borrar Datos)")
       );
     }
@@ -104,6 +115,7 @@ function App(){
     const [dragOverQ, SDQ] = useState(null); 
     const [confirmDel, SConfirm] = useState(null);
     const [exitingIds, setExitingIds] = useState(new Set());
+    const [deleting, setDeleting] = useState(false); // New deletion loading state
 
     const [wikiData, setWikiData] = useState(null);
     const [loadingBio, setLoadingBio] = useState(false);
@@ -121,8 +133,9 @@ function App(){
     const curTab=tabs.find(t=>t.id===act)||tabs[0];
     const thStyle={'--theme-color':curTab.c};
 
+    // --- INIT ---
     useEffect(()=>{
-        const e=localStorage.getItem('ev_v9');
+        const e=localStorage.getItem('ev_v11');
         const t=localStorage.getItem('tb_v9');
         const g=localStorage.getItem('gc_v9');
         const c=localStorage.getItem('cm_v9');
@@ -140,35 +153,15 @@ function App(){
         }
     },[]);
     
-    useEffect(()=>{ localStorage.setItem('ev_v9',JSON.stringify(evs)) },[evs]);
+    useEffect(()=>{ localStorage.setItem('ev_v11',JSON.stringify(evs)) },[evs]);
     useEffect(()=>{ localStorage.setItem('tb_v9',JSON.stringify(tabs)) },[tabs]);
     useEffect(()=>{ localStorage.setItem('gc_v9',JSON.stringify(gCfg)) },[gCfg]);
     useEffect(()=>{ localStorage.setItem('cm_v9',JSON.stringify(cals)) },[cals]);
 
-    useEffect(()=>{
-        const tick = setInterval(() => {
-            if('Notification' in window && Notification.permission === 'granted'){
-                const now = new Date();
-                evs.forEach(e => {
-                    if(!e.notify || !e.date || !e.time || e.notified) return;
-                    try {
-                        const evD = new Date(`${e.date}T${e.time}`);
-                        const diff = (evD - now) / 60000; 
-                        if (diff <= e.notify && diff > (e.notify - 1.5)) new Notification(`Recordatorio: ${e.title}`, { body: `${e.time}` });
-                    } catch(err){}
-                });
-            }
-        }, 60000); 
-        return () => clearInterval(tick);
-    }, [evs]);
-
     const initGapi = async () => {
         if(gCfg.apiKey && window.gapi && !gI.current){
             try {
-                await window.gapi.client.init({
-                    apiKey: gCfg.apiKey,
-                    discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"]
-                });
+                await window.gapi.client.init({apiKey: gCfg.apiKey, discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"]});
                 gI.current = true;
             } catch(e) { console.warn("GAPI Init Error", e); }
         }
@@ -179,12 +172,9 @@ function App(){
             try {
                 tC.current = window.google.accounts.oauth2.initTokenClient({
                     client_id: gCfg.clientId,
-                    scope: "https://www.googleapis.com/auth/calendar.readonly",
+                    scope: "https://www.googleapis.com/auth/calendar.events", // Added .events scope for write access
                     callback: (r) => {
-                        if(r.error) {
-                            alert("Error Auth: " + r.error);
-                            return;
-                        }
+                        if(r.error) { alert("Error Auth: " + r.error); return; }
                         if(window.gapi && window.gapi.client) window.gapi.client.setToken(r);
                         SGS(true);
                         fetchG(date); 
@@ -199,11 +189,7 @@ function App(){
         if(!gCfg.apiKey || !gCfg.clientId) return alert("Configura API Key y Client ID primero.");
         if(!gI.current) await initGapi();
         if(!gsI.current) initGis();
-        if(tC.current) {
-            tC.current.requestAccessToken({prompt: 'select_account'});
-        } else {
-            alert("El servicio de Google no está listo. Revisa tu conexión.");
-        }
+        if(tC.current) tC.current.requestAccessToken({prompt: 'select_account'});
     };
 
     const fetchG = async (td = new Date()) => {
@@ -244,11 +230,28 @@ function App(){
                         const dateStr = dRaw.includes('T') ? dRaw.split('T')[0] : dRaw;
                         const timeStr = start.dateTime ? start.dateTime.split('T')[1].substring(0,5) : '';
                         
+                        // --- SOLUCIÓN 1: MEJORA EN DETECCIÓN DE CLASES ---
+                        // Si tiene recurrencia (recurringEventId o recurrence), ES UNA CLASE/EVENTO FIJO.
                         let cat = 'task', q = 'q2';
                         const titleLower = (i.summary || '').toLowerCase();
-                        if(titleLower.includes('clase') || titleLower.includes('aula')) { cat = 'class'; q = null; }
+                        
+                        if (i.recurringEventId || i.recurrence || titleLower.includes('clase') || titleLower.includes('aula') || titleLower.includes('reunión')) {
+                            cat = 'class';
+                            q = null; // Quitar de cuadrantes de tareas
+                        }
 
-                        newGoogleEvents.push({ id: i.id || `g-${Math.random()}`, calId: res.value.id, title: i.summary || '(Sin título)', date: dateStr, time: timeStr, type: 'google', notes: i.description || '', cat, quad: q, gCol: res.value.color });
+                        newGoogleEvents.push({ 
+                            id: i.id, // ID real de Google
+                            calId: res.value.id, 
+                            title: i.summary || '(Sin título)', 
+                            date: dateStr, 
+                            time: timeStr, 
+                            type: 'google', 
+                            notes: i.description || '', 
+                            cat, 
+                            quad: q, 
+                            gCol: res.value.color 
+                        });
                     });
                 }
             });
@@ -261,11 +264,7 @@ function App(){
                 return Array.from(mergedMap.values());
             });
 
-        } catch(e) {
-            console.error("Critical Sync Error", e);
-        } finally {
-            SSy(false);
-        }
+        } catch(e) { console.error("Sync Error", e); } finally { SSy(false); }
     };
 
     const days = useMemo(() => {
@@ -327,10 +326,13 @@ function App(){
         return text.match(/[^.!?]+[.!?]+/g) || [text];
     };
     
+    // --- DRAG LOGIC ---
     useEffect(() => {
         if (!dTask) return;
         const move = (e) => {
             const t = e.touches ? e.touches[0] : e;
+            // Prevent scrolling while dragging task
+            e.preventDefault(); 
             SDT(p => ({ ...p, x: t.clientX, y: t.clientY }));
             const el = document.elementFromPoint(t.clientX, t.clientY);
             const qD = el?.closest('[data-quad]');
@@ -342,7 +344,7 @@ function App(){
             const qD = el?.closest('[data-quad]');
             if (qD) {
                 const nQ = qD.getAttribute('data-quad');
-                if (nQ === 'q4') SConfirm({id: dTask.id, title: dTask.title});
+                if (nQ === 'q4') SConfirm({id: dTask.id, title: dTask.title, type: dTask.type, calId: dTask.calId}); // Pass type and calId
                 else if (nQ !== dTask.startQuad) SE(p => p.map(x => x.id === dTask.id ? { ...x, quad: nQ } : x));
             }
             SDT(null); SDQ(null);
@@ -352,15 +354,39 @@ function App(){
         return () => { window.removeEventListener('touchmove', move); window.removeEventListener('touchend', end); };
     }, [dTask]);
 
-    const confirmDelete = () => { 
+    // --- SOLUCIÓN 2: ELIMINACIÓN BIDIRECCIONAL (API + LOCAL) ---
+    const confirmDelete = async () => { 
         if(!confirmDel) return;
-        const id = confirmDel.id; 
+        const { id, type, calId } = confirmDel;
+        
+        setDeleting(true); // Loading state
+
+        // 1. Delete from Google if applicable
+        if (type === 'google' && window.gapi && window.gapi.client) {
+            try {
+                await window.gapi.client.calendar.events.delete({
+                    calendarId: calId,
+                    eventId: id
+                });
+                console.log("Deleted from Google");
+            } catch (err) {
+                console.error("Error deleting from Google:", err);
+                alert("No se pudo eliminar de Google Calendar. Revisa permisos.");
+                setDeleting(false);
+                return; // Stop if sync fails
+            }
+        }
+
+        // 2. Animate Local Deletion
+        setDeleting(false);
         SConfirm(null); 
         setExitingIds(prev => new Set(prev).add(id));
+        
+        // 3. Remove from State after Animation
         setTimeout(() => { 
             SE(prev => prev.filter(e => e.id !== id)); 
             setExitingIds(prev => { const n = new Set(prev); n.delete(id); return n; }); 
-        }, 500);
+        }, 400); // Matches CSS animation duration
     };
 
     return h('div',{className:"h-screen w-screen bg-[#050505] text-slate-200 font-sans overflow-hidden flex flex-col relative selection:bg-[var(--theme-color)] selection:text-black",style:thStyle},
@@ -389,20 +415,29 @@ function App(){
             ),
             
             act==='t2' 
-            ? h('div',{className:"flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-2 grid-rows-2 gap-3 pb-20 md:pb-0"}, Object.keys(Q).map(k=>{
-                const isOver=dragOverQ===k, isDel=k==='q4';
-                const quadrantEvents = mx.filter(e=>(e.quad||'q2')===k);
-                return h('div',{key:k,'data-quad':k, className:`${isOver?(isDel?'border-red-500 bg-red-900/10':'border-[var(--theme-color)] bg-[var(--theme-color)]/5'):'border-neutral-800 bg-neutral-900/40'} border rounded-xl p-3 flex flex-col relative overflow-hidden backdrop-blur-sm transition-colors duration-300`},
-                    h('div',{className:"flex justify-between items-center mb-3 pb-2 border-b border-white/5"},h('h3',{className:"text-xs font-black tracking-[0.2em] uppercase",style:{color:Q[k].c}},Q[k].t),h('span',{className:"bg-black/50 text-neutral-400 text-[10px] font-mono px-2 py-0.5 rounded"},quadrantEvents.length)),
-                    h('div',{className:"flex-1 overflow-y-auto space-y-2 no-scrollbar"}, quadrantEvents.map(e=>
-                        h('div',{key:e.id, onClick:()=>{SF({...e});SSI(e.id);SM('e')}, className:`bg-black/80 border border-white/5 p-3 rounded hover:border-white/20 transition-all flex gap-3 group relative ${exitingIds.has(e.id)?'anim-exit':''}`},
-                            h('div',{className:"mt-0.5"},Icon('CheckCircle',14,`text-[${Q[k].c}]`)),
-                            h('p',{className:"flex-1 text-xs font-bold text-slate-200 truncate"},e.title),
-                            h('div',{className:"text-neutral-600 cursor-grab active:cursor-grabbing", onTouchStart:(ev)=>{ev.stopPropagation(); SDT({...e, x:ev.touches[0].clientX, y:ev.touches[0].clientY, startQuad:k})}}, Icon('GripHorizontal',14))
-                        )
-                    ))
-                )
-            })) 
+            ? h('div',{className:"flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-2 grid-rows-2 gap-3 pb-20 md:pb-0 relative"}, 
+                // DRAGGING GHOST (Visual Feedback)
+                dTask && h('div',{className:"fixed pointer-events-none z-[999] bg-zinc-800 border border-white/20 p-3 rounded shadow-2xl flex gap-3 w-64 backdrop-blur-md", style:{left:dTask.x, top:dTask.y, transform:'translate(-50%, -50%) rotate(3deg)'}},
+                    Icon('GripHorizontal',14,'text-white'), h('span',{className:"text-xs font-bold text-white truncate"}, dTask.title)
+                ),
+                Object.keys(Q).map(k=>{
+                    const isOver=dragOverQ===k, isDel=k==='q4';
+                    const quadrantEvents = mx.filter(e=>(e.quad||'q2')===k);
+                    return h('div',{key:k,'data-quad':k, className:`${isOver?(isDel?'border-red-500 bg-red-900/30 scale-[1.02] shadow-[0_0_30px_rgba(220,38,38,0.3)]':'border-[var(--theme-color)] bg-[var(--theme-color)]/10 scale-[1.02] shadow-[0_0_30px_var(--theme-color)]'):'border-neutral-800 bg-neutral-900/40'} border rounded-xl p-3 flex flex-col relative overflow-hidden backdrop-blur-sm transition-all duration-200`},
+                        h('div',{className:"flex justify-between items-center mb-3 pb-2 border-b border-white/5"},h('h3',{className:"text-xs font-black tracking-[0.2em] uppercase",style:{color:Q[k].c}},Q[k].t),h('span',{className:"bg-black/50 text-neutral-400 text-[10px] font-mono px-2 py-0.5 rounded"},quadrantEvents.length)),
+                        h('div',{className:"flex-1 overflow-y-auto space-y-2 no-scrollbar"}, quadrantEvents.map(e=>
+                            h('div',{key:e.id, onClick:()=>{SF({...e});SSI(e.id);SM('e')}, className:`bg-black/80 border border-white/5 p-3 rounded hover:border-white/20 transition-all flex gap-3 group relative ${dTask?.id===e.id ? 'opacity-30' : ''} ${exitingIds.has(e.id)?'anim-exit':''}`},
+                                h('div',{className:"mt-0.5"},Icon('CheckCircle',14,`text-[${Q[k].c}]`)),
+                                h('p',{className:"flex-1 text-xs font-bold text-slate-200 truncate"},e.title),
+                                h('div',{className:"text-neutral-600 cursor-grab active:cursor-grabbing p-1 -m-1", onTouchStart:(ev)=>{
+                                    // ev.preventDefault(); // Sometimes helps on mobile but can block scroll. Handled in useEffect
+                                    SDT({...e, x:ev.touches[0].clientX, y:ev.touches[0].clientY, startQuad:k, type: e.type, calId: e.calId})
+                                }}, Icon('GripHorizontal',14))
+                            )
+                        ))
+                    )
+                })
+            ) 
             : h('div',{onTouchStart:e=>{tE.current=null;tS.current=e.targetTouches[0].clientX},onTouchMove:e=>tE.current=e.targetTouches[0].clientX,onTouchEnd:()=>{if(!tS.current||!tE.current)return; const d=tS.current-tE.current; if(Math.abs(d)>50){SDir(d>0?'n':'p');SD(new Date(date.getFullYear(),date.getMonth()+(d>0?1:-1),1));}},className:"flex-1 bg-black/40 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden flex flex-col relative shadow-2xl"}, 
                 h('div',{className:"grid grid-cols-7 bg-white/5 border-b border-white/5"},['L','M','X','J','V','S','D'].map(d=>h('div',{key:d,className:"py-3 text-center text-[10px] font-black tracking-widest text-neutral-500"},d))),
                 h('div',{key:date.toISOString(),className:`grid grid-cols-7 flex-1 auto-rows-fr ${dir==='n'?'anim-n':'anim-p'}`, style:{willChange:'transform'}}, days.map((d,i)=>{ 
@@ -519,12 +554,13 @@ function App(){
             ),
             
             confirmDel && h('div',{className:"w-full max-w-sm bg-zinc-900 border border-red-900 rounded-xl overflow-hidden flex flex-col p-6 items-center text-center space-y-4"},
-                h('div',{className:"bg-red-500/10 p-4 rounded-full text-red-500 mb-2"}, Icon('Trash2', 32)),
-                h('h3',{className:"text-lg font-black text-white"},"¿Purgar Registro?"),
-                h('div',{className:"flex gap-3 w-full mt-4"},
+                h('div',{className:"bg-red-500/10 p-4 rounded-full text-red-500 mb-2"}, Icon(deleting ? 'RefreshCw' : 'Trash2', 32, deleting ? 'animate-spin' : '')),
+                h('h3',{className:"text-lg font-black text-white"}, deleting ? "Eliminando..." : "¿Purgar Registro?"),
+                !deleting && h('div',{className:"flex gap-3 w-full mt-4"},
                     h('button',{onClick:()=>SConfirm(null),className:"flex-1 py-3 rounded border border-neutral-700 text-neutral-300 font-bold hover:bg-white/5"},"CANCELAR"),
                     h('button',{onClick:confirmDelete,className:"flex-1 py-3 rounded bg-red-600 text-white font-bold hover:bg-red-500"},"ELIMINAR")
-                )
+                ),
+                confirmDel.type === 'google' && !deleting && h('span',{className:"text-xs text-red-400 mt-2 flex items-center gap-1"}, Icon('CloudOff',10), "Se eliminará de Google Calendar")
             ),
             
             modal && !confirmDel && !sets && !bioShow && h('div',{className:"w-full max-w-md bg-zinc-900 border border-neutral-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col"},
