@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V16: Better</title>
+<title>CMD V17: Ultra Fluid</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif'],mono:['JetBrains Mono','Courier New','monospace']},animation:{'pulse-fast':'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite','scan':'scan 2s linear infinite'}} }}</script>
@@ -27,27 +27,32 @@ body{background:#000;touch-action:none;overscroll-behavior:none;user-select:none
 @keyframes slidePrev { from { transform: translateX(-20%); opacity: 0; filter: blur(5px); } to { transform: translateX(0); opacity: 1; filter: blur(0); } }
 
 /* --- TV PURGE ANIMATION --- */
-.anim-purge { animation: tvPurge 0.5s cubic-bezier(0.19, 1, 0.22, 1) forwards; transform-origin: center; pointer-events: none; will-change: transform, opacity, max-height, margin; }
+.anim-purge { animation: tvPurge 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; transform-origin: center; pointer-events: none; will-change: transform, opacity, max-height, margin; }
 @keyframes tvPurge {
-    0% { transform: scale(1); opacity: 1; max-height: 80px; margin-bottom: 0.75rem; }
-    100% { transform: scale(0, 0); opacity: 0; max-height: 0; margin-bottom: 0; padding: 0; border-width: 0; }
+    0% { transform: scale(1); filter: brightness(1); opacity: 1; max-height: 80px; margin-bottom: 0.75rem; }
+    30% { transform: scale(1.05); filter: brightness(2.5) drop-shadow(0 0 15px var(--theme-color)); opacity: 1; max-height: 80px; }
+    50% { transform: scale(1, 0.05); filter: brightness(5) drop-shadow(0 0 25px white); opacity: 1; max-height: 80px; }
+    70% { transform: scale(0.5, 0.05); opacity: 0; max-height: 80px; }
+    100% { transform: scale(0, 0); opacity: 0; max-height: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; border-width: 0; }
 }
-.tr-h { transition: height 0.4s cubic-bezier(0.32, 0.725, 0.25, 1); }
+.tr-h { transition: height 0.5s cubic-bezier(0.32, 0.725, 0.25, 1); }
 
-/* --- SNAPPY FOLDER ANIMATIONS --- */
-.zoom-enter { animation: zoomInFolder 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
-.zoom-exit { animation: zoomOutFolder 0.2s cubic-bezier(0.3, 0, 0, 1) forwards; }
+/* --- IOS ULTRA FLUID ANIMATIONS --- */
+.zoom-enter { animation: zoomInFolder 0.25s cubic-bezier(0.2, 0.9, 0.2, 1) forwards; }
+.zoom-exit { animation: zoomOutFolder 0.2s cubic-bezier(0.2, 0.9, 0.2, 1) forwards; }
 
 @keyframes zoomInFolder {
-    0% { opacity: 0; transform: scale(0.9); filter: blur(5px); }
-    100% { opacity: 1; transform: scale(1); filter: blur(0); }
+    0% { opacity: 0; transform: scale(0.92) translateY(10px); filter: blur(4px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
 }
 @keyframes zoomOutFolder {
     0% { opacity: 1; transform: scale(1); filter: blur(0); }
-    100% { opacity: 0; transform: scale(1.05); filter: blur(5px); }
+    100% { opacity: 0; transform: scale(0.95); filter: blur(4px); }
 }
 
-.card-press:active { transform: scale(0.97); transition: transform 0.1s; }
+/* Card Hover Effects */
+.card-hover { transition: transform 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94); will-change: transform; }
+.card-hover:active { transform: scale(0.97); }
 
 </style>
 </head>
@@ -65,8 +70,7 @@ const ICONS={
     Eye:L.Eye,EyeOff:L.EyeOff,Bell:L.Bell,Search:L.Search,Wifi:L.Wifi,WifiOff:L.WifiOff,
     Globe:L.Globe,Database:L.Database,Key:L.Key, AlertTriangle:L.AlertTriangle, CloudOff:L.CloudOff, Info:L.Info, 
     Plus:L.Plus, Save:L.Save, Check:L.Check, ArrowLeft:L.ArrowLeft, FileText:L.FileText, 
-    Youtube:L.Youtube, Cloud:L.Cloud, File:L.File, ExternalLink:L.ExternalLink, MoreVertical:L.MoreVertical, Play:L.Play,
-    Edit3:L.Edit3
+    Youtube:L.Youtube, Cloud:L.Cloud, File:L.File, ExternalLink:L.ExternalLink, MoreVertical:L.MoreVertical, Play:L.Play
 };
 
 const TAXONOMY_DB = {
@@ -110,6 +114,7 @@ function App(){
     const [evs,SE]=useState([]); 
     const [cals,SC]=useState({}); 
     
+    // Project Manager State
     const [projs, SProjs] = useState([]);
     const [curProjId, SCurProjId] = useState(null);
     const [projAnim, SProjAnim] = useState('idle');
@@ -119,6 +124,7 @@ function App(){
     const [selId,SSI]=useState(null);
     const [form,SF]=useState({title:'',date:'',time:'',type:'gen',notes:'',cat:'task',quad:'q2',notify:0});
     
+    // Resource Form State
     const [resForm, SResForm] = useState({ content: '' });
 
     const [sets,SS]=useState(false);
@@ -377,6 +383,9 @@ function App(){
         setSaving(false); SM(null);
     };
 
+    // --- ENHANCED PROJECT MANAGER ---
+
+    // Youtube ID Extractor
     const getYouTubeId = (url) => {
         const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
         const match = url.match(regExp);
@@ -385,12 +394,8 @@ function App(){
 
     const addProject = () => {
         if(!form.title) return;
-        if(modal === 'ep' && curProjId) {
-            SProjs(projs.map(p => p.id === curProjId ? {...p, title: form.title, color: form.color || p.color} : p));
-        } else {
-            const newProj = { id: Date.now(), title: form.title, color: form.color || '#22c55e', resources: [] };
-            SProjs([...projs, newProj]);
-        }
+        const newProj = { id: Date.now(), title: form.title, color: form.color || '#22c55e', resources: [] };
+        SProjs([...projs, newProj]);
         SM(null); SF({title:'',date:'',time:'',type:'gen',notes:'',cat:'task',quad:'q2',notify:0});
     };
 
@@ -400,22 +405,29 @@ function App(){
         const content = resForm.content.trim();
         let type = 'note', icon = 'FileText', color = '#FBBC04', thumb = null, title = content;
         
+        // 1. YouTube Detection & Metadata Fetch
         const ytId = getYouTubeId(content);
         if (ytId) {
-            type = 'video'; icon = 'Youtube'; color = '#FF0000'; thumb = `https://img.youtube.com/vi/${ytId}/mqdefault.jpg`;
+            type = 'video';
+            icon = 'Youtube';
+            color = '#FF0000';
+            thumb = `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
             try {
                 const res = await fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${ytId}`);
                 const data = await res.json();
                 if(data.title) title = data.title;
             } catch(e) { console.warn("NoEmbed failed", e); }
         } 
+        // 2. Drive / PDF / General Link Detection
         else if(content.includes('drive.google.com')) { type = 'drive'; icon = 'Cloud'; color = '#34A853'; }
         else if(content.includes('.pdf')) { type = 'pdf'; icon = 'File'; color = '#EA4335'; }
         else if(content.startsWith('http')) { type = 'link'; icon = 'ExternalLink'; color = '#3b82f6'; }
 
         const newRes = { id: Date.now(), type, icon, color, content, title, thumb, date: new Date().toISOString() };
+        
         SProjs(projs.map(p => p.id === curProjId ? { ...p, resources: [...p.resources, newRes] } : p));
-        SAddingRes(false); SM(null); SResForm({ content: '' });
+        SAddingRes(false);
+        SM(null); SResForm({ content: '' });
     };
 
     const deleteResource = (rId) => {
@@ -429,73 +441,79 @@ function App(){
     const openProject = (pId) => {
         SProjAnim('entering');
         SCurProjId(pId);
-        setTimeout(() => SProjAnim('idle'), 250); 
+        setTimeout(() => SProjAnim('idle'), 300); 
     };
 
     const closeProject = () => {
         SProjAnim('exiting');
-        // Faster unmount to reduce lag perception
+        // Reduced timeout for snappier feel
         setTimeout(() => {
             SCurProjId(null);
             SProjAnim('idle');
         }, 200);
     };
-    
-    const editProject = () => {
-        const p = projs.find(x => x.id === curProjId);
-        if(p) { SF({title: p.title, color: p.color}); SM('ep'); }
-    }
 
     const currentProject = projs.find(p => p.id === curProjId);
 
     // --- RENDER HELPERS ---
     
-    // FLAT FOLDER (Minimalist)
+    // Minimalist Folder (Flat Icon + Color Pill)
     const renderFolder = (p) => {
         return h('div', {
             key: p.id,
             onClick: () => openProject(p.id),
-            className: "group flex flex-col items-center gap-2 cursor-pointer card-press"
+            className: "group flex flex-col items-center gap-3 cursor-pointer active:scale-95 transition-transform duration-200"
         },
-            // Flat Colored Container
-            h('div', { 
-                className: "w-[72px] h-[72px] md:w-[90px] md:h-[90px] rounded-[22px] flex items-center justify-center shadow-lg transition-transform",
-                style: { backgroundColor: p.color }
-            },
-                Icon('Folder', 32, "text-black/30") 
+            // Folder Icon Container
+            h('div', { className: "relative flex items-center justify-center w-24 h-20" },
+                Icon('Folder', 72, "text-neutral-700 stroke-[1] fill-neutral-800/50 group-hover:text-neutral-600 transition-colors"),
+                
+                // Color Pill
+                h('div', { 
+                    className: "absolute -bottom-1 w-8 h-1.5 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)]",
+                    style: { backgroundColor: p.color }
+                })
             ),
-            h('span', { className: "text-[11px] md:text-xs font-medium text-white/90 text-center truncate w-full px-1" }, p.title),
             
+            // Title
+            h('div', { className: "text-center" },
+                h('span', { className: "text-xs font-medium text-white/90 block truncate max-w-[100px]" }, p.title),
+                h('span', { className: "text-[10px] text-neutral-600 font-mono" }, `${p.resources.length} items`)
+            ),
+            
+            // Delete (hover only)
             h('button', {
                 onClick: (e) => { e.stopPropagation(); deleteProject(p.id); },
-                className: "absolute top-0 right-0 bg-neutral-800 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-20 -mr-2 -mt-2 shadow-lg border border-white/10"
-            }, Icon('X', 10, "text-white"))
+                className: "absolute top-0 right-2 opacity-0 group-hover:opacity-100 p-1.5 text-neutral-600 hover:text-red-500 transition-all z-20"
+            }, Icon('X', 14))
         );
     };
 
-    // Big Icon Resource Card
+    // Big Card Renderer for Resource View
     const renderResourceCard = (r) => {
         const isVideo = r.type === 'video';
         return h('div', {
             key: r.id,
             onClick: () => r.type !== 'note' && window.open(r.content, '_blank'),
-            className: "relative aspect-square md:aspect-[4/3] rounded-2xl overflow-hidden bg-neutral-900/60 border border-white/5 shadow-xl flex flex-col card-press cursor-pointer group"
+            className: "relative aspect-video rounded-xl overflow-hidden bg-neutral-900 border border-white/5 shadow-2xl flex flex-col card-hover cursor-pointer group"
         },
-            h('div', { className: `flex-1 w-full relative overflow-hidden ${isVideo ? 'bg-black' : 'bg-gradient-to-br from-white/5 to-transparent flex items-center justify-center'}` },
+            // Visual Content
+            h('div', { className: `flex-1 w-full relative overflow-hidden ${isVideo ? 'bg-black' : 'bg-white/5 flex items-center justify-center'}` },
                 isVideo && r.thumb 
                 ? h('img', { src: r.thumb, className: "w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" })
-                : Icon(r.icon, 56, `text-[${r.color}] drop-shadow-[0_10px_20px_${r.color}40]`) // Bigger Icon
+                : Icon(r.icon, 64, `text-[${r.color}] drop-shadow-[0_15px_30px_${r.color}30] opacity-80`)
             ),
             
-            h('div', { className: "h-[50px] shrink-0 bg-white/5 backdrop-blur-md p-3 flex items-center justify-between" },
-                h('div', { className: "flex-1 min-w-0 pr-2" },
-                    h('p', { className: "text-[11px] font-bold text-white truncate leading-tight" }, r.title || r.content),
-                    h('span', { className: "text-[9px] text-neutral-500 uppercase tracking-wider" }, r.type)
+            // Minimal Info Overlay
+            h('div', { className: "absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 to-transparent p-3 pt-10 flex items-end justify-between" },
+                h('div', { className: "min-w-0 flex-1 pr-2" },
+                    h('p', { className: "text-sm font-bold text-white truncate leading-tight drop-shadow-md" }, r.title || r.content),
+                    h('span', { className: "text-[9px] text-white/60 uppercase tracking-wider" }, r.type)
                 ),
                 h('button', {
                     onClick: (e) => { e.stopPropagation(); deleteResource(r.id); },
-                    className: "text-neutral-600 hover:text-red-500 transition-colors"
-                }, Icon('Trash2', 14))
+                    className: "text-white/40 hover:text-red-400 transition-colors p-1"
+                }, Icon('Trash2', 16))
             )
         );
     }
@@ -514,6 +532,7 @@ function App(){
         ),
 
         h('main',{className:"flex-1 px-2 pb-2 md:px-6 md:pb-8 overflow-hidden flex flex-col z-10"},
+            // Header Action Bar
             h('div',{className:"py-4 flex justify-between shrink-0"},
                 h('div',{className:"flex items-baseline gap-2"},
                     h('h1',{className:"text-3xl md:text-5xl font-black text-white tracking-tighter leading-none drop-shadow-lg"}, 
@@ -536,11 +555,14 @@ function App(){
                 )
             ),
             
+            // --- TAB CONTENT SWITCHER ---
             act==='t4' ? (
+                // --- PROJECT MANAGER ---
                 h('div', { className: "flex-1 overflow-hidden relative" },
                     
+                    // FOLDER GRID VIEW
                     !curProjId && h('div', { 
-                        className: `absolute inset-0 overflow-y-auto p-4 content-start grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-x-4 gap-y-8 ${projAnim === 'exiting' ? 'zoom-exit' : 'zoom-enter'}` 
+                        className: `absolute inset-0 overflow-y-auto p-8 content-start grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-x-4 gap-y-10 ${projAnim === 'exiting' ? 'zoom-exit' : 'zoom-enter'}` 
                     },
                         projs.map(p => renderFolder(p)),
                         projs.length === 0 && h('div', { className: "col-span-full flex flex-col items-center justify-center opacity-30 mt-20" },
@@ -549,25 +571,26 @@ function App(){
                         )
                     ),
                     
+                    // PROJECT DETAIL VIEW (Big Gallery Style)
                     curProjId && currentProject && h('div', { 
-                        className: `absolute inset-0 bg-black/60 backdrop-blur-2xl flex flex-col z-20 ${projAnim === 'entering' ? 'zoom-enter' : projAnim === 'exiting' ? 'zoom-exit' : ''}` 
+                        className: `absolute inset-0 bg-black/80 backdrop-blur-3xl flex flex-col z-20 ${projAnim === 'entering' ? 'zoom-enter' : projAnim === 'exiting' ? 'zoom-exit' : ''}` 
                     },
-                        h('div', { className: "flex items-center justify-between p-4 border-b border-white/5 bg-white/5 backdrop-blur-xl shrink-0" },
-                            h('div',{className:"flex items-center gap-4"},
-                                h('button', { onClick: closeProject, className: "p-2 rounded-full hover:bg-white/10 text-white active:scale-90 transition-all flex items-center gap-1" }, 
-                                    Icon('ArrowLeft', 20), h('span',{className:"text-sm font-bold"},"Atrás")
-                                ),
-                                h('div', {},
-                                    h('h2', { className: "text-lg font-black text-white tracking-tight" }, currentProject.title),
-                                    h('span', { className: "text-[10px] font-mono text-neutral-400" }, `${currentProject.resources.length} ITEMS`)
-                                )
+                        // Nav Header
+                        h('div', { className: "flex items-center gap-4 p-4 border-b border-white/5 bg-transparent shrink-0" },
+                            h('button', { onClick: closeProject, className: "p-2 rounded-full hover:bg-white/10 text-white active:scale-90 transition-all flex items-center gap-1" }, 
+                                Icon('ArrowLeft', 24), h('span',{className:"text-sm font-bold"},"Atrás")
                             ),
-                            h('button', {onClick: editProject, className:"p-2 rounded-full hover:bg-white/10 text-neutral-400"}, Icon('Edit3', 18))
+                            h('div', {},
+                                h('h2', { className: "text-xl font-black text-white tracking-tight" }, currentProject.title),
+                                h('span', { className: "text-[10px] font-mono text-neutral-400" }, `${currentProject.resources.length} ITEMS`)
+                            )
                         ),
                         
+                        // Resource Grid
                         h('div', { className: "flex-1 overflow-y-auto p-6" },
-                            h('div', { className: "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4" },
+                            h('div', { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20" },
                                 currentProject.resources.map(r => renderResourceCard(r)),
+                                // Empty State within Project
                                 currentProject.resources.length === 0 && h('div', { className: "col-span-full flex flex-col items-center justify-center py-20 text-neutral-600" },
                                     Icon('Plus', 48, "mb-4 opacity-20"),
                                     h('p', { className: "text-sm" }, "Carpeta vacía"),
@@ -618,6 +641,7 @@ function App(){
             )
         ),
 
+        // Event List Bottom Sheet (Only for Tabs 1, 2, 3)
         act !== 't4' && h('div',{className:`fixed bottom-0 left-0 right-[60px] z-50 rounded-tr-2xl glass flex flex-col ${!drag?'tr-h':''}`,style:{height:dH}},
             h('div',{className:"w-full h-6 flex justify-center items-center cursor-grab touch-none shrink-0",onTouchStart:e=>{SDr(true);dY.current=e.touches[0].clientY;dH0.current=dH},onTouchMove:e=>{if(drag)SH(Math.min(window.innerHeight-50,Math.max(40,dH0.current+(dY.current-e.touches[0].clientY))))},onTouchEnd:()=>{SDr(false);const h=window.innerHeight;SH(dH>h*.75?h-20:dH>h*.3?h*.5:40)}},h('div',{className:"w-12 h-1 bg-white/20 rounded-full"})),
             h('div',{className:`flex-1 overflow-x-auto p-4 flex gap-4 no-scrollbar fade-content ${dH<80?'opacity-0 pointer-events-none':'opacity-100'}`}, upGrouped.length?upGrouped.map(([dStr,evs])=>
@@ -642,18 +666,20 @@ function App(){
 
         (modal || confirmDel || sets || bioShow || guideShow) && h('div',{id:'modal-root',className:"bg-black/90 backdrop-blur-md flex items-center justify-center p-4"},
             
-            (modal === 'np' || modal === 'ep') && h('div',{className:"w-full max-w-sm ios-glass rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-pulse-fast", style:{animation:'none'}},
-                h('div',{className:"p-4 bg-white/5 border-b border-white/5 flex justify-between"},h('span',{className:"font-black text-white tracking-widest"}, modal==='ep'?"EDITAR":"NUEVO PROYECTO"),h('button',{onClick:()=>SM(null)},Icon('X'))),
+            // --- NEW PROJECT MODAL ---
+            modal === 'np' && h('div',{className:"w-full max-w-sm ios-glass rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-pulse-fast", style:{animation:'none'}},
+                h('div',{className:"p-4 bg-white/5 border-b border-white/5 flex justify-between"},h('span',{className:"font-black text-white tracking-widest"},"NUEVO PROYECTO"),h('button',{onClick:()=>SM(null)},Icon('X'))),
                 h('div',{className:"p-5 space-y-4"},
                     h('input',{autoFocus:true,placeholder:"Nombre...",className:"w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white font-bold outline-none focus:border-[var(--theme-color)] transition-all",value:form.title,onChange:e=>SF({...form,title:e.target.value})}),
                     h('div',{className:"flex justify-between items-center"},
-                         h('span',{className:"text-sm text-neutral-400"},"Color"),
-                         h('input',{type:'color',value:form.color||'#22c55e',onChange:e=>SF({...form,color:e.target.value}),className:"w-10 h-10 rounded border-none bg-transparent cursor-pointer"})
+                         h('span',{className:"text-sm text-neutral-400"},"Etiqueta de Color"),
+                         h('input',{type:'color',value:form.color||'#22c55e',onChange:e=>SF({...form,color:e.target.value}),className:"w-8 h-8 rounded-full border-2 border-white/20 bg-transparent cursor-pointer p-0 overflow-hidden"})
                     ),
-                    h('button',{onClick:addProject,className:"w-full py-3 rounded-xl bg-[var(--theme-color)] text-black font-black hover:scale-[1.02] transition-transform shadow-[0_0_20px_var(--theme-color)]"},"GUARDAR")
+                    h('button',{onClick:addProject,className:"w-full py-3 rounded-xl bg-[var(--theme-color)] text-black font-black hover:scale-[1.02] transition-transform shadow-[0_0_20px_var(--theme-color)]"},"CREAR")
                 )
             ),
 
+            // --- NEW RESOURCE MODAL ---
             modal === 'nr' && h('div',{className:"w-full max-w-sm ios-glass rounded-3xl overflow-hidden shadow-2xl flex flex-col"},
                 h('div',{className:"p-4 bg-white/5 border-b border-white/5 flex justify-between"},h('span',{className:"font-black text-white tracking-widest"},"AÑADIR RECURSO"),h('button',{onClick:()=>SM(null)},Icon('X'))),
                 h('div',{className:"p-5 space-y-4"},
