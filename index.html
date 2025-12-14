@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V19.7: Tryfix</title>
+<title>CMD V20: Ultimate</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif'],mono:['JetBrains Mono','Courier New','monospace']},animation:{'pulse-fast':'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite','scan':'scan 2s linear infinite'}} }}</script>
@@ -70,11 +70,23 @@ const ICONS={
     Youtube:L.Youtube, Cloud:L.Cloud, File:L.File, ExternalLink:L.ExternalLink, MoreVertical:L.MoreVertical, Play:L.Play
 };
 
+// --- EXPANDED BIOLOGY DATABASE ---
 const TAXONOMY_DB = {
     "Corvus corax": { k: "Animalia", p: "Chordata", c: "Aves", o: "Passeriformes", f: "Corvidae", g: "Corvus" },
     "Ambystoma mexicanum": { k: "Animalia", p: "Chordata", c: "Amphibia", o: "Caudata", f: "Ambystomatidae", g: "Ambystoma" },
     "Phidippus audax": { k: "Animalia", p: "Arthropoda", c: "Arachnida", o: "Araneae", f: "Salticidae", g: "Phidippus" },
-    "Hymenopus coronatus": { k: "Animalia", p: "Arthropoda", c: "Insecta", o: "Mantodea", f: "Hymenopodidae", g: "Hymenopus" }
+    "Hymenopus coronatus": { k: "Animalia", p: "Arthropoda", c: "Insecta", o: "Mantodea", f: "Hymenopodidae", g: "Hymenopus" },
+    "Panthera onca": { k: "Animalia", p: "Chordata", c: "Mammalia", o: "Carnivora", f: "Felidae", g: "Panthera" },
+    "Danaus plexippus": { k: "Animalia", p: "Arthropoda", c: "Insecta", o: "Lepidoptera", f: "Nymphalidae", g: "Danaus" },
+    "Octopus vulgaris": { k: "Animalia", p: "Mollusca", c: "Cephalopoda", o: "Octopoda", f: "Octopodidae", g: "Octopus" },
+    "Orcinus orca": { k: "Animalia", p: "Chordata", c: "Mammalia", o: "Artiodactyla", f: "Delphinidae", g: "Orcinus" },
+    "Physarum polycephalum": { k: "Protista", p: "Amoebozoa", c: "Myxogastria", o: "Physarales", f: "Physaraceae", g: "Physarum" },
+    "Tardigrada": { k: "Animalia", p: "Tardigrada", c: "Eutardigrada", o: "Parachela", f: "Macrobiotidae", g: "Macrobiotus" },
+    "Mimosa pudica": { k: "Plantae", p: "Tracheophyta", c: "Magnoliopsida", o: "Fabales", f: "Fabaceae", g: "Mimosa" },
+    "Amanita muscaria": { k: "Fungi", p: "Basidiomycota", c: "Agaricomycetes", o: "Agaricales", f: "Amanitaceae", g: "Amanita" },
+    "Vampyroteuthis infernalis": { k: "Animalia", p: "Mollusca", c: "Cephalopoda", o: "Vampyromorphida", f: "Vampyroteuthidae", g: "Vampyroteuthis" },
+    "Gingko biloba": { k: "Plantae", p: "Ginkgophyta", c: "Ginkgoopsida", o: "Ginkgoales", f: "Ginkgoaceae", g: "Ginkgo" },
+    "Ornithorhynchus anatinus": { k: "Animalia", p: "Chordata", c: "Mammalia", o: "Monotremata", f: "Ornithorhynchidae", g: "Ornithorhynchus" }
 };
 const SPECIES_LIST = Object.keys(TAXONOMY_DB);
 const TABS=[{id:'t1',l:'EVENTOS',i:'Calendar',c:'#3b82f6'},{id:'t2',l:'TAREAS',i:'CheckSquare',c:'#ef4444'},{id:'t3',l:'NOTAS',i:'BookOpen',c:'#eab308'},{id:'t4',l:'PROY',i:'Folder',c:'#22c55e'}];
@@ -142,6 +154,9 @@ function App(){
     const [wikiData, setWikiData] = useState(null);
     const [loadingBio, setLoadingBio] = useState(false);
     const [bioError, setBioError] = useState(false);
+    
+    // Bio Almanac Seen State (Prevent Repetition)
+    const [seenBio, setSeenBio] = useState(new Set());
 
     const fM=useRef(new Set());
     const tC=useRef(null);
@@ -160,7 +175,7 @@ function App(){
         const t=localStorage.getItem('tb_v9');
         const g=localStorage.getItem('gc_v9');
         const c=localStorage.getItem('cm_v9');
-        const p=localStorage.getItem('pj_v5'); // Version Bump for Jumbo
+        const p=localStorage.getItem('pj_v5'); 
         if(e) try{ SE(JSON.parse(e) || []) }catch(x){ SE([]) } 
         if(t) try{ ST(JSON.parse(t)) }catch(x){ ST(TABS) }
         if(g) try{ SG(JSON.parse(g)) }catch(x){ SG({apiKey:'',clientId:''}) }
@@ -303,9 +318,24 @@ function App(){
         return { lk: l, mx: m, upGrouped: Object.entries(gr) };
     }, [evs, cals]);
 
+    // --- ENHANCED FETCH WIKI BIO (WITH NO REPEAT LOGIC) ---
     const fetchWikiBio = async () => {
         SBS(true); setLoadingBio(true); setBioError(false); setWikiData(null);
-        const query = SPECIES_LIST[Math.floor(Math.random() * SPECIES_LIST.length)];
+        
+        // Filter out seen species
+        let availableSpecies = SPECIES_LIST.filter(s => !seenBio.has(s));
+        
+        // If all seen, reset the memory to start over
+        if (availableSpecies.length === 0) {
+            availableSpecies = SPECIES_LIST;
+            setSeenBio(new Set());
+        }
+
+        const query = availableSpecies[Math.floor(Math.random() * availableSpecies.length)];
+        
+        // Add to seen
+        setSeenBio(prev => new Set(prev).add(query));
+
         const taxonomy = TAXONOMY_DB[query];
         try {
             const url = `https://es.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=extracts|pageimages&piprop=original|thumbnail&pithumbsize=600&exintro&explaintext&titles=${query}`;
