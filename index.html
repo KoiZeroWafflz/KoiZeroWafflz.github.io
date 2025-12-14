@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V20: Ultimate</title>
+<title>CMD V21: Notes & Smart Bio</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif'],mono:['JetBrains Mono','Courier New','monospace']},animation:{'pulse-fast':'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite','scan':'scan 2s linear infinite'}} }}</script>
@@ -129,11 +129,14 @@ function App(){
     const [projAnim, SProjAnim] = useState('idle');
     const [addingRes, SAddingRes] = useState(false);
     
+    // Notes State
+    const [notes, SNotes] = useState([]);
+
     const [modal,SM]=useState(null); 
     const [selId,SSI]=useState(null);
     const [form,SF]=useState({title:'',date:'',time:'',type:'gen',notes:'',cat:'task',quad:'q2',notify:0});
     
-    // Resource Form State
+    // Generic Resource/Note Form State
     const [resForm, SResForm] = useState({ content: '' });
 
     const [sets,SS]=useState(false);
@@ -155,7 +158,7 @@ function App(){
     const [loadingBio, setLoadingBio] = useState(false);
     const [bioError, setBioError] = useState(false);
     
-    // Bio Almanac Seen State (Prevent Repetition)
+    // Bio Almanac Seen State
     const [seenBio, setSeenBio] = useState(new Set());
 
     const fM=useRef(new Set());
@@ -176,11 +179,13 @@ function App(){
         const g=localStorage.getItem('gc_v9');
         const c=localStorage.getItem('cm_v9');
         const p=localStorage.getItem('pj_v5'); 
+        const n=localStorage.getItem('nt_v1'); // Notes Storage
         if(e) try{ SE(JSON.parse(e) || []) }catch(x){ SE([]) } 
         if(t) try{ ST(JSON.parse(t)) }catch(x){ ST(TABS) }
         if(g) try{ SG(JSON.parse(g)) }catch(x){ SG({apiKey:'',clientId:''}) }
         if(c) try{ SC(JSON.parse(c)) }catch(x){ SC({}) }
         if(p) try{ SProjs(JSON.parse(p) || []) }catch(x){ SProjs([]) }
+        if(n) try{ SNotes(JSON.parse(n) || []) }catch(x){ SNotes([]) }
         if(!window.gapi) {
             const script = document.createElement('script');
             script.src = "https://apis.google.com/js/api.js";
@@ -194,6 +199,7 @@ function App(){
     useEffect(()=>{ localStorage.setItem('gc_v9',JSON.stringify(gCfg)) },[gCfg]);
     useEffect(()=>{ localStorage.setItem('cm_v9',JSON.stringify(cals)) },[cals]);
     useEffect(()=>{ localStorage.setItem('pj_v5',JSON.stringify(projs)) },[projs]);
+    useEffect(()=>{ localStorage.setItem('nt_v1',JSON.stringify(notes)) },[notes]);
 
     useEffect(() => {
         if(gSign && gCfg.apiKey) {
@@ -318,24 +324,16 @@ function App(){
         return { lk: l, mx: m, upGrouped: Object.entries(gr) };
     }, [evs, cals]);
 
-    // --- ENHANCED FETCH WIKI BIO (WITH NO REPEAT LOGIC) ---
+    // --- ENHANCED FETCH WIKI BIO ---
     const fetchWikiBio = async () => {
         SBS(true); setLoadingBio(true); setBioError(false); setWikiData(null);
-        
-        // Filter out seen species
         let availableSpecies = SPECIES_LIST.filter(s => !seenBio.has(s));
-        
-        // If all seen, reset the memory to start over
         if (availableSpecies.length === 0) {
             availableSpecies = SPECIES_LIST;
             setSeenBio(new Set());
         }
-
         const query = availableSpecies[Math.floor(Math.random() * availableSpecies.length)];
-        
-        // Add to seen
         setSeenBio(prev => new Set(prev).add(query));
-
         const taxonomy = TAXONOMY_DB[query];
         try {
             const url = `https://es.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=extracts|pageimages&piprop=original|thumbnail&pithumbsize=600&exintro&explaintext&titles=${query}`;
@@ -395,7 +393,11 @@ function App(){
         else if (type === 'resource') {
              SProjs(prev => prev.map(p => p.id === projId ? { ...p, resources: p.resources.filter(r => r.id !== id) } : p));
         }
-        // 3. DELETE GOOGLE/LOCAL EVENT
+        // 3. DELETE NOTE
+        else if (type === 'note') {
+            SNotes(prev => prev.filter(n => n.id !== id));
+        }
+        // 4. DELETE GOOGLE/LOCAL EVENT
         else {
             if (type === 'google' && window.gapi && window.gapi.client) {
                 try { await window.gapi.client.calendar.events.delete({ calendarId: calId, eventId: id }); } 
@@ -469,12 +471,23 @@ function App(){
         SM(null); SResForm({ content: '' });
     };
 
+    const addNote = () => {
+        if(!resForm.content) return;
+        const newNote = { id: Date.now(), text: resForm.content, date: new Date().toISOString() };
+        SNotes([newNote, ...notes]);
+        SM(null); SResForm({ content: '' });
+    };
+
     const deleteResource = (r) => {
         SConfirm({ id: r.id, title: r.title || 'Recurso', type: 'resource', projId: curProjId });
     };
 
     const deleteProject = (p) => {
         SConfirm({ id: p.id, title: p.title, type: 'project' });
+    }
+
+    const deleteNote = (n) => {
+        SConfirm({ id: n.id, title: "Nota Rápida", type: 'note' });
     }
 
     const openProject = (pId) => {
@@ -502,22 +515,14 @@ function App(){
             onClick: () => openProject(p.id),
             className: "group flex flex-col items-center gap-4 cursor-pointer card-touch relative"
         },
-            // Jumbo Transparent Hitbox (150x150)
             h('div', { className: "w-[150px] h-[150px] md:w-[180px] md:h-[180px] flex items-center justify-center relative rounded-3xl hover:bg-white/5 transition-colors" },
-                // Big Icon (96px)
                 Icon('Folder', 96, "text-neutral-500 stroke-[0.8] group-hover:text-white transition-colors"),
-                
-                // Proportional Color Pill (w-20)
                 h('div', { 
                     className: "absolute bottom-5 left-1/2 -translate-x-1/2 w-20 h-3 rounded-full shadow-[0_0_15px_rgba(0,0,0,0.5)]",
                     style: { backgroundColor: p.color, boxShadow: `0 0 15px ${p.color}60` }
                 })
             ),
-            
-            // Big & Bold Title (Dominant)
             h('span', { className: "text-lg md:text-xl font-black text-white uppercase tracking-tight group-hover:text-white transition-colors text-center leading-tight w-full drop-shadow-md break-words" }, p.title),
-            
-            // Delete (hover only)
             h('button', {
                 onClick: (e) => { e.stopPropagation(); deleteProject(p); },
                 className: "absolute top-2 right-2 bg-neutral-900 rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity z-20 shadow-lg border border-white/10 text-white"
@@ -528,7 +533,6 @@ function App(){
     // RENDER: Resource Card
     const renderResourceCard = (r) => {
         const isVideo = r.type === 'video';
-        
         let typeLabel = "ARCHIVO";
         if(r.type === 'video') typeLabel = "YOUTUBE";
         else if(r.type === 'pdf') typeLabel = "DOCUMENTO PDF";
@@ -546,7 +550,6 @@ function App(){
                 ? h('img', { src: r.thumb, className: "w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500" })
                 : Icon(r.icon, 42, `text-[${r.color}] drop-shadow-[0_0_25px_${r.color}30] group-hover:scale-110 transition-transform duration-300`)
             ),
-            
             h('div', { className: "h-[44px] shrink-0 bg-black/60 backdrop-blur-md px-3 flex items-center justify-between border-t border-white/5" },
                 h('div',{className:"flex flex-col overflow-hidden"},
                     h('p', { className: "text-[10px] font-bold text-white truncate w-full leading-tight" }, r.title || r.content),
@@ -579,6 +582,7 @@ function App(){
                 h('div',{className:"flex items-baseline gap-2"},
                     h('h1',{className:"text-3xl md:text-5xl font-black text-white tracking-tighter leading-none drop-shadow-lg"}, 
                         act==='t4' ? (curProjId ? currentProject?.title.toUpperCase() : 'BIBLIOTECA') 
+                        : act==='t3' ? 'NOTAS RAPIDAS'
                         : act==='t2'?"MATRIZ":date.toLocaleString('es-ES',{month:'long'}).toUpperCase()
                     ),
                     act==='t1'&&h('span',{className:"text-neutral-600 font-bold text-2xl"},date.getFullYear())
@@ -588,17 +592,37 @@ function App(){
                         curProjId 
                         ? h('button', {onClick: () => SM('nr'), className: "flex items-center gap-2 px-4 py-2 bg-[var(--theme-color)] text-black font-bold rounded-full shadow-[0_0_15px_var(--theme-color)] hover:brightness-110 active:scale-95 transition-all"}, Icon('Plus', 18), "Añadir")
                         : h('button', {onClick: () => SM('np'), className: "flex items-center gap-2 px-4 py-2 bg-white/10 border border-white/20 text-white font-bold rounded-full hover:bg-white/20 active:scale-95 transition-all"}, Icon('Plus', 18), "Carpeta")
+                    ) : act==='t3' ? (
+                        h('button', {onClick: () => SM('nn'), className: "flex items-center gap-2 px-4 py-2 bg-[var(--theme-color)] text-black font-bold rounded-full shadow-[0_0_15px_var(--theme-color)] hover:brightness-110 active:scale-95 transition-all"}, Icon('Plus', 18), "NUEVA")
                     ) : (
                         act==='t1'&&h('button',{onClick:()=>SD(new Date()),className:"hidden md:block px-4 py-1 text-xs font-bold text-neutral-400 border border-neutral-800 rounded bg-neutral-900 safe-hover"},"HOY")
                     ),
                     
-                    act!=='t4' && h('button',{onClick:gSign?()=>fetchG(date):auth,className:`flex items-center gap-2 px-3 py-2 rounded bg-neutral-900 border active:scale-95 outline-none ${sync?'border-[var(--theme-color)] text-[var(--theme-color)]':'border-neutral-800 text-neutral-400'}`},Icon('RefreshCw',18,sync?'animate-spin':''),h('span',{className:"hidden md:inline text-[10px] font-black"},"SYNC")),
+                    (act==='t1' || act==='t2') && h('button',{onClick:gSign?()=>fetchG(date):auth,className:`flex items-center gap-2 px-3 py-2 rounded bg-neutral-900 border active:scale-95 outline-none ${sync?'border-[var(--theme-color)] text-[var(--theme-color)]':'border-neutral-800 text-neutral-400'}`},Icon('RefreshCw',18,sync?'animate-spin':''),h('span',{className:"hidden md:inline text-[10px] font-black"},"SYNC")),
                     h('button',{onClick:()=>SS(true),className:"p-2.5 rounded bg-neutral-900 border border-neutral-800 text-neutral-400 safe-hover active:scale-95 outline-none"},Icon('Settings',20))
                 )
             ),
             
             // --- TAB CONTENT SWITCHER ---
-            act==='t4' ? (
+            act==='t3' ? (
+                // --- QUICK NOTES VIEW ---
+                h('div', { className: "flex-1 overflow-y-auto p-2" },
+                    notes.length === 0 && h('div', { className: "flex flex-col items-center justify-center opacity-30 mt-32" },
+                        Icon('BookOpen', 64, "mb-4 stroke-[1]"),
+                        h('span', { className: "text-sm font-mono tracking-widest" }, "BANDEJA VACÍA")
+                    ),
+                    h('div', { className: "columns-2 gap-3 space-y-3" },
+                        notes.map(n => h('div', { key: n.id, className: "break-inside-avoid bg-neutral-900/60 backdrop-blur-md border border-yellow-500/20 p-4 rounded-2xl flex flex-col gap-2 relative group hover:bg-neutral-800/80 transition-colors shadow-lg" },
+                            h('p', { className: "text-sm text-gray-200 whitespace-pre-wrap font-medium leading-relaxed" }, n.text),
+                            h('span', { className: "text-[9px] text-neutral-500 font-mono" }, new Date(n.date).toLocaleDateString()),
+                            h('button', {
+                                onClick: () => deleteNote(n),
+                                className: "absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-neutral-500 hover:text-red-500 transition-all p-1"
+                            }, Icon('X', 12))
+                        ))
+                    )
+                )
+            ) : act==='t4' ? (
                 // --- PROJECT MANAGER ---
                 h('div', { className: "flex-1 overflow-hidden relative" },
                     
@@ -683,7 +707,7 @@ function App(){
         ),
 
         // Event List Bottom Sheet
-        act !== 't4' && h('div',{className:`fixed bottom-0 left-0 right-[60px] z-50 rounded-tr-2xl glass flex flex-col ${!drag?'tr-h':''}`,style:{height:dH}},
+        (act === 't1' || act === 't2') && h('div',{className:`fixed bottom-0 left-0 right-[60px] z-50 rounded-tr-2xl glass flex flex-col ${!drag?'tr-h':''}`,style:{height:dH}},
             h('div',{className:"w-full h-6 flex justify-center items-center cursor-grab touch-none shrink-0",onTouchStart:e=>{SDr(true);dY.current=e.touches[0].clientY;dH0.current=dH},onTouchMove:e=>{if(drag)SH(Math.min(window.innerHeight-50,Math.max(40,dH0.current+(dY.current-e.touches[0].clientY))))},onTouchEnd:()=>{SDr(false);const h=window.innerHeight;SH(dH>h*.75?h-20:dH>h*.3?h*.5:40)}},h('div',{className:"w-12 h-1 bg-white/20 rounded-full"})),
             h('div',{className:`flex-1 overflow-x-auto p-4 flex gap-4 no-scrollbar fade-content ${dH<80?'opacity-0 pointer-events-none':'opacity-100'}`}, upGrouped.length?upGrouped.map(([dStr,evs])=>
                 h('div',{key:dStr,className:"flex flex-col gap-2 min-w-[220px]"},
@@ -710,7 +734,7 @@ function App(){
             // --- UNIFIED DELETE MODAL (FIXED) ---
             confirmDel && h('div',{className:"w-full max-w-sm bg-zinc-900 border border-red-900 rounded-xl overflow-hidden flex flex-col p-6 items-center text-center space-y-4"},
                 h('div',{className:"bg-red-500/10 p-4 rounded-full text-red-500 mb-2"}, Icon(deleting ? 'RefreshCw' : 'Trash2', 32, deleting ? 'animate-spin' : '')),
-                h('h3',{className:"text-lg font-black text-white"}, deleting ? "Eliminando..." : (confirmDel.type === 'project' ? "¿Eliminar Proyecto?" : "¿Eliminar Item?")),
+                h('h3',{className:"text-lg font-black text-white"}, deleting ? "Eliminando..." : (confirmDel.type === 'project' ? "¿Eliminar Proyecto?" : confirmDel.type === 'note' ? "¿Eliminar Nota?" : "¿Eliminar Item?")),
                 h('p',{className:"text-xs text-neutral-400"}, confirmDel.title),
                 !deleting && h('div',{className:"flex gap-3 w-full mt-4"},
                     h('button',{onClick:()=>SConfirm(null),className:"flex-1 py-3 rounded border border-neutral-700 text-neutral-300 font-bold hover:bg-white/5"},"CANCELAR"),
@@ -741,6 +765,17 @@ function App(){
                     h('textarea',{autoFocus:true,rows:3,placeholder:"https://...",className:"w-full bg-black/40 border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-[var(--theme-color)] transition-all",value:resForm.content,onChange:e=>SResForm({...resForm,content:e.target.value})}),
                     h('button',{onClick:addResource, disabled: addingRes, className:"w-full py-3 rounded-xl bg-[var(--theme-color)] text-black font-black hover:scale-[1.02] transition-transform flex justify-center items-center gap-2"},
                         addingRes ? Icon('RefreshCw', 18, "animate-spin") : "GUARDAR"
+                    )
+                )
+            ),
+
+            // --- NEW NOTE MODAL (QUICK CAPTURE) ---
+            modal === 'nn' && h('div',{className:"w-full max-w-sm ios-glass rounded-3xl overflow-hidden shadow-2xl flex flex-col"},
+                h('div',{className:"p-4 bg-white/5 border-b border-white/5 flex justify-between"},h('span',{className:"font-black text-white tracking-widest"},"NOTA RÁPIDA"),h('button',{onClick:()=>SM(null)},Icon('X'))),
+                h('div',{className:"p-5 space-y-4"},
+                    h('textarea',{autoFocus:true,rows:5,placeholder:"Escribe aquí...",className:"w-full bg-black/40 border border-white/10 rounded-xl p-3 text-sm text-white outline-none focus:border-[var(--theme-color)] transition-all",value:resForm.content,onChange:e=>SResForm({...resForm,content:e.target.value})}),
+                    h('button',{onClick:addNote, className:"w-full py-3 rounded-xl bg-[var(--theme-color)] text-black font-black hover:scale-[1.02] transition-transform flex justify-center items-center gap-2"},
+                        "GUARDAR"
                     )
                 )
             ),
