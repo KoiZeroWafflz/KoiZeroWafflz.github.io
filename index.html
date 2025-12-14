@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V17: Ultra Fluid</title>
+<title>CMD V18: Fast</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif'],mono:['JetBrains Mono','Courier New','monospace']},animation:{'pulse-fast':'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite','scan':'scan 2s linear infinite'}} }}</script>
@@ -21,38 +21,35 @@ body{background:#000;touch-action:none;overscroll-behavior:none;user-select:none
 #modal-root { position: fixed; inset: 0; z-index: 9999; pointer-events: auto; }
 
 /* Smooth Month Animations */
-.anim-n { animation: slideNext 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
-.anim-p { animation: slidePrev 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
-@keyframes slideNext { from { transform: translateX(20%); opacity: 0; filter: blur(5px); } to { transform: translateX(0); opacity: 1; filter: blur(0); } }
-@keyframes slidePrev { from { transform: translateX(-20%); opacity: 0; filter: blur(5px); } to { transform: translateX(0); opacity: 1; filter: blur(0); } }
+.anim-n { animation: slideNext 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.anim-p { animation: slidePrev 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes slideNext { from { transform: translateX(10%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes slidePrev { from { transform: translateX(-10%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
 /* --- TV PURGE ANIMATION --- */
-.anim-purge { animation: tvPurge 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; transform-origin: center; pointer-events: none; will-change: transform, opacity, max-height, margin; }
+.anim-purge { animation: tvPurge 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; transform-origin: center; pointer-events: none; will-change: transform, opacity, max-height, margin; }
 @keyframes tvPurge {
     0% { transform: scale(1); filter: brightness(1); opacity: 1; max-height: 80px; margin-bottom: 0.75rem; }
-    30% { transform: scale(1.05); filter: brightness(2.5) drop-shadow(0 0 15px var(--theme-color)); opacity: 1; max-height: 80px; }
-    50% { transform: scale(1, 0.05); filter: brightness(5) drop-shadow(0 0 25px white); opacity: 1; max-height: 80px; }
-    70% { transform: scale(0.5, 0.05); opacity: 0; max-height: 80px; }
-    100% { transform: scale(0, 0); opacity: 0; max-height: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; border-width: 0; }
+    40% { transform: scale(1, 0.05); filter: brightness(5); opacity: 1; max-height: 80px; }
+    100% { transform: scale(0, 0); opacity: 0; max-height: 0; margin-bottom: 0; padding: 0; border: 0; }
 }
-.tr-h { transition: height 0.5s cubic-bezier(0.32, 0.725, 0.25, 1); }
+.tr-h { transition: height 0.4s cubic-bezier(0.32, 0.725, 0.25, 1); }
 
-/* --- IOS ULTRA FLUID ANIMATIONS --- */
-.zoom-enter { animation: zoomInFolder 0.25s cubic-bezier(0.2, 0.9, 0.2, 1) forwards; }
-.zoom-exit { animation: zoomOutFolder 0.2s cubic-bezier(0.2, 0.9, 0.2, 1) forwards; }
+/* --- OPTIMIZED FOLDER ANIMATIONS --- */
+.zoom-enter { animation: zoomInFolder 0.25s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+.zoom-exit { animation: zoomOutFolder 0.2s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
 
 @keyframes zoomInFolder {
-    0% { opacity: 0; transform: scale(0.92) translateY(10px); filter: blur(4px); }
-    100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+    0% { opacity: 0; transform: scale(0.92); }
+    100% { opacity: 1; transform: scale(1); }
 }
 @keyframes zoomOutFolder {
-    0% { opacity: 1; transform: scale(1); filter: blur(0); }
-    100% { opacity: 0; transform: scale(0.95); filter: blur(4px); }
+    0% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(0.95); }
 }
 
-/* Card Hover Effects */
-.card-hover { transition: transform 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94); will-change: transform; }
-.card-hover:active { transform: scale(0.97); }
+.card-touch { transition: transform 0.1s; will-change: transform; }
+.card-touch:active { transform: scale(0.97); }
 
 </style>
 </head>
@@ -163,7 +160,7 @@ function App(){
         const t=localStorage.getItem('tb_v9');
         const g=localStorage.getItem('gc_v9');
         const c=localStorage.getItem('cm_v9');
-        const p=localStorage.getItem('pj_v2'); 
+        const p=localStorage.getItem('pj_v3'); 
         if(e) try{ SE(JSON.parse(e) || []) }catch(x){ SE([]) } 
         if(t) try{ ST(JSON.parse(t)) }catch(x){ ST(TABS) }
         if(g) try{ SG(JSON.parse(g)) }catch(x){ SG({apiKey:'',clientId:''}) }
@@ -181,7 +178,7 @@ function App(){
     useEffect(()=>{ localStorage.setItem('tb_v9',JSON.stringify(tabs)) },[tabs]);
     useEffect(()=>{ localStorage.setItem('gc_v9',JSON.stringify(gCfg)) },[gCfg]);
     useEffect(()=>{ localStorage.setItem('cm_v9',JSON.stringify(cals)) },[cals]);
-    useEffect(()=>{ localStorage.setItem('pj_v2',JSON.stringify(projs)) },[projs]);
+    useEffect(()=>{ localStorage.setItem('pj_v3',JSON.stringify(projs)) },[projs]);
 
     useEffect(() => {
         if(gSign && gCfg.apiKey) {
@@ -383,9 +380,6 @@ function App(){
         setSaving(false); SM(null);
     };
 
-    // --- ENHANCED PROJECT MANAGER ---
-
-    // Youtube ID Extractor
     const getYouTubeId = (url) => {
         const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
         const match = url.match(regExp);
@@ -405,20 +399,18 @@ function App(){
         const content = resForm.content.trim();
         let type = 'note', icon = 'FileText', color = '#FBBC04', thumb = null, title = content;
         
-        // 1. YouTube Detection & Metadata Fetch
         const ytId = getYouTubeId(content);
         if (ytId) {
             type = 'video';
             icon = 'Youtube';
             color = '#FF0000';
-            thumb = `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
+            thumb = `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
             try {
                 const res = await fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${ytId}`);
                 const data = await res.json();
                 if(data.title) title = data.title;
             } catch(e) { console.warn("NoEmbed failed", e); }
         } 
-        // 2. Drive / PDF / General Link Detection
         else if(content.includes('drive.google.com')) { type = 'drive'; icon = 'Cloud'; color = '#34A853'; }
         else if(content.includes('.pdf')) { type = 'pdf'; icon = 'File'; color = '#EA4335'; }
         else if(content.startsWith('http')) { type = 'link'; icon = 'ExternalLink'; color = '#3b82f6'; }
@@ -441,12 +433,13 @@ function App(){
     const openProject = (pId) => {
         SProjAnim('entering');
         SCurProjId(pId);
-        setTimeout(() => SProjAnim('idle'), 300); 
+        // Instant animation trigger
+        requestAnimationFrame(() => SProjAnim('idle'));
     };
 
     const closeProject = () => {
         SProjAnim('exiting');
-        // Reduced timeout for snappier feel
+        // Reduced latency for snappier feel
         setTimeout(() => {
             SCurProjId(null);
             SProjAnim('idle');
@@ -457,63 +450,58 @@ function App(){
 
     // --- RENDER HELPERS ---
     
-    // Minimalist Folder (Flat Icon + Color Pill)
+    // NEW FLAT FOLDER DESIGN
     const renderFolder = (p) => {
         return h('div', {
             key: p.id,
             onClick: () => openProject(p.id),
-            className: "group flex flex-col items-center gap-3 cursor-pointer active:scale-95 transition-transform duration-200"
+            className: "group flex flex-col items-center gap-3 cursor-pointer card-touch relative"
         },
-            // Folder Icon Container
-            h('div', { className: "relative flex items-center justify-center w-24 h-20" },
-                Icon('Folder', 72, "text-neutral-700 stroke-[1] fill-neutral-800/50 group-hover:text-neutral-600 transition-colors"),
+            // Transparent Large Hitbox
+            h('div', { className: "w-[80px] h-[80px] md:w-[100px] md:h-[100px] flex items-center justify-center relative rounded-2xl hover:bg-white/5 transition-colors" },
+                // Big Icon (Neutral or Tinted)
+                Icon('Folder', 48, "text-neutral-500 stroke-[1.5] group-hover:text-white transition-colors"),
                 
-                // Color Pill
+                // Color Pill (Bottom Center)
                 h('div', { 
-                    className: "absolute -bottom-1 w-8 h-1.5 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)]",
-                    style: { backgroundColor: p.color }
+                    className: "absolute bottom-2 left-1/2 -translate-x-1/2 w-8 h-1.5 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)]",
+                    style: { backgroundColor: p.color, boxShadow: `0 0 10px ${p.color}40` }
                 })
             ),
             
             // Title
-            h('div', { className: "text-center" },
-                h('span', { className: "text-xs font-medium text-white/90 block truncate max-w-[100px]" }, p.title),
-                h('span', { className: "text-[10px] text-neutral-600 font-mono" }, `${p.resources.length} items`)
-            ),
+            h('span', { className: "text-[11px] font-medium text-neutral-400 group-hover:text-white transition-colors text-center truncate w-full px-1 max-w-[100px]" }, p.title),
             
             // Delete (hover only)
             h('button', {
                 onClick: (e) => { e.stopPropagation(); deleteProject(p.id); },
-                className: "absolute top-0 right-2 opacity-0 group-hover:opacity-100 p-1.5 text-neutral-600 hover:text-red-500 transition-all z-20"
-            }, Icon('X', 14))
+                className: "absolute top-0 right-2 bg-neutral-900 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-20 shadow-lg border border-white/10"
+            }, Icon('X', 10, "text-white"))
         );
     };
 
-    // Big Card Renderer for Resource View
+    // LARGER RESOURCE CARDS
     const renderResourceCard = (r) => {
         const isVideo = r.type === 'video';
         return h('div', {
             key: r.id,
             onClick: () => r.type !== 'note' && window.open(r.content, '_blank'),
-            className: "relative aspect-video rounded-xl overflow-hidden bg-neutral-900 border border-white/5 shadow-2xl flex flex-col card-hover cursor-pointer group"
+            className: "relative aspect-[16/10] rounded-xl overflow-hidden bg-neutral-900/40 border border-white/5 shadow-xl flex flex-col card-touch cursor-pointer group hover:border-white/20 hover:bg-neutral-800/60"
         },
             // Visual Content
-            h('div', { className: `flex-1 w-full relative overflow-hidden ${isVideo ? 'bg-black' : 'bg-white/5 flex items-center justify-center'}` },
+            h('div', { className: `flex-1 w-full relative overflow-hidden ${isVideo ? 'bg-black' : 'flex items-center justify-center'}` },
                 isVideo && r.thumb 
-                ? h('img', { src: r.thumb, className: "w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" })
-                : Icon(r.icon, 64, `text-[${r.color}] drop-shadow-[0_15px_30px_${r.color}30] opacity-80`)
+                ? h('img', { src: r.thumb, className: "w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500" })
+                : Icon(r.icon, 42, `text-[${r.color}] drop-shadow-[0_0_25px_${r.color}30] group-hover:scale-110 transition-transform duration-300`)
             ),
             
-            // Minimal Info Overlay
-            h('div', { className: "absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 to-transparent p-3 pt-10 flex items-end justify-between" },
-                h('div', { className: "min-w-0 flex-1 pr-2" },
-                    h('p', { className: "text-sm font-bold text-white truncate leading-tight drop-shadow-md" }, r.title || r.content),
-                    h('span', { className: "text-[9px] text-white/60 uppercase tracking-wider" }, r.type)
-                ),
+            // Minimal Footer
+            h('div', { className: "h-[40px] shrink-0 bg-black/40 backdrop-blur-md px-3 flex items-center justify-between border-t border-white/5" },
+                h('p', { className: "text-[10px] font-bold text-white truncate w-full leading-tight" }, r.title || r.content),
                 h('button', {
                     onClick: (e) => { e.stopPropagation(); deleteResource(r.id); },
-                    className: "text-white/40 hover:text-red-400 transition-colors p-1"
-                }, Icon('Trash2', 16))
+                    className: "ml-2 text-neutral-600 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                }, Icon('Trash2', 12))
             )
         );
     }
@@ -560,18 +548,18 @@ function App(){
                 // --- PROJECT MANAGER ---
                 h('div', { className: "flex-1 overflow-hidden relative" },
                     
-                    // FOLDER GRID VIEW
+                    // FLAT FOLDER GRID
                     !curProjId && h('div', { 
-                        className: `absolute inset-0 overflow-y-auto p-8 content-start grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-x-4 gap-y-10 ${projAnim === 'exiting' ? 'zoom-exit' : 'zoom-enter'}` 
+                        className: `absolute inset-0 overflow-y-auto p-4 content-start grid grid-cols-3 md:grid-cols-5 lg:grid-cols-8 gap-x-2 gap-y-6 ${projAnim === 'exiting' ? 'zoom-exit' : 'zoom-enter'}` 
                     },
                         projs.map(p => renderFolder(p)),
                         projs.length === 0 && h('div', { className: "col-span-full flex flex-col items-center justify-center opacity-30 mt-20" },
                             Icon('Folder', 64, "mb-4 stroke-[1]"),
-                            h('span', { className: "text-sm font-mono" }, "Sin proyectos activos")
+                            h('span', { className: "text-sm font-mono" }, "Sin proyectos")
                         )
                     ),
                     
-                    // PROJECT DETAIL VIEW (Big Gallery Style)
+                    // PROJECT DETAIL VIEW (BIG ICONS)
                     curProjId && currentProject && h('div', { 
                         className: `absolute inset-0 bg-black/80 backdrop-blur-3xl flex flex-col z-20 ${projAnim === 'entering' ? 'zoom-enter' : projAnim === 'exiting' ? 'zoom-exit' : ''}` 
                     },
@@ -581,16 +569,15 @@ function App(){
                                 Icon('ArrowLeft', 24), h('span',{className:"text-sm font-bold"},"Atrás")
                             ),
                             h('div', {},
-                                h('h2', { className: "text-xl font-black text-white tracking-tight" }, currentProject.title),
+                                h('h2', { className: "text-lg font-black text-white tracking-tight" }, currentProject.title),
                                 h('span', { className: "text-[10px] font-mono text-neutral-400" }, `${currentProject.resources.length} ITEMS`)
                             )
                         ),
                         
-                        // Resource Grid
-                        h('div', { className: "flex-1 overflow-y-auto p-6" },
-                            h('div', { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20" },
+                        // Large Resource Grid
+                        h('div', { className: "flex-1 overflow-y-auto p-4 md:p-6" },
+                            h('div', { className: "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6" },
                                 currentProject.resources.map(r => renderResourceCard(r)),
-                                // Empty State within Project
                                 currentProject.resources.length === 0 && h('div', { className: "col-span-full flex flex-col items-center justify-center py-20 text-neutral-600" },
                                     Icon('Plus', 48, "mb-4 opacity-20"),
                                     h('p', { className: "text-sm" }, "Carpeta vacía"),
@@ -641,7 +628,7 @@ function App(){
             )
         ),
 
-        // Event List Bottom Sheet (Only for Tabs 1, 2, 3)
+        // Event List Bottom Sheet
         act !== 't4' && h('div',{className:`fixed bottom-0 left-0 right-[60px] z-50 rounded-tr-2xl glass flex flex-col ${!drag?'tr-h':''}`,style:{height:dH}},
             h('div',{className:"w-full h-6 flex justify-center items-center cursor-grab touch-none shrink-0",onTouchStart:e=>{SDr(true);dY.current=e.touches[0].clientY;dH0.current=dH},onTouchMove:e=>{if(drag)SH(Math.min(window.innerHeight-50,Math.max(40,dH0.current+(dY.current-e.touches[0].clientY))))},onTouchEnd:()=>{SDr(false);const h=window.innerHeight;SH(dH>h*.75?h-20:dH>h*.3?h*.5:40)}},h('div',{className:"w-12 h-1 bg-white/20 rounded-full"})),
             h('div',{className:`flex-1 overflow-x-auto p-4 flex gap-4 no-scrollbar fade-content ${dH<80?'opacity-0 pointer-events-none':'opacity-100'}`}, upGrouped.length?upGrouped.map(([dStr,evs])=>
@@ -667,13 +654,13 @@ function App(){
         (modal || confirmDel || sets || bioShow || guideShow) && h('div',{id:'modal-root',className:"bg-black/90 backdrop-blur-md flex items-center justify-center p-4"},
             
             // --- NEW PROJECT MODAL ---
-            modal === 'np' && h('div',{className:"w-full max-w-sm ios-glass rounded-3xl overflow-hidden shadow-2xl flex flex-col animate-pulse-fast", style:{animation:'none'}},
+            modal === 'np' && h('div',{className:"w-full max-w-sm ios-glass rounded-3xl overflow-hidden shadow-2xl flex flex-col"},
                 h('div',{className:"p-4 bg-white/5 border-b border-white/5 flex justify-between"},h('span',{className:"font-black text-white tracking-widest"},"NUEVO PROYECTO"),h('button',{onClick:()=>SM(null)},Icon('X'))),
                 h('div',{className:"p-5 space-y-4"},
                     h('input',{autoFocus:true,placeholder:"Nombre...",className:"w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white font-bold outline-none focus:border-[var(--theme-color)] transition-all",value:form.title,onChange:e=>SF({...form,title:e.target.value})}),
-                    h('div',{className:"flex justify-between items-center"},
-                         h('span',{className:"text-sm text-neutral-400"},"Etiqueta de Color"),
-                         h('input',{type:'color',value:form.color||'#22c55e',onChange:e=>SF({...form,color:e.target.value}),className:"w-8 h-8 rounded-full border-2 border-white/20 bg-transparent cursor-pointer p-0 overflow-hidden"})
+                     h('div',{className:"flex justify-between items-center bg-black/40 p-3 rounded-xl border border-white/10"},
+                         h('span',{className:"text-sm text-neutral-400"},"Color de Píldora"),
+                         h('input',{type:'color',value:form.color||'#22c55e',onChange:e=>SF({...form,color:e.target.value}),className:"w-8 h-8 rounded border-none bg-transparent cursor-pointer"})
                     ),
                     h('button',{onClick:addProject,className:"w-full py-3 rounded-xl bg-[var(--theme-color)] text-black font-black hover:scale-[1.02] transition-transform shadow-[0_0_20px_var(--theme-color)]"},"CREAR")
                 )
