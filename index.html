@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V22: Organize/title>
+<title>CMD V23: Stable Core & Notes</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif'],mono:['JetBrains Mono','Courier New','monospace']},animation:{'pulse-fast':'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite','scan':'scan 2s linear infinite'}} }}</script>
@@ -36,43 +36,11 @@ body{background:#000;touch-action:none;overscroll-behavior:none;user-select:none
 }
 
 @keyframes tvPurge {
-    0% {
-        transform: scale(1);
-        filter: brightness(1);
-        opacity: 1;
-        max-height: 200px; /* Adjust based on max content height */
-        margin-bottom: 0.75rem;
-    }
-    30% {
-        /* PHASE 1: Energy Accumulation (Glow) */
-        transform: scale(1.02);
-        filter: brightness(3) drop-shadow(0 0 20px var(--theme-color));
-        opacity: 1;
-        max-height: 200px;
-    }
-    50% {
-        /* PHASE 2: Vertical Compression (Light Line) */
-        transform: scale(1, 0.02);
-        filter: brightness(10) drop-shadow(0 0 30px white);
-        opacity: 1;
-        max-height: 200px;
-    }
-    60% {
-        /* PHASE 3: Fade Out Line */
-        transform: scale(0.5, 0.02);
-        opacity: 0;
-        max-height: 200px;
-    }
-    100% {
-        /* PHASE 4: Collapse Space */
-        transform: scale(0, 0);
-        opacity: 0;
-        max-height: 0;
-        margin-bottom: 0;
-        padding-top: 0;
-        padding-bottom: 0;
-        border-width: 0;
-    }
+    0% { transform: scale(1); filter: brightness(1); opacity: 1; max-height: 200px; margin-bottom: 0.75rem; }
+    30% { transform: scale(1.02); filter: brightness(3) drop-shadow(0 0 20px var(--theme-color)); opacity: 1; max-height: 200px; }
+    50% { transform: scale(1, 0.02); filter: brightness(10) drop-shadow(0 0 30px white); opacity: 1; max-height: 200px; }
+    60% { transform: scale(0.5, 0.02); opacity: 0; max-height: 200px; }
+    100% { transform: scale(0, 0); opacity: 0; max-height: 0; margin-bottom: 0; padding: 0; border: 0; }
 }
 
 .tr-h { transition: height 0.4s cubic-bezier(0.32, 0.725, 0.25, 1); }
@@ -203,7 +171,6 @@ function App(){
     const [loadingBio, setLoadingBio] = useState(false);
     const [bioError, setBioError] = useState(false);
     
-    // Bio Almanac Seen State
     const [seenBio, setSeenBio] = useState(new Set());
 
     const fM=useRef(new Set());
@@ -219,18 +186,25 @@ function App(){
     const thStyle={'--theme-color':curTab.c};
 
     useEffect(()=>{
-        const e=localStorage.getItem('ev_v14');
-        const t=localStorage.getItem('tb_v9');
-        const g=localStorage.getItem('gc_v9');
-        const c=localStorage.getItem('cm_v9');
-        const p=localStorage.getItem('pj_v5'); 
-        const n=localStorage.getItem('nt_v1'); 
-        if(e) try{ SE(JSON.parse(e) || []) }catch(x){ SE([]) } 
-        if(t) try{ ST(JSON.parse(t)) }catch(x){ ST(TABS) }
-        if(g) try{ SG(JSON.parse(g)) }catch(x){ SG({apiKey:'',clientId:''}) }
-        if(c) try{ SC(JSON.parse(c)) }catch(x){ SC({}) }
-        if(p) try{ SProjs(JSON.parse(p) || []) }catch(x){ SProjs([]) }
-        if(n) try{ SNotes(JSON.parse(n) || []) }catch(x){ SNotes([]) }
+        // --- CRASH PREVENTION LOADING SYSTEM ---
+        const safeLoad = (key, def) => {
+            try {
+                const item = localStorage.getItem(key);
+                if(!item) return def;
+                const parsed = JSON.parse(item);
+                // Ensure array for list types
+                if(Array.isArray(def) && !Array.isArray(parsed)) return def;
+                return parsed;
+            } catch(e) { console.warn("Resetting corrupt data:", key); return def; }
+        };
+
+        SE(safeLoad('ev_v14', []));
+        ST(safeLoad('tb_v9', TABS));
+        SG(safeLoad('gc_v9', {apiKey:'',clientId:''}));
+        SC(safeLoad('cm_v9', {}));
+        SProjs(safeLoad('pj_v5', []));
+        SNotes(safeLoad('nt_v1', []));
+
         if(!window.gapi) {
             const script = document.createElement('script');
             script.src = "https://apis.google.com/js/api.js";
@@ -445,7 +419,6 @@ function App(){
             setDeleting(false);
             SConfirm(null);
             setExitingNotes(prev => new Set(prev).add(id));
-            // Wait for 700ms animation
             setTimeout(() => {
                 SNotes(prev => prev.filter(n => n.id !== id));
                 setExitingNotes(prev => { const n = new Set(prev); n.delete(id); return n; });
@@ -662,12 +635,12 @@ function App(){
             act==='t3' ? (
                 // --- QUICK NOTES VIEW (WITH ANIMATIONS) ---
                 h('div', { className: "flex-1 overflow-y-auto p-2" },
-                    notes.length === 0 && h('div', { className: "flex flex-col items-center justify-center opacity-30 mt-32" },
+                    (notes || []).length === 0 && h('div', { className: "flex flex-col items-center justify-center opacity-30 mt-32" },
                         Icon('BookOpen', 64, "mb-4 stroke-[1]"),
                         h('span', { className: "text-sm font-mono tracking-widest" }, "BANDEJA VACÍA")
                     ),
                     h('div', { className: "columns-2 gap-3 space-y-3" },
-                        notes.map(n => h('div', { key: n.id, className: `break-inside-avoid bg-neutral-900/60 backdrop-blur-md border border-yellow-500/20 p-4 rounded-2xl flex flex-col gap-2 relative group hover:bg-neutral-800/80 transition-colors shadow-lg zoom-enter ${exitingNotes.has(n.id) ? 'anim-purge' : ''}` },
+                        (notes || []).map(n => h('div', { key: n.id, className: `break-inside-avoid bg-neutral-900/60 backdrop-blur-md border border-yellow-500/20 p-4 rounded-2xl flex flex-col gap-2 relative group hover:bg-neutral-800/80 transition-colors shadow-lg zoom-enter ${exitingNotes.has(n.id) ? 'anim-purge' : ''}` },
                             h('p', { className: "text-sm text-gray-200 whitespace-pre-wrap font-medium leading-relaxed" }, n.text),
                             h('span', { className: "text-[9px] text-neutral-500 font-mono" }, new Date(n.date).toLocaleDateString()),
                             h('button', {
@@ -685,8 +658,8 @@ function App(){
                     !curProjId && h('div', { 
                         className: `absolute inset-0 overflow-y-auto p-4 content-start grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-2 gap-y-8 ${projAnim === 'exiting' ? 'zoom-exit' : 'zoom-enter'}` 
                     },
-                        projs.map(p => renderFolder(p)),
-                        projs.length === 0 && h('div', { className: "col-span-full flex flex-col items-center justify-center opacity-30 mt-20" },
+                        (projs || []).map(p => renderFolder(p)),
+                        (projs || []).length === 0 && h('div', { className: "col-span-full flex flex-col items-center justify-center opacity-30 mt-20" },
                             Icon('Folder', 96, "mb-4 stroke-[0.5]"),
                             h('span', { className: "text-lg font-mono tracking-widest" }, "VACÍO")
                         )
