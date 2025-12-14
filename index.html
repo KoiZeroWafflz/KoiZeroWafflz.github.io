@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V19: Bold</title>
+<title>CMD V19: Actualize</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif'],mono:['JetBrains Mono','Courier New','monospace']},animation:{'pulse-fast':'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite','scan':'scan 2s linear infinite'}} }}</script>
@@ -160,7 +160,7 @@ function App(){
         const t=localStorage.getItem('tb_v9');
         const g=localStorage.getItem('gc_v9');
         const c=localStorage.getItem('cm_v9');
-        const p=localStorage.getItem('pj_v4'); // Version Bump for Projects
+        const p=localStorage.getItem('pj_v5'); // Version Bump for Projects V19
         if(e) try{ SE(JSON.parse(e) || []) }catch(x){ SE([]) } 
         if(t) try{ ST(JSON.parse(t)) }catch(x){ ST(TABS) }
         if(g) try{ SG(JSON.parse(g)) }catch(x){ SG({apiKey:'',clientId:''}) }
@@ -178,7 +178,7 @@ function App(){
     useEffect(()=>{ localStorage.setItem('tb_v9',JSON.stringify(tabs)) },[tabs]);
     useEffect(()=>{ localStorage.setItem('gc_v9',JSON.stringify(gCfg)) },[gCfg]);
     useEffect(()=>{ localStorage.setItem('cm_v9',JSON.stringify(cals)) },[cals]);
-    useEffect(()=>{ localStorage.setItem('pj_v4',JSON.stringify(projs)) },[projs]);
+    useEffect(()=>{ localStorage.setItem('pj_v5',JSON.stringify(projs)) },[projs]);
 
     useEffect(() => {
         if(gSign && gCfg.apiKey) {
@@ -354,7 +354,7 @@ function App(){
     // --- UNIFIED DELETE SYSTEM ---
     const confirmDelete = async () => { 
         if(!confirmDel) return;
-        const { id, type, calId, projId } = confirmDel; // Added projId for resource deletion
+        const { id, type, calId, projId } = confirmDel; 
         setDeleting(true); 
 
         // 1. DELETE PROJECT
@@ -466,30 +466,30 @@ function App(){
 
     // --- RENDER HELPERS ---
     
-    // RENDER: Flat Folder with Bold Title
+    // RENDER: MASSIVE FLAT FOLDER
     const renderFolder = (p) => {
         return h('div', {
             key: p.id,
             onClick: () => openProject(p.id),
-            className: "group flex flex-col items-center gap-3 cursor-pointer card-touch relative"
+            className: "group flex flex-col items-center gap-6 cursor-pointer card-touch relative my-6"
         },
-            // Transparent Large Hitbox
-            h('div', { className: "w-[120px] h-[120px] md:w-[140px] md:h-[140px] flex items-center justify-center relative rounded-2xl hover:bg-white/5 transition-colors" },
-                Icon('Folder', 72, "text-neutral-500 stroke-[1] group-hover:text-white transition-colors"),
+            // Transparent Large Hitbox - SCALED 3X
+            h('div', { className: "w-[260px] h-[260px] md:w-[300px] md:h-[300px] flex items-center justify-center relative rounded-[3rem] hover:bg-white/5 transition-colors" },
+                Icon('Folder', 216, "text-neutral-500 stroke-[0.8] group-hover:text-white transition-colors"),
                 h('div', { 
-                    className: "absolute bottom-3 left-1/2 -translate-x-1/2 w-14 h-2.5 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)]",
-                    style: { backgroundColor: p.color, boxShadow: `0 0 10px ${p.color}40` }
+                    className: "absolute bottom-8 left-1/2 -translate-x-1/2 w-40 h-4 rounded-full shadow-[0_0_20px_rgba(0,0,0,0.5)]",
+                    style: { backgroundColor: p.color, boxShadow: `0 0 25px ${p.color}60` }
                 })
             ),
             
-            // Bold White Title
-            h('span', { className: "text-[12px] font-black text-white uppercase tracking-tight group-hover:text-white transition-colors text-center truncate w-full px-1 max-w-[120px] drop-shadow-md" }, p.title),
+            // Bold White Title - SCALED 3X
+            h('span', { className: "text-3xl font-black text-white uppercase tracking-tight group-hover:text-white transition-colors text-center truncate w-full px-4 max-w-[300px] drop-shadow-xl" }, p.title),
             
             // Delete (hover only)
             h('button', {
                 onClick: (e) => { e.stopPropagation(); deleteProject(p); },
-                className: "absolute top-0 right-2 bg-neutral-900 rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity z-20 shadow-lg border border-white/10 text-white"
-            }, Icon('X', 12))
+                className: "absolute top-4 right-4 bg-neutral-900 rounded-full p-3 opacity-0 group-hover:opacity-100 transition-opacity z-20 shadow-2xl border border-white/20 text-white"
+            }, Icon('X', 20))
         );
     };
 
@@ -497,7 +497,6 @@ function App(){
     const renderResourceCard = (r) => {
         const isVideo = r.type === 'video';
         
-        // Map Type to Readable Text
         let typeLabel = "ARCHIVO";
         if(r.type === 'video') typeLabel = "YOUTUBE";
         else if(r.type === 'pdf') typeLabel = "DOCUMENTO PDF";
@@ -571,18 +570,18 @@ function App(){
                 // --- PROJECT MANAGER ---
                 h('div', { className: "flex-1 overflow-hidden relative" },
                     
-                    // FLAT FOLDER GRID
+                    // MASSIVE FLAT FOLDER GRID (1 col mobile, 3 col desktop)
                     !curProjId && h('div', { 
-                        className: `absolute inset-0 overflow-y-auto p-4 content-start grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-2 gap-y-6 ${projAnim === 'exiting' ? 'zoom-exit' : 'zoom-enter'}` 
+                        className: `absolute inset-0 overflow-y-auto p-4 content-start grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-2 gap-y-10 place-items-center ${projAnim === 'exiting' ? 'zoom-exit' : 'zoom-enter'}` 
                     },
                         projs.map(p => renderFolder(p)),
                         projs.length === 0 && h('div', { className: "col-span-full flex flex-col items-center justify-center opacity-30 mt-20" },
-                            Icon('Folder', 64, "mb-4 stroke-[1]"),
-                            h('span', { className: "text-sm font-mono" }, "Sin proyectos")
+                            Icon('Folder', 96, "mb-4 stroke-[0.5]"),
+                            h('span', { className: "text-xl font-mono" }, "Sin proyectos")
                         )
                     ),
                     
-                    // PROJECT DETAIL VIEW (BIG ICONS)
+                    // PROJECT DETAIL VIEW
                     curProjId && currentProject && h('div', { 
                         className: `absolute inset-0 bg-black/80 backdrop-blur-3xl flex flex-col z-20 ${projAnim === 'entering' ? 'zoom-enter' : projAnim === 'exiting' ? 'zoom-exit' : ''}` 
                     },
@@ -676,7 +675,7 @@ function App(){
 
         (modal || confirmDel || sets || bioShow || guideShow) && h('div',{id:'modal-root',className:"bg-black/90 backdrop-blur-md flex items-center justify-center p-4"},
             
-            // --- UNIFIED DELETE MODAL (FIXED) ---
+            // --- UNIFIED DELETE MODAL ---
             confirmDel && h('div',{className:"w-full max-w-sm bg-zinc-900 border border-red-900 rounded-xl overflow-hidden flex flex-col p-6 items-center text-center space-y-4"},
                 h('div',{className:"bg-red-500/10 p-4 rounded-full text-red-500 mb-2"}, Icon(deleting ? 'RefreshCw' : 'Trash2', 32, deleting ? 'animate-spin' : '')),
                 h('h3',{className:"text-lg font-black text-white"}, deleting ? "Eliminando..." : (confirmDel.type === 'project' ? "¿Eliminar Proyecto?" : "¿Eliminar Item?")),
@@ -755,65 +754,6 @@ function App(){
                 )
             ),
 
-            bioShow && h('div',{className:"w-full max-w-5xl h-[85vh] md:h-[650px] bg-black border border-white/20 rounded-xl overflow-hidden flex flex-col md:flex-row relative shadow-[0_0_50px_rgba(0,0,0,1)]"},
-                h('button',{onClick:()=>SBS(false),className:"absolute top-4 right-4 z-50 p-2 bg-black/60 rounded-full text-white hover:text-red-400 border border-white/10 backdrop-blur safe-hover"},Icon('X', 18)),
-                
-                loadingBio ? h('div',{className:"absolute inset-0 z-50 flex flex-col items-center justify-center bg-black text-white"},
-                    h('div',{className:"w-16 h-16 border-4 border-t-[var(--theme-color)] border-neutral-800 rounded-full animate-spin mb-4"}),
-                    h('p',{className:"text-sm font-mono tracking-widest animate-pulse"}, "ANALIZANDO MUESTRA..."),
-                    h('p',{className:"text-xs text-neutral-500 mt-2"}, "Conectando con Wikipedia API")
-                ) : bioError ? h('div',{className:"absolute inset-0 z-50 flex flex-col items-center justify-center bg-black text-red-500"},
-                    Icon('WifiOff', 48, "mb-4 opacity-50"),
-                    h('h3',{className:"text-xl font-bold"}, "ERROR DE ENLACE"),
-                    h('button',{onClick:fetchWikiBio, className:"mt-6 px-6 py-2 bg-white/10 rounded hover:bg-white/20 text-white"}, "Reintentar")
-                ) : wikiData && h(F, null,
-                    h('div',{className:"w-full md:w-5/12 h-1/3 md:h-full relative bg-zinc-900 overflow-hidden group"},
-                        wikiData.img ? h('img',{src:wikiData.img,className:"w-full h-full object-cover opacity-80"}) 
-                        : h('div',{className:"w-full h-full flex items-center justify-center bg-[#111]"}, Icon('Dna', 64, "text-neutral-700 animate-pulse")),
-                        h('div',{className:"absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"}),
-                        h('div',{className:"scan-line"}),
-                        h('div',{className:"absolute bottom-6 left-6 right-6 z-20"},
-                             h('div',{className:"flex items-center gap-2 mb-2"},
-                                h('div',{className:"w-2 h-2 rounded-full animate-pulse",style:{background:curTab.c}}),
-                                h('span',{className:"text-[10px] font-mono tracking-widest text-white/70 uppercase"},"Wiki Data Link")
-                            ),
-                            h('h2',{className:"text-3xl md:text-4xl font-black text-white italic tracking-tighter leading-none mb-1 drop-shadow-2xl"}, wikiData.title.toUpperCase())
-                        )
-                    ),
-                    h('div',{className:"w-full md:w-7/12 flex flex-col bg-[#050505] relative hud-grid"},
-                         h('div',{className:"flex items-center justify-between p-4 border-b border-white/10 bg-white/5"},
-                            h('button',{onClick:fetchWikiBio, className:"flex items-center gap-2 px-3 py-1.5 bg-[var(--theme-color)]/20 border border-[var(--theme-color)] text-[var(--theme-color)] text-xs font-bold rounded hover:bg-[var(--theme-color)] hover:text-black transition-all"}, Icon('RefreshCw', 12), "Siguiente Muestra"),
-                            h('div',{className:"flex items-center gap-2"}, Icon('Globe',14,"text-blue-500"), h('span',{className:"text-[10px] text-neutral-500 uppercase"}, "Wikipedia API"))
-                        ),
-                        h('div',{className:"flex-1 overflow-y-auto p-6 space-y-8 no-scrollbar"},
-                            h('div',{className:"space-y-3"},
-                                h('h4',{className:"text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] flex items-center gap-2"}, Icon('Activity',12), "Clasificación Taxonómica"),
-                                h('div',{className:"grid grid-cols-2 md:grid-cols-3 gap-[1px] bg-white/10 border border-white/10 rounded overflow-hidden"},
-                                    Object.entries(wikiData.tax).map(([k,v])=>
-                                        h('div',{key:k, className:"bg-[#0c0c0e] p-3 flex flex-col group hover:bg-[#151518] transition-colors"},
-                                            h('span',{className:"text-[9px] text-neutral-600 font-bold uppercase mb-1 tracking-wider"}, 
-                                                k==='k'?'Reino':k==='p'?'Filo':k==='c'?'Clase':k==='o'?'Orden':k==='f'?'Familia':k==='g'?'Género':k
-                                            ),
-                                            h('span',{className:"text-xs font-mono truncate",style:{color:curTab.c}}, v)
-                                        )
-                                    )
-                                )
-                            ),
-                            h('div',{className:"space-y-4"},
-                                h('h4',{className:"text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] flex items-center gap-2"}, Icon('BookOpen',12), "Informe Descriptivo"),
-                                h('div',{className:"grid gap-3"},
-                                    getDescBlocks(wikiData.desc).map((block, i) =>
-                                        h('div',{key:i, className:"bg-white/5 p-4 rounded border-l-2 border-[var(--theme-color)]/50 hover:bg-white/10 transition-colors"},
-                                            h('p',{className:"text-sm text-neutral-300 leading-relaxed"}, block)
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    )
-                )
-            ),
-            
             (modal === 'e' || modal === 'c') && !confirmDel && !sets && !bioShow && !guideShow && h('div',{className:"w-full max-w-md bg-zinc-900 border border-neutral-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col"},
                 h('div',{className:"p-4 bg-black/50 border-b border-neutral-800 flex justify-between"},h('span',{className:"font-black text-white tracking-widest"},modal==='e'?'EDITAR':'NUEVO'),h('button',{onClick:()=>SM(null)},Icon('X'))),
                 h('div',{className:"p-5 space-y-4"},
