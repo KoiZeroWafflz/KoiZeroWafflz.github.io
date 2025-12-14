@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>CMD V21: Notes & Smart Bio</title>
+<title>CMD V22: Notes And Organization</title>
 <link rel="manifest" href="./manifest.json"><meta name="theme-color" content="#000">
 <script src="https://cdn.tailwindcss.com"></script>
 <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif'],mono:['JetBrains Mono','Courier New','monospace']},animation:{'pulse-fast':'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite','scan':'scan 2s linear infinite'}} }}</script>
@@ -26,16 +26,69 @@ body{background:#000;touch-action:none;overscroll-behavior:none;user-select:none
 @keyframes slideNext { from { transform: translateX(10%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 @keyframes slidePrev { from { transform: translateX(-10%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
-/* --- TV PURGE ANIMATION --- */
+/* --- TV PURGE ANIMATION (TASKS) --- */
 .anim-purge { animation: tvPurge 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; transform-origin: center; pointer-events: none; will-change: transform, opacity, max-height, margin; }
 @keyframes tvPurge {
     0% { transform: scale(1); filter: brightness(1); opacity: 1; max-height: 80px; margin-bottom: 0.75rem; }
     40% { transform: scale(1, 0.05); filter: brightness(5); opacity: 1; max-height: 80px; }
     100% { transform: scale(0, 0); opacity: 0; max-height: 0; margin-bottom: 0; padding: 0; border: 0; }
 }
+
+/* --- TV PURGE ANIMATION (NOTES) --- */
+/* Especial para alturas variables */
+.anim-purge-note { 
+    animation: tvPurgeNote 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
+    transform-origin: center; 
+    pointer-events: none; 
+    will-change: transform, opacity, max-height, margin, padding;
+    overflow: hidden;
+}
+
+@keyframes tvPurgeNote {
+    0% {
+        transform: scale(1);
+        filter: brightness(1);
+        opacity: 1;
+        max-height: 500px; /* Suficiente para notas largas */
+        margin-bottom: 0.75rem; /* Gap de Tailwind gap-3 */
+        padding: 1rem; /* p-4 */
+        border-width: 1px;
+    }
+    30% {
+        /* FASE 1: Acumulación de Energía */
+        transform: scale(1.02);
+        filter: brightness(2.5) drop-shadow(0 0 20px var(--theme-color));
+        opacity: 1;
+        max-height: 500px;
+    }
+    50% {
+        /* FASE 2: Compresión Vertical (Línea de luz) */
+        transform: scale(1, 0.02); 
+        filter: brightness(10) drop-shadow(0 0 30px white); /* Luz pura */
+        opacity: 1;
+        max-height: 500px; 
+    }
+    70% {
+         /* FASE 3: Desvanecimiento de la línea */
+         transform: scale(0.5, 0.02);
+         opacity: 0;
+         max-height: 500px;
+    }
+    100% {
+        /* FASE 4: Colapso del espacio (Slide Up) */
+        transform: scale(0, 0);
+        opacity: 0;
+        max-height: 0;
+        margin-bottom: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        border-width: 0;
+    }
+}
+
 .tr-h { transition: height 0.4s cubic-bezier(0.32, 0.725, 0.25, 1); }
 
-/* --- OPTIMIZED FOLDER ANIMATIONS --- */
+/* --- OPTIMIZED FOLDER/NOTE ANIMATIONS --- */
 .zoom-enter { animation: zoomInFolder 0.25s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
 .zoom-exit { animation: zoomOutFolder 0.2s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
 
@@ -388,14 +441,24 @@ function App(){
         // 1. DELETE PROJECT
         if (type === 'project') {
              SProjs(prev => prev.filter(p => p.id !== id));
+             setDeleting(false); 
+             SConfirm(null);
         } 
         // 2. DELETE RESOURCE
         else if (type === 'resource') {
              SProjs(prev => prev.map(p => p.id === projId ? { ...p, resources: p.resources.filter(r => r.id !== id) } : p));
+             setDeleting(false); 
+             SConfirm(null);
         }
-        // 3. DELETE NOTE
+        // 3. DELETE NOTE (WITH TV ANIMATION)
         else if (type === 'note') {
-            SNotes(prev => prev.filter(n => n.id !== id));
+            setDeleting(false);
+            SConfirm(null);
+            setExitingIds(prev => new Set(prev).add(id));
+            setTimeout(() => { 
+                SNotes(prev => prev.filter(n => n.id !== id)); 
+                setExitingIds(prev => { const n = new Set(prev); n.delete(id); return n; }); 
+            }, 650); // Matches CSS animation duration
         }
         // 4. DELETE GOOGLE/LOCAL EVENT
         else {
@@ -403,13 +466,12 @@ function App(){
                 try { await window.gapi.client.calendar.events.delete({ calendarId: calId, eventId: id }); } 
                 catch (err) { alert("Error Google"); setDeleting(false); return; }
             }
+            setDeleting(false); 
+            SConfirm(null);
             SE(prev => prev.filter(e => e.id !== id)); 
             setExitingIds(prev => new Set(prev).add(id));
             setTimeout(() => { setExitingIds(prev => { const n = new Set(prev); n.delete(id); return n; }); }, 700); 
         }
-
-        setDeleting(false); 
-        SConfirm(null); 
     };
 
     const handleSave = async () => {
@@ -612,7 +674,7 @@ function App(){
                         h('span', { className: "text-sm font-mono tracking-widest" }, "BANDEJA VACÍA")
                     ),
                     h('div', { className: "columns-2 gap-3 space-y-3" },
-                        notes.map(n => h('div', { key: n.id, className: "break-inside-avoid bg-neutral-900/60 backdrop-blur-md border border-yellow-500/20 p-4 rounded-2xl flex flex-col gap-2 relative group hover:bg-neutral-800/80 transition-colors shadow-lg" },
+                        notes.map(n => h('div', { key: n.id, className: `break-inside-avoid bg-neutral-900/60 backdrop-blur-md border border-yellow-500/20 p-4 rounded-2xl flex flex-col gap-2 relative group hover:bg-neutral-800/80 transition-colors shadow-lg zoom-enter ${exitingIds.has(n.id) ? 'anim-purge-note' : ''}` },
                             h('p', { className: "text-sm text-gray-200 whitespace-pre-wrap font-medium leading-relaxed" }, n.text),
                             h('span', { className: "text-[9px] text-neutral-500 font-mono" }, new Date(n.date).toLocaleDateString()),
                             h('button', {
@@ -821,65 +883,6 @@ function App(){
                 )
             ),
 
-            bioShow && h('div',{className:"w-full max-w-5xl h-[85vh] md:h-[650px] bg-black border border-white/20 rounded-xl overflow-hidden flex flex-col md:flex-row relative shadow-[0_0_50px_rgba(0,0,0,1)]"},
-                h('button',{onClick:()=>SBS(false),className:"absolute top-4 right-4 z-50 p-2 bg-black/60 rounded-full text-white hover:text-red-400 border border-white/10 backdrop-blur safe-hover"},Icon('X', 18)),
-                
-                loadingBio ? h('div',{className:"absolute inset-0 z-50 flex flex-col items-center justify-center bg-black text-white"},
-                    h('div',{className:"w-16 h-16 border-4 border-t-[var(--theme-color)] border-neutral-800 rounded-full animate-spin mb-4"}),
-                    h('p',{className:"text-sm font-mono tracking-widest animate-pulse"}, "ANALIZANDO MUESTRA..."),
-                    h('p',{className:"text-xs text-neutral-500 mt-2"}, "Conectando con Wikipedia API")
-                ) : bioError ? h('div',{className:"absolute inset-0 z-50 flex flex-col items-center justify-center bg-black text-red-500"},
-                    Icon('WifiOff', 48, "mb-4 opacity-50"),
-                    h('h3',{className:"text-xl font-bold"}, "ERROR DE ENLACE"),
-                    h('button',{onClick:fetchWikiBio, className:"mt-6 px-6 py-2 bg-white/10 rounded hover:bg-white/20 text-white"}, "Reintentar")
-                ) : wikiData && h(F, null,
-                    h('div',{className:"w-full md:w-5/12 h-1/3 md:h-full relative bg-zinc-900 overflow-hidden group"},
-                        wikiData.img ? h('img',{src:wikiData.img,className:"w-full h-full object-cover opacity-80"}) 
-                        : h('div',{className:"w-full h-full flex items-center justify-center bg-[#111]"}, Icon('Dna', 64, "text-neutral-700 animate-pulse")),
-                        h('div',{className:"absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"}),
-                        h('div',{className:"scan-line"}),
-                        h('div',{className:"absolute bottom-6 left-6 right-6 z-20"},
-                             h('div',{className:"flex items-center gap-2 mb-2"},
-                                h('div',{className:"w-2 h-2 rounded-full animate-pulse",style:{background:curTab.c}}),
-                                h('span',{className:"text-[10px] font-mono tracking-widest text-white/70 uppercase"},"Wiki Data Link")
-                            ),
-                            h('h2',{className:"text-3xl md:text-4xl font-black text-white italic tracking-tighter leading-none mb-1 drop-shadow-2xl"}, wikiData.title.toUpperCase())
-                        )
-                    ),
-                    h('div',{className:"w-full md:w-7/12 flex flex-col bg-[#050505] relative hud-grid"},
-                         h('div',{className:"flex items-center justify-between p-4 border-b border-white/10 bg-white/5"},
-                            h('button',{onClick:fetchWikiBio, className:"flex items-center gap-2 px-3 py-1.5 bg-[var(--theme-color)]/20 border border-[var(--theme-color)] text-[var(--theme-color)] text-xs font-bold rounded hover:bg-[var(--theme-color)] hover:text-black transition-all"}, Icon('RefreshCw', 12), "Siguiente Muestra"),
-                            h('div',{className:"flex items-center gap-2"}, Icon('Globe',14,"text-blue-500"), h('span',{className:"text-[10px] text-neutral-500 uppercase"}, "Wikipedia API"))
-                        ),
-                        h('div',{className:"flex-1 overflow-y-auto p-6 space-y-8 no-scrollbar"},
-                            h('div',{className:"space-y-3"},
-                                h('h4',{className:"text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] flex items-center gap-2"}, Icon('Activity',12), "Clasificación Taxonómica"),
-                                h('div',{className:"grid grid-cols-2 md:grid-cols-3 gap-[1px] bg-white/10 border border-white/10 rounded overflow-hidden"},
-                                    Object.entries(wikiData.tax).map(([k,v])=>
-                                        h('div',{key:k, className:"bg-[#0c0c0e] p-3 flex flex-col group hover:bg-[#151518] transition-colors"},
-                                            h('span',{className:"text-[9px] text-neutral-600 font-bold uppercase mb-1 tracking-wider"}, 
-                                                k==='k'?'Reino':k==='p'?'Filo':k==='c'?'Clase':k==='o'?'Orden':k==='f'?'Familia':k==='g'?'Género':k
-                                            ),
-                                            h('span',{className:"text-xs font-mono truncate",style:{color:curTab.c}}, v)
-                                        )
-                                    )
-                                )
-                            ),
-                            h('div',{className:"space-y-4"},
-                                h('h4',{className:"text-[10px] font-black text-neutral-500 uppercase tracking-[0.2em] flex items-center gap-2"}, Icon('BookOpen',12), "Informe Descriptivo"),
-                                h('div',{className:"grid gap-3"},
-                                    getDescBlocks(wikiData.desc).map((block, i) =>
-                                        h('div',{key:i, className:"bg-white/5 p-4 rounded border-l-2 border-[var(--theme-color)]/50 hover:bg-white/10 transition-colors"},
-                                            h('p',{className:"text-sm text-neutral-300 leading-relaxed"}, block)
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    )
-                )
-            ),
-            
             (modal === 'e' || modal === 'c') && !confirmDel && !sets && !bioShow && !guideShow && h('div',{className:"w-full max-w-md bg-zinc-900 border border-neutral-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col"},
                 h('div',{className:"p-4 bg-black/50 border-b border-neutral-800 flex justify-between"},h('span',{className:"font-black text-white tracking-widest"},modal==='e'?'EDITAR':'NUEVO'),h('button',{onClick:()=>SM(null)},Icon('X'))),
                 h('div',{className:"p-5 space-y-4"},
